@@ -9,7 +9,6 @@ import { formatTimeSeconds } from '../../utils/helpers';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
-
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
@@ -22,38 +21,48 @@ export const ExamResultPage: React.FC = () => {
       if (!attemptId) return;
       try {
         setLoading(true);
+        
+        // 1. Carrega os dados da tentativa e da prova
         const att = await getAttemptById(attemptId);
         if (!att) throw new Error("Tentativa não encontrada");
         setAttempt(att);
-
+        
         const examData = await getExamById(att.examId);
         setExam(examData);
-
+        
+        // 2. Carrega as questões e as respostas do aluno
         const examQs = await getExamQuestions(att.examId);
         setQuestions(examQs);
-
+        
         const userAns = await getAttemptAnswers(attemptId);
         const ansMap: Record<string, AttemptAnswer> = {};
         userAns.forEach(a => { ansMap[a.examQuestionId] = a; });
         setAnswers(ansMap);
-
-        // Fetch answer keys for review if enabled
+        
+        // 3. OTIMIZAÇÃO: Busca de gabaritos em paralelo (Resolvendo o gargalo N+1)
         if (!examData || examData.showCommentsAfterFinish !== false) {
           const keysMap: Record<string, QuestionAnswer> = {};
-          for (const q of examQs) {
+          
+          // Criamos um array de Promessas (pedidos ao banco)
+          // O map() dispara todas as consultas simultaneamente sem bloquear a execução
+          const keysPromises = examQs.map(async (q) => {
             const key = await getQuestionAnswer(q.originalQuestionId);
-            if (key) keysMap[q.originalQuestionId] = key;
-          }
+            if (key) {
+              keysMap[q.originalQuestionId] = key;
+            }
+          });
+
+          // O Promise.all aguarda que TODAS as requisições paralelas terminem
+          await Promise.all(keysPromises);
+          
           setAnswerKeys(keysMap);
         }
-
       } catch (err) {
         console.error("Erro ao carregar resultados:", err);
       } finally {
         setLoading(false);
       }
     }
-
     loadResult();
   }, [attemptId]);
 
@@ -71,6 +80,7 @@ export const ExamResultPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       
+      {/* Botão de Voltar */}
       <Link to="/app/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Minhas Provas</span>
@@ -81,7 +91,7 @@ export const ExamResultPage: React.FC = () => {
         <div className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
           isPassed ? 'bg-teal-500/10' : 'bg-amber-500/10'
         }`} />
-
+        
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
@@ -94,7 +104,6 @@ export const ExamResultPage: React.FC = () => {
               Desempenho avaliado pela Sociedade Brasileira de Ortopedia e Traumatologia.
             </p>
           </div>
-
           <div className="text-center md:text-right shrink-0">
             <div className={`text-4xl sm:text-5xl font-black tracking-tight ${
               isPassed ? 'text-teal-400' : 'text-amber-400'
@@ -114,19 +123,16 @@ export const ExamResultPage: React.FC = () => {
             <p className="text-xs text-slate-400">Acertos</p>
             <p className="text-base font-bold text-white mt-0.5">{attempt.correctAnswers}</p>
           </div>
-
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <XCircle className="w-5 h-5 text-red-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Erros</p>
             <p className="text-base font-bold text-white mt-0.5">{attempt.wrongAnswers}</p>
           </div>
-
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <HelpCircle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Sem Resposta</p>
             <p className="text-base font-bold text-white mt-0.5">{attempt.unansweredQuestions}</p>
           </div>
-
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <Clock className="w-5 h-5 text-cyan-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Tempo Total</p>
@@ -149,7 +155,6 @@ export const ExamResultPage: React.FC = () => {
             {questions.map((q, idx) => {
               const userAns = answers[q.id];
               const key = answerKeys[q.originalQuestionId];
-
               const selected = userAns?.selectedAlternative;
               const correct = key?.correctAlternative;
               const isCorrect = userAns?.isCorrect;
@@ -170,7 +175,6 @@ export const ExamResultPage: React.FC = () => {
                     <span className="text-xs font-bold text-slate-300">
                       Questão {idx + 1}
                     </span>
-
                     {isCorrect ? (
                       <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
@@ -210,6 +214,7 @@ export const ExamResultPage: React.FC = () => {
                       const isCorrectKey = correct === altKey;
 
                       let style = 'bg-slate-950 border-slate-800/80 text-slate-300';
+                      
                       if (isCorrectKey) {
                         style = 'bg-emerald-500/15 border-emerald-500/50 text-white font-semibold';
                       } else if (isSelectedByUser && !isCorrectKey) {
@@ -231,6 +236,7 @@ export const ExamResultPage: React.FC = () => {
                             {altKey}
                           </div>
                           <span className="leading-relaxed flex-1">{text}</span>
+                          
                           {isCorrectKey && <span className="text-[10px] uppercase font-bold text-emerald-400 shrink-0">Gabarito</span>}
                           {isSelectedByUser && !isCorrectKey && <span className="text-[10px] uppercase font-bold text-red-400 shrink-0">Sua Escolha</span>}
                         </div>
@@ -255,14 +261,12 @@ export const ExamResultPage: React.FC = () => {
                       )}
                     </div>
                   )}
-
                 </div>
               );
             })}
           </div>
         </section>
       )}
-
     </div>
   );
 };
