@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  CheckCircle2, XCircle, Clock, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, HelpCircle 
+  CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, HelpCircle 
 } from 'lucide-react';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById } from '../../services/firebaseService';
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam } from '../../types';
-import { formatTimeSeconds } from '../../utils/helpers';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -22,7 +21,6 @@ export const ExamResultPage: React.FC = () => {
       try {
         setLoading(true);
         
-        // 1. Carrega os dados da tentativa e da prova
         const att = await getAttemptById(attemptId);
         if (!att) throw new Error("Tentativa não encontrada");
         setAttempt(att);
@@ -30,7 +28,6 @@ export const ExamResultPage: React.FC = () => {
         const examData = await getExamById(att.examId);
         setExam(examData);
         
-        // 2. Carrega as questões e as respostas do aluno
         const examQs = await getExamQuestions(att.examId);
         setQuestions(examQs);
         
@@ -39,12 +36,9 @@ export const ExamResultPage: React.FC = () => {
         userAns.forEach(a => { ansMap[a.examQuestionId] = a; });
         setAnswers(ansMap);
         
-        // 3. OTIMIZAÇÃO: Busca de gabaritos em paralelo (Resolvendo o gargalo N+1)
         if (!examData || examData.showCommentsAfterFinish !== false) {
           const keysMap: Record<string, QuestionAnswer> = {};
           
-          // Criamos um array de Promessas (pedidos ao banco)
-          // O map() dispara todas as consultas simultaneamente sem bloquear a execução
           const keysPromises = examQs.map(async (q) => {
             const key = await getQuestionAnswer(q.originalQuestionId);
             if (key) {
@@ -52,7 +46,6 @@ export const ExamResultPage: React.FC = () => {
             }
           });
 
-          // O Promise.all aguarda que TODAS as requisições paralelas terminem
           await Promise.all(keysPromises);
           
           setAnswerKeys(keysMap);
@@ -80,7 +73,6 @@ export const ExamResultPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       
-      {/* Botão de Voltar */}
       <Link to="/app/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Minhas Provas</span>
@@ -117,7 +109,7 @@ export const ExamResultPage: React.FC = () => {
         </div>
 
         {/* Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-6 border-t border-slate-800">
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Acertos</p>
@@ -132,13 +124,6 @@ export const ExamResultPage: React.FC = () => {
             <HelpCircle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Sem Resposta</p>
             <p className="text-base font-bold text-white mt-0.5">{attempt.unansweredQuestions}</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
-            <Clock className="w-5 h-5 text-cyan-400 mx-auto mb-1" />
-            <p className="text-xs text-slate-400">Tempo Total</p>
-            <p className="text-base font-bold text-white mt-0.5">
-              {formatTimeSeconds(attempt.elapsedSeconds || 0)}
-            </p>
           </div>
         </div>
       </div>
@@ -170,7 +155,6 @@ export const ExamResultPage: React.FC = () => {
                       : 'border-slate-800'
                   }`}
                 >
-                  {/* Question Banner Header */}
                   <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
                     <span className="text-xs font-bold text-slate-300">
                       Questão {idx + 1}
@@ -192,19 +176,16 @@ export const ExamResultPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Enunciado */}
                   <p className="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed whitespace-pre-line mb-4">
                     {q.statement}
                   </p>
 
-                  {/* Image */}
                   {q.imageUrl && (
                     <div className="mb-4">
                       <img src={q.imageUrl} alt="Imagem da questão" className="max-h-60 rounded-xl object-contain bg-slate-950 p-2 border border-slate-800" />
                     </div>
                   )}
 
-                  {/* Alternatives */}
                   <div className="space-y-2 mb-6">
                     {(['A', 'B', 'C', 'D'] as const).map((altKey) => {
                       const text = q.alternatives[altKey];
@@ -244,7 +225,6 @@ export const ExamResultPage: React.FC = () => {
                     })}
                   </div>
 
-                  {/* Comment & Solution Explanation */}
                   {key && (key.comments || key.solutionText) && (
                     <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 space-y-2">
                       {key.solutionText && (
