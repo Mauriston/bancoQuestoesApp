@@ -133,7 +133,6 @@ export interface Attempt {
   scorePercentage?: number;
   startedAt: Timestamp | string;
   completedAt?: Timestamp | string | null;
-  elapsedSeconds?: number;
 }
 
 export interface AttemptAnswer {
@@ -144,7 +143,6 @@ export interface AttemptAnswer {
   selectedAlternative: "A" | "B" | "C" | "D" | null;
   isCorrect?: boolean;
   answeredAt?: Timestamp | string | null;
-  timeSpentSeconds?: number;
   areaId: string;
   themeId: string;
   flaggedForReview?: boolean;
