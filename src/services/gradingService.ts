@@ -1,12 +1,12 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { Attempt, AttemptAnswer, QuestionAnswer, UserStats, AreaStat, ThemeStat } from '../types';
+import { Attempt, UserStats } from '../types';
 import { getAttemptById, getAttemptAnswers, getQuestionAnswer } from './firebaseService';
 
 export async function finishAndGradeAttempt(
-  attemptId: string, 
-  elapsedSeconds: number
+  attemptId: string
 ): Promise<Attempt> {
+  
   const attempt = await getAttemptById(attemptId);
   if (!attempt) throw new Error("Tentativa de prova não encontrada");
 
@@ -16,7 +16,6 @@ export async function finishAndGradeAttempt(
   }
 
   const userAnswers = await getAttemptAnswers(attemptId);
-  
   let correctCount = 0;
   let wrongCount = 0;
   let unansweredCount = 0;
@@ -29,6 +28,7 @@ export async function finishAndGradeAttempt(
     const questionAnswer = await getQuestionAnswer(ans.originalQuestionId);
     
     let isCorrect = false;
+
     if (ans.selectedAlternative && questionAnswer) {
       if (ans.selectedAlternative === questionAnswer.correctAlternative) {
         isCorrect = true;
@@ -53,7 +53,6 @@ export async function finishAndGradeAttempt(
       areaBreakdown[ans.areaId].total += 1;
       if (isCorrect) areaBreakdown[ans.areaId].correct += 1;
     }
-
     if (ans.themeId) {
       if (!themeBreakdown[ans.themeId]) themeBreakdown[ans.themeId] = { total: 0, correct: 0 };
       themeBreakdown[ans.themeId].total += 1;
@@ -72,7 +71,6 @@ export async function finishAndGradeAttempt(
     wrongAnswers: wrongCount,
     unansweredQuestions: unansweredCount,
     scorePercentage,
-    elapsedSeconds,
     completedAt: serverTimestamp()
   };
 
@@ -140,7 +138,6 @@ export async function finishAndGradeAttempt(
     correctAnswers: correctCount,
     wrongAnswers: wrongCount,
     unansweredQuestions: unansweredCount,
-    scorePercentage,
-    elapsedSeconds
+    scorePercentage
   };
 }
