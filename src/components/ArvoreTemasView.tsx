@@ -39,7 +39,7 @@ export const ArvoreTemasView: React.FC<ArvoreTemasViewProps> = ({
     setExpandedAreas({});
   };
 
-  // Filtered tree
+  // Filtered tee
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     return arvoreData
