@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Clock, ArrowLeft, ArrowRight, Bookmark, CheckCircle2, AlertTriangle, 
-  X, ZoomIn, Send, FileText, Check 
+  ArrowLeft, ArrowRight, Bookmark, CheckCircle2, 
+  X, ZoomIn, Send 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -11,28 +11,20 @@ import {
 } from '../../services/firebaseService';
 import { finishAndGradeAttempt } from '../../services/gradingService';
 import { Exam, ExamQuestion, AttemptAnswer } from '../../types';
-import { formatTimeSeconds } from '../../utils/helpers';
 
 export const TakeExamPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-
+  
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [attemptId, setAttemptId] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, { alt: "A"|"B"|"C"|"D"|null; flagged: boolean }>>({});
-  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
-  
-  // Timer state
-  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
-
-  // Image lightbox modal
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null | undefined>(null);
 
   useEffect(() => {
@@ -40,25 +32,23 @@ export const TakeExamPage: React.FC = () => {
       if (!assignmentId || !currentUser) return;
       try {
         setLoading(true);
-
         const allAssignments = await getUserAssignments(currentUser.id);
         const asgn = allAssignments.find(a => a.id === assignmentId);
         if (!asgn) throw new Error("Atribuição de prova não encontrada");
-
+        
         const examData = await getExamById(asgn.examId);
         if (!examData) throw new Error("Dados da prova não encontrados");
         setExam(examData);
 
-        // Start or resume attempt
         const { attemptId: attId, examQuestions } = await startExamAttempt(
           assignmentId, 
           currentUser.id, 
           asgn.examId
         );
+        
         setAttemptId(attId);
         setQuestions(examQuestions);
 
-        // Load existing saved answers
         const savedAns = await getAttemptAnswers(attId);
         const ansMap: Record<string, { alt: "A"|"B"|"C"|"D"|null; flagged: boolean }> = {};
         savedAns.forEach(a => {
@@ -69,52 +59,28 @@ export const TakeExamPage: React.FC = () => {
         });
         setAnswers(ansMap);
 
-        // Timer setup
-        if (examData.durationMinutes && examData.durationMinutes > 0) {
-          setRemainingSeconds(examData.durationMinutes * 60);
-        }
-
       } catch (err) {
         console.error("Erro ao iniciar prova:", err);
       } finally {
         setLoading(false);
       }
     }
-
     initExam();
   }, [assignmentId, currentUser]);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (remainingSeconds === null || submitting) return;
-
-    if (remainingSeconds <= 0) {
-      handleFinishExam(); // Auto finish on time expiration
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setRemainingSeconds(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [remainingSeconds, submitting]);
 
   const currentQ = questions[currentIndex];
   const currentAns = currentQ ? answers[currentQ.id] : null;
 
   const handleSelectOption = async (alt: "A" | "B" | "C" | "D") => {
     if (!currentQ || !attemptId) return;
-
-    const newAlt = currentAns?.alt === alt ? null : alt; // toggle option
+    const newAlt = currentAns?.alt === alt ? null : alt; 
     const newFlag = currentAns?.flagged || false;
-
+    
     setAnswers(prev => ({
       ...prev,
       [currentQ.id]: { alt: newAlt, flagged: newFlag }
     }));
-
-    // Auto-save to Firestore in background
+    
     try {
       await saveAttemptAnswer(
         attemptId,
@@ -132,15 +98,14 @@ export const TakeExamPage: React.FC = () => {
 
   const handleToggleFlag = async () => {
     if (!currentQ || !attemptId) return;
-
     const newFlag = !currentAns?.flagged;
     const currentSelected = currentAns?.alt || null;
-
+    
     setAnswers(prev => ({
       ...prev,
       [currentQ.id]: { alt: currentSelected, flagged: newFlag }
     }));
-
+    
     try {
       await saveAttemptAnswer(
         attemptId,
@@ -158,13 +123,11 @@ export const TakeExamPage: React.FC = () => {
 
   const handleFinishExam = async () => {
     if (submitting || !attemptId) return;
-
     setSubmitting(true);
     setFinishModalOpen(false);
 
     try {
-      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      await finishAndGradeAttempt(attemptId, elapsed);
+      await finishAndGradeAttempt(attemptId);
       navigate(`/app/attempts/${attemptId}/result`);
     } catch (err) {
       console.error("Erro ao finalizar prova:", err);
@@ -199,19 +162,7 @@ export const TakeExamPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Timer & Finish Controls */}
         <div className="flex items-center gap-4">
-          {remainingSeconds !== null && (
-            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-bold font-mono ${
-              remainingSeconds < 300 
-                ? 'bg-red-500/20 text-red-300 border-red-500/40 animate-pulse' 
-                : 'bg-slate-950 border-slate-800 text-teal-400'
-            }`}>
-              <Clock className="w-4 h-4" />
-              <span>{formatTimeSeconds(remainingSeconds)}</span>
-            </div>
-          )}
-
           <button
             onClick={() => setFinishModalOpen(true)}
             className="flex items-center gap-1.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-teal-500/20 transition-all"
@@ -242,7 +193,6 @@ export const TakeExamPage: React.FC = () => {
               <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
                 Questão #{currentIndex + 1}
               </span>
-
               <button
                 onClick={handleToggleFlag}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
@@ -261,7 +211,7 @@ export const TakeExamPage: React.FC = () => {
               {currentQ.statement}
             </p>
 
-            {/* Image Preview if available */}
+            {/* Image Preview se houver */}
             {currentQ.imageUrl && (
               <div className="mb-6 p-3 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-md">
                 <div className="relative group cursor-pointer" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
@@ -281,13 +231,13 @@ export const TakeExamPage: React.FC = () => {
               </div>
             )}
 
-            {/* Alternatives A, B, C, D */}
+            {/* Alternativas */}
             <div className="space-y-3">
               {(['A', 'B', 'C', 'D'] as const).map((letter) => {
                 const text = currentQ.alternatives[letter];
                 if (!text) return null;
                 const isSelected = currentAns?.alt === letter;
-
+                
                 return (
                   <button
                     key={letter}
@@ -311,7 +261,7 @@ export const TakeExamPage: React.FC = () => {
               })}
             </div>
 
-            {/* Navigation Bottom Controls */}
+            {/* Navegação Inferior */}
             <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-between">
               <button
                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
@@ -321,7 +271,7 @@ export const TakeExamPage: React.FC = () => {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Anterior</span>
               </button>
-
+              
               <button
                 onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
                 disabled={currentIndex === questions.length - 1}
@@ -331,17 +281,15 @@ export const TakeExamPage: React.FC = () => {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-
           </div>
         </div>
 
-        {/* Question Navigator Drawer Sidebar */}
+        {/* Menu Lateral de Navegação das Questões */}
         <div className="space-y-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
             <h3 className="text-xs font-bold text-slate-200 mb-3 uppercase tracking-wider">
               Navegação das Questões
             </h3>
-
             <div className="grid grid-cols-5 gap-2">
               {questions.map((q, idx) => {
                 const ans = answers[q.id];
@@ -369,7 +317,7 @@ export const TakeExamPage: React.FC = () => {
                 );
               })}
             </div>
-
+            
             <div className="mt-4 pt-4 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-teal-500/20 border border-teal-500/40" />
@@ -389,7 +337,7 @@ export const TakeExamPage: React.FC = () => {
 
       </div>
 
-      {/* Image Lightbox Modal */}
+      {/* Modal de Imagem */}
       {previewImageUrl && (
         <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewImageUrl(null)}>
           <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
@@ -404,7 +352,7 @@ export const TakeExamPage: React.FC = () => {
         </div>
       )}
 
-      {/* Confirm Finish Modal */}
+      {/* Confirmação de Término */}
       {finishModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -417,10 +365,10 @@ export const TakeExamPage: React.FC = () => {
                 <p className="text-xs text-slate-400">Confirme o envio definitivo das suas respostas.</p>
               </div>
             </div>
-
+            
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
-              <p>• Respondidas: <strong className="text-teal-400">{answeredCount}</strong> de {questions.length}</p>
-              <p>• Pendentes: <strong className="text-amber-400">{questions.length - answeredCount}</strong></p>
+              <p>✔ Respondidas: <strong className="text-teal-400">{answeredCount}</strong> de {questions.length}</p>
+              <p>⏳ Pendentes: <strong className="text-amber-400">{questions.length - answeredCount}</strong></p>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -441,7 +389,6 @@ export const TakeExamPage: React.FC = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
