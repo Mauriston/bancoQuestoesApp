@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, Check, ChevronRight, FileCheck, Search, Users, ShieldAlert, Sparkles, AlertCircle 
+  ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getQuestions, getAreas, getThemes, getActiveUsers, createAndPublishExam } from '../../services/firebaseService';
@@ -10,13 +10,11 @@ import { Question, Area, Theme, AppUser } from '../../types';
 export const CreateExamPage: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-
   const [step, setStep] = useState(1);
-
+  
   // Step 1: Basic info
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState<number>(60);
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleAlternatives, setShuffleAlternatives] = useState(false);
   const [showResultAfterFinish, setShowResultAfterFinish] = useState(true);
@@ -28,7 +26,6 @@ export const CreateExamPage: React.FC = () => {
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
-  
   const [areaFilter, setAreaFilter] = useState('');
   const [themeFilter, setThemeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +59,6 @@ export const CreateExamPage: React.FC = () => {
         setLoadingQuestions(false);
       }
     }
-
     loadResources();
   }, []);
 
@@ -91,20 +87,17 @@ export const CreateExamPage: React.FC = () => {
       setErrorMsg("Preencha todos os campos e selecione pelo menos uma questão.");
       return;
     }
-
     setPublishing(true);
     setErrorMsg('');
 
     try {
       const assignedIds = assignMode === 'all' ? ['all'] : selectedUserIds;
-
       await createAndPublishExam({
         examData: {
           name,
           description,
           status: 'published',
           questionCount: selectedQuestions.length,
-          durationMinutes: durationMinutes > 0 ? durationMinutes : undefined,
           shuffleQuestions,
           shuffleAlternatives,
           showResultAfterFinish,
@@ -116,7 +109,6 @@ export const CreateExamPage: React.FC = () => {
         assignedUserIds: assignedIds,
         adminId: currentUser.id
       });
-
       navigate('/admin/exams');
     } catch (err: any) {
       setErrorMsg("Erro ao publicar prova: " + err.message);
@@ -137,7 +129,7 @@ export const CreateExamPage: React.FC = () => {
           <FileCheck className="w-5 h-5 text-cyan-400" />
           Assistente de Criação de Prova
         </h1>
-        <p className="text-xs text-slate-400 mt-1">Siga as 5 etapas para publicar um novo simulado.</p>
+        <p className="text-xs text-slate-400 mt-1">Siga as 4 etapas para publicar um novo simulado.</p>
       </div>
 
       {/* Step Indicator Header */}
@@ -162,7 +154,7 @@ export const CreateExamPage: React.FC = () => {
       {step === 1 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
           <h2 className="text-sm font-bold text-white mb-2">Etapa 1: Dados e Configurações da Prova</h2>
-
+          
           <div>
             <label className="block text-slate-300 font-medium mb-1">Nome / Título da Prova *</label>
             <input
@@ -174,7 +166,7 @@ export const CreateExamPage: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
             />
           </div>
-
+          
           <div>
             <label className="block text-slate-300 font-medium mb-1">Descrição / Instruções aos Candidatos</label>
             <textarea
@@ -184,20 +176,6 @@ export const CreateExamPage: React.FC = () => {
               onChange={(e) => setDescription(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
             />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-slate-300 font-medium mb-1">Duração Total (Minutos)</label>
-              <input
-                type="number"
-                min={0}
-                placeholder="60 (deixe 0 para sem tempo limite)"
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-              />
-            </div>
           </div>
 
           <div className="space-y-2 pt-2 border-t border-slate-800">
@@ -210,7 +188,6 @@ export const CreateExamPage: React.FC = () => {
               />
               <span>Embaralhar ordem das questões para cada candidato</span>
             </label>
-
             <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -220,7 +197,6 @@ export const CreateExamPage: React.FC = () => {
               />
               <span>Exibir nota e resultado imediatamente após finalizar</span>
             </label>
-
             <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -262,7 +238,6 @@ export const CreateExamPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input
               type="text"
@@ -289,7 +264,6 @@ export const CreateExamPage: React.FC = () => {
             </select>
           </div>
 
-          {/* List */}
           <div className="max-h-96 overflow-y-auto space-y-2 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
             {filteredQuestions.map(q => {
               const isSelected = selectedQuestions.some(sq => sq.id === q.id);
@@ -306,7 +280,7 @@ export const CreateExamPage: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => {}} // handled by parent onClick
+                    onChange={() => {}} 
                     className="mt-1 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
                   />
                   <div className="flex-1">
@@ -319,10 +293,7 @@ export const CreateExamPage: React.FC = () => {
           </div>
 
           <div className="flex justify-between pt-4">
-            <button
-              onClick={() => setStep(1)}
-              className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800"
-            >
+            <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">
               Voltar
             </button>
             <button
@@ -341,7 +312,7 @@ export const CreateExamPage: React.FC = () => {
       {step === 3 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
           <h2 className="text-sm font-bold text-white mb-2">Etapa 3: Atribuir a Prova aos Candidatos</h2>
-
+          
           <div className="space-y-3">
             <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-slate-800 bg-slate-950">
               <input
@@ -356,7 +327,7 @@ export const CreateExamPage: React.FC = () => {
                 <span className="text-[10px] text-slate-400">Todos os residentes ativos receberão o simulado em seu painel.</span>
               </div>
             </label>
-
+            
             <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-slate-800 bg-slate-950">
               <input
                 type="radio"
@@ -394,10 +365,7 @@ export const CreateExamPage: React.FC = () => {
           )}
 
           <div className="flex justify-between pt-4">
-            <button
-              onClick={() => setStep(2)}
-              className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800"
-            >
+            <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">
               Voltar
             </button>
             <button
@@ -417,19 +385,15 @@ export const CreateExamPage: React.FC = () => {
           <h2 className="text-sm font-bold text-white border-b border-slate-800 pb-3">
             Etapa 4: Resumo e Confirmação de Publicação
           </h2>
-
+          
           <div className="space-y-2 text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800">
             <p>• Nome da Prova: <strong className="text-white">{name}</strong></p>
-            <p>• Total de Questões Congeladas: <strong className="text-teal-400">{selectedQuestions.length}</strong></p>
-            <p>• Duração: <strong className="text-white">{durationMinutes ? `${durationMinutes} minutos` : 'Sem tempo limite'}</strong></p>
+            <p>• Total de Questões: <strong className="text-teal-400">{selectedQuestions.length}</strong></p>
             <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'all' ? `Todos os ${activeUsers.length} usuários ativos` : `${selectedUserIds.length} usuários`}</strong></p>
           </div>
 
           <div className="flex justify-between pt-4">
-            <button
-              onClick={() => setStep(3)}
-              className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800"
-            >
+            <button onClick={() => setStep(3)} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">
               Voltar
             </button>
             <button
@@ -438,12 +402,11 @@ export const CreateExamPage: React.FC = () => {
               className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-teal-500/20 disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
-              <span>{publishing ? 'Publicando e Congelando Prova...' : 'Publicar Prova Agora'}</span>
+              <span>{publishing ? 'Publicando...' : 'Publicar Prova Agora'}</span>
             </button>
           </div>
         </div>
       )}
-
     </div>
   );
 };
