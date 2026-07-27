@@ -34,8 +34,14 @@ jobs:
       - name: 6. Instalar Firebase CLI Globalmente
         run: npm install -g firebase-tools
 
-      - name: 7. Deploy no Firebase Hosting e Cloud Functions
-        run: firebase deploy --only functions,hosting --project gen-lang-client-0316191622
+      # O repositório não tem uma pasta functions/ (nenhuma Cloud Function
+      # foi escrita ainda — ver auditoria dos fluxos Firebase), então
+      # "--only functions,hosting" sempre falhava antes mesmo de tentar
+      # publicar: o Firebase CLI recusa alvos que não existem no projeto.
+      # Publicamos só o hosting (o frontend React estático) até existir
+      # código de functions de verdade para publicar.
+      - name: 7. Deploy no Firebase Hosting
+        run: firebase deploy --only hosting --project gen-lang-client-0316191622
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
