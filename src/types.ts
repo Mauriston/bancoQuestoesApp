@@ -83,6 +83,12 @@ export interface Exam {
   name: string;
   description?: string;
   status: 'draft' | 'published' | 'archived';
+  // Controla se a prova fica visível/disponível para os candidatos
+  // iniciarem. Toda prova nasce inativa (false) — o admin precisa ativá-la
+  // explicitamente. Provas antigas sem esse campo são tratadas como ativas
+  // (ver isExamActive() em firebaseService.ts) para não sumir do painel de
+  // quem já tinha provas publicadas antes dessa funcionalidade existir.
+  active?: boolean;
   questionCount: number;
   shuffleQuestions?: boolean;
   shuffleAlternatives?: boolean;

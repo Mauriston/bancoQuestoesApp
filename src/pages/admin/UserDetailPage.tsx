@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, User, BookOpen, CheckCircle2, Award, ChevronRight, AlertTriangle
+  ArrowLeft, BookOpen, CheckCircle2, Award, ChevronRight, Trash2
 } from 'lucide-react';
-import { getUserById, getUserStats, getUserAttempts, getAreas } from '../../services/firebaseService';
+import { getUserById, getUserStats, getUserAttempts, getAreas, deleteAttempt } from '../../services/firebaseService';
 import { AppUser, UserStats, Attempt, Area } from '../../types';
 import { formatDate } from '../../utils/helpers';
 
@@ -14,34 +14,49 @@ export const UserDetailPage: React.FC = () => {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadUser = useCallback(async () => {
+    if (!userId) return;
+    try {
+      setLoading(true);
+      const [u, uStats, uAttempts, areaList] = await Promise.all([
+        getUserById(userId),
+        getUserStats(userId),
+        getUserAttempts(userId),
+        getAreas()
+      ]);
+      setUser(u);
+      setStats(uStats);
+      setAttempts(uAttempts.sort((a, b) => {
+        const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
+        const bT = b.startedAt ? (typeof b.startedAt === 'object' && 'seconds' in b.startedAt ? b.startedAt.seconds : 0) : 0;
+        return bT - aT;
+      }));
+      setAreas(areaList);
+    } catch (err) {
+      console.error("Erro ao carregar dados do usuário:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    async function loadUser() {
-      if (!userId) return;
-      try {
-        setLoading(true);
-        const [u, uStats, uAttempts, areaList] = await Promise.all([
-          getUserById(userId),
-          getUserStats(userId),
-          getUserAttempts(userId),
-          getAreas()
-        ]);
-        setUser(u);
-        setStats(uStats);
-        setAttempts(uAttempts.sort((a, b) => {
-          const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
-          const bT = b.startedAt ? (typeof b.startedAt === 'object' && 'seconds' in b.startedAt ? b.startedAt.seconds : 0) : 0;
-          return bT - aT;
-        }));
-        setAreas(areaList);
-      } catch (err) {
-        console.error("Erro ao carregar dados do usuário:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadUser();
-  }, [userId]);
+  }, [loadUser]);
+
+  const handleDeleteAttempt = async (attemptId: string) => {
+    if (!confirm("Excluir esta tentativa do histórico do residente? A nota e as respostas dela deixam de existir, e a prova volta a ficar disponível para ele refazer.")) return;
+    setDeletingId(attemptId);
+    try {
+      await deleteAttempt(attemptId);
+      await loadUser();
+    } catch (err: any) {
+      alert("Erro ao excluir tentativa: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -207,6 +222,14 @@ export const UserDetailPage: React.FC = () => {
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
                     )}
+                    <button
+                      onClick={() => handleDeleteAttempt(att.id)}
+                      disabled={deletingId === att.id}
+                      title="Excluir esta tentativa do histórico"
+                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               );

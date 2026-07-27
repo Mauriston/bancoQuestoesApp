@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowRight, CheckCircle2, X, ZoomIn, Send, Trophy
+  ArrowRight, CheckCircle2, X, ZoomIn, Send, Trophy, AlertCircle, ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getExamById, getExamQuestions, startExamAttempt, getAttemptAnswers,
-  saveAttemptAnswer, getUserAssignments
+  saveAttemptAnswer, getUserAssignments, isExamActive
 } from '../../services/firebaseService';
 import { finishAndGradeAttempt } from '../../services/gradingService';
 import { Exam, ExamQuestion } from '../../types';
@@ -29,6 +29,7 @@ export const TakeExamPage: React.FC = () => {
   const [savedAlt, setSavedAlt] = useState<Record<string, "A" | "B" | "C" | "D" | null>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null | undefined>(null);
@@ -38,12 +39,20 @@ export const TakeExamPage: React.FC = () => {
       if (!assignmentId || !currentUser) return;
       try {
         setLoading(true);
+        setLoadError(null);
         const allAssignments = await getUserAssignments(currentUser.id);
         const asgn = allAssignments.find(a => a.id === assignmentId);
         if (!asgn) throw new Error("Atribuição de prova não encontrada");
 
         const examData = await getExamById(asgn.examId);
         if (!examData) throw new Error("Dados da prova não encontrados");
+
+        // Uma prova desativada pelo admin não pode ser iniciada — mas quem
+        // já estava em andamento ('started') não é interrompido.
+        if (asgn.status === 'available' && !isExamActive(examData)) {
+          throw new Error("Esta prova não está mais disponível no momento.");
+        }
+
         setExam(examData);
 
         const { attemptId: attId, examQuestions } = await startExamAttempt(
@@ -67,8 +76,9 @@ export const TakeExamPage: React.FC = () => {
         setCurrentIndex(resumeIndex);
         setCurrentAlt(altMap[examQuestions[resumeIndex]?.id] ?? null);
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Erro ao iniciar prova:", err);
+        setLoadError(err?.message || "Não foi possível carregar esta prova.");
       } finally {
         setLoading(false);
       }
@@ -131,6 +141,21 @@ export const TakeExamPage: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  if (loadError) {
+    return (
+      <div className="max-w-md mx-auto flex flex-col items-center justify-center text-center py-20 text-slate-400 gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <p className="text-sm text-slate-200 font-semibold">{loadError}</p>
+        <Link to="/app/exams" className="inline-flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 font-semibold">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Voltar para Minhas Provas</span>
+        </Link>
+      </div>
+    );
+  }
 
   if (loading || !currentQ) {
     return (

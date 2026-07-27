@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Eye
+  FileCheck, Plus, Trash2, Eye, Power, PowerOff
 } from 'lucide-react';
-import { getExams, deleteExam } from '../../services/firebaseService';
+import { getExams, deleteExam, updateExamActiveStatus, isExamActive } from '../../services/firebaseService';
 import { Exam } from '../../types';
 import { formatDate } from '../../utils/helpers';
 
@@ -11,6 +11,7 @@ export const ExamsListPage: React.FC = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchExamsList = async () => {
     setLoading(true);
@@ -29,12 +30,24 @@ export const ExamsListPage: React.FC = () => {
   }, []);
 
   const handleDelete = async (examId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta prova?")) return;
+    if (!confirm("Tem certeza que deseja excluir esta prova? As tentativas já realizadas por residentes também serão apagadas do histórico deles.")) return;
     try {
       await deleteExam(examId);
       await fetchExamsList();
     } catch (err: any) {
       alert("Erro ao excluir prova: " + (err?.message || "erro desconhecido."));
+    }
+  };
+
+  const handleToggleActive = async (exam: Exam) => {
+    setTogglingId(exam.id);
+    try {
+      await updateExamActiveStatus(exam.id, !isExamActive(exam));
+      await fetchExamsList();
+    } catch (err: any) {
+      alert("Erro ao alterar status da prova: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -81,8 +94,12 @@ export const ExamsListPage: React.FC = () => {
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      {ex.status === 'published' ? 'Publicada' : 'Rascunho'}
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                      isExamActive(ex)
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}>
+                      {isExamActive(ex) ? 'Ativa' : 'Inativa'}
                     </span>
                     <span className="text-[11px] text-slate-500">{formatDate(ex.createdAt)}</span>
                   </div>
@@ -102,7 +119,7 @@ export const ExamsListPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
                   <Link
                     to={`/admin/exams/${ex.id}`}
                     onClick={(e) => e.stopPropagation()}
@@ -111,13 +128,26 @@ export const ExamsListPage: React.FC = () => {
                     <Eye className="w-3.5 h-3.5" />
                     <span>Ver Prova</span>
                   </Link>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
-                    className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Excluir</span>
-                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleActive(ex); }}
+                      disabled={togglingId === ex.id}
+                      className={`text-xs font-semibold flex items-center gap-1 disabled:opacity-40 ${
+                        isExamActive(ex) ? 'text-amber-400 hover:text-amber-300' : 'text-emerald-400 hover:text-emerald-300'
+                      }`}
+                    >
+                      {isExamActive(ex) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+                      <span>{isExamActive(ex) ? 'Desativar' : 'Ativar'}</span>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
+                      className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

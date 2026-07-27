@@ -1,5 +1,5 @@
 import {
-   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
    query, where, orderBy, limit, serverTimestamp, writeBatch, runTransaction, Timestamp, addDoc,
    Query, DocumentData
 } from 'firebase/firestore';
@@ -260,6 +260,18 @@ export async function getExamById(examId: string): Promise<Exam | null> {
   return null;
 }
 
+// Provas gravadas antes do campo `active` existir não têm esse campo no
+// Firestore (`undefined`) — tratamos isso como ativo para não esconder
+// provas que já estavam publicadas e em uso antes dessa funcionalidade.
+// Só um `false` explícito (setado pelo admin) desativa.
+export function isExamActive(exam: Exam | null | undefined): boolean {
+  return !exam || exam.active !== false;
+}
+
+export async function updateExamActiveStatus(examId: string, active: boolean): Promise<void> {
+  await updateDoc(doc(db, 'exams', examId), { active, updatedAt: serverTimestamp() });
+}
+
 export async function getExamQuestions(examId: string): Promise<ExamQuestion[]> {
   const snapshot = await getDocs(collection(db, 'exams', examId, 'questions'));
   const questions: ExamQuestion[] = [];
@@ -282,6 +294,9 @@ export async function createAndPublishExam(params: {
     ...params.examData,
     id: examId,
     status: 'published',
+    // Toda prova nasce inativa — só fica visível aos candidatos depois que
+    // o admin a ativar explicitamente em ExamsListPage.
+    active: false,
     questionCount: params.questions.length,
     createdBy: params.adminId,
     createdAt: serverTimestamp() as any,
@@ -365,19 +380,93 @@ export async function createAndPublishExam(params: {
   return examId;
 }
 
+// Reverte o efeito de uma tentativa corrigida sobre o agregado userStats do
+// residente (contraparte do somatório feito em finishAndGradeAttempt, em
+// gradingService.ts). Usado tanto para excluir uma tentativa avulsa quanto
+// na cascata de deleteExam() — sem isso, "Meu Desempenho" e os dashboards
+// do admin ficariam inflados com dados de provas que não existem mais no
+// histórico do usuário.
+async function subtractFromUserStats(userId: string, answers: AttemptAnswer[]): Promise<void> {
+  const areaBreakdown: Record<string, { total: number; correct: number }> = {};
+  const themeBreakdown: Record<string, { total: number; correct: number }> = {};
+  let correctCount = 0;
+  let wrongCount = 0;
+
+  for (const ans of answers) {
+    if (!ans.selectedAlternative) continue; // não respondida nunca somou em userStats
+    if (ans.isCorrect) correctCount++; else wrongCount++;
+    if (ans.areaId) {
+      if (!areaBreakdown[ans.areaId]) areaBreakdown[ans.areaId] = { total: 0, correct: 0 };
+      areaBreakdown[ans.areaId].total += 1;
+      if (ans.isCorrect) areaBreakdown[ans.areaId].correct += 1;
+    }
+    if (ans.themeId) {
+      if (!themeBreakdown[ans.themeId]) themeBreakdown[ans.themeId] = { total: 0, correct: 0 };
+      themeBreakdown[ans.themeId].total += 1;
+      if (ans.isCorrect) themeBreakdown[ans.themeId].correct += 1;
+    }
+  }
+
+  if (correctCount === 0 && wrongCount === 0) return;
+
+  const statsRef = doc(db, 'userStats', userId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(statsRef);
+    if (!snap.exists()) return;
+    const current = snap.data() as UserStats;
+
+    const newTotalSolved = Math.max(0, (current.totalSolved || 0) - (correctCount + wrongCount));
+    const newTotalCorrect = Math.max(0, (current.totalCorrect || 0) - correctCount);
+    const newOverallPercentage = newTotalSolved > 0 ? Math.round((newTotalCorrect / newTotalSolved) * 100) : 0;
+
+    const newAreas = { ...(current.areas || {}) };
+    Object.entries(areaBreakdown).forEach(([aId, data]) => {
+      if (newAreas[aId]) {
+        newAreas[aId] = {
+          ...newAreas[aId],
+          solved: Math.max(0, newAreas[aId].solved - data.total),
+          correct: Math.max(0, newAreas[aId].correct - data.correct)
+        };
+      }
+    });
+
+    const newThemes = { ...(current.themes || {}) };
+    Object.entries(themeBreakdown).forEach(([tId, data]) => {
+      if (newThemes[tId]) {
+        newThemes[tId] = {
+          ...newThemes[tId],
+          solved: Math.max(0, newThemes[tId].solved - data.total),
+          correct: Math.max(0, newThemes[tId].correct - data.correct)
+        };
+      }
+    });
+
+    tx.set(statsRef, {
+      ...current,
+      totalSolved: newTotalSolved,
+      totalCorrect: newTotalCorrect,
+      overallScorePercentage: newOverallPercentage,
+      areas: newAreas,
+      themes: newThemes,
+      updatedAt: serverTimestamp()
+    });
+  });
+}
+
 export async function deleteExam(examId: string): Promise<void> {
-  // Deleting only the exam document leaves two kinds of orphans behind,
-  // since Firestore never cascade-deletes subcollections or docs in other
-  // collections that merely reference the deleted id:
+  // Deleting only the exam document leaves orphans behind, since Firestore
+  // never cascade-deletes subcollections or docs in other collections that
+  // merely reference the deleted id:
   //   1. the frozen `exams/{examId}/questions` subcollection (dead storage
   //      that getExamQuestions() would still happily serve if the id were
   //      ever reused);
   //   2. `examAssignments` docs still pointing residents at a prova that no
   //      longer exists, which breaks ExamsPage/TakeExamPage for them
-  //      (getExamById returns null but the assignment stays 'available').
-  // Completed `attempts` are intentionally left untouched — they are a
-  // resident's performance history and must survive the source exam being
-  // removed from circulation.
+  //      (getExamById returns null but the assignment stays 'available');
+  //   3. `attempts` (and their `answers` subcollection) tied to this exam.
+  //      Excluir a prova deve excluí-la também do histórico dos residentes
+  //      — pedido explícito do admin — então essas tentativas saem junto,
+  //      com a mesma reversão de userStats aplicada por deleteAttempt().
   //
   // The exam document itself is deleted first, on its own — that's the part
   // the admin actually asked for and it must not get stuck behind cleanup.
@@ -389,9 +478,10 @@ export async function deleteExam(examId: string): Promise<void> {
   await deleteDoc(doc(db, 'exams', examId));
 
   try {
-    const [questionsSnap, assignmentsSnap] = await Promise.all([
+    const [questionsSnap, assignmentsSnap, attempts] = await Promise.all([
       getDocs(collection(db, 'exams', examId, 'questions')),
-      getDocs(query(collection(db, 'examAssignments'), where('examId', '==', examId)))
+      getDocs(query(collection(db, 'examAssignments'), where('examId', '==', examId))),
+      getAttemptsForExam(examId)
     ]);
 
     let batch = writeBatch(db);
@@ -410,11 +500,66 @@ export async function deleteExam(examId: string): Promise<void> {
     for (const d of questionsSnap.docs) await queueDelete(d.ref);
     for (const d of assignmentsSnap.docs) await queueDelete(d.ref);
 
+    for (const attempt of attempts) {
+      const answersSnap = await getDocs(collection(db, 'attempts', attempt.id, 'answers'));
+      if (attempt.status === 'completed') {
+        const answers = answersSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttemptAnswer));
+        await subtractFromUserStats(attempt.userId, answers);
+      }
+      for (const d of answersSnap.docs) await queueDelete(d.ref);
+      await queueDelete(doc(db, 'attempts', attempt.id));
+    }
+
     if (opCount > 0) {
       await batch.commit();
     }
   } catch (cleanupErr) {
-    console.warn(`Prova ${examId} excluída, mas a limpeza de dados órfãos (questões congeladas/atribuições) falhou:`, cleanupErr);
+    console.warn(`Prova ${examId} excluída, mas a limpeza de dados órfãos (questões congeladas/atribuições/tentativas) falhou:`, cleanupErr);
+  }
+}
+
+// Exclui uma única tentativa do histórico de um usuário sem remover a prova
+// em si. Se a tentativa já tinha sido corrigida, reverte o que ela somou em
+// userStats; se estava ligada a uma examAssignment, essa atribuição volta
+// para 'available' — senão o painel do residente ficaria com um card
+// "Concluída"/link "Ver Relatório" apontando para uma tentativa inexistente.
+export async function deleteAttempt(attemptId: string): Promise<void> {
+  const attemptSnap = await getDoc(doc(db, 'attempts', attemptId));
+  if (!attemptSnap.exists()) return;
+  const attempt = { id: attemptId, ...attemptSnap.data() } as Attempt;
+
+  const answersSnap = await getDocs(collection(db, 'attempts', attemptId, 'answers'));
+
+  if (attempt.status === 'completed') {
+    const answers = answersSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttemptAnswer));
+    await subtractFromUserStats(attempt.userId, answers);
+  }
+
+  let batch = writeBatch(db);
+  let opCount = 0;
+  for (const d of answersSnap.docs) {
+    batch.delete(d.ref);
+    opCount++;
+    if (opCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  }
+  batch.delete(doc(db, 'attempts', attemptId));
+  await batch.commit();
+
+  if (attempt.assignmentId) {
+    try {
+      await updateDoc(doc(db, 'examAssignments', attempt.assignmentId), {
+        status: 'available',
+        startedAt: deleteField(),
+        completedAt: deleteField(),
+        attemptId: deleteField()
+      });
+    } catch (err) {
+      console.warn(`Tentativa ${attemptId} excluída, mas não foi possível liberar a atribuição ${attempt.assignmentId} para nova tentativa:`, err);
+    }
   }
 }
 

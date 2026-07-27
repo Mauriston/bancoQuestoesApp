@@ -434,6 +434,10 @@ export const CreateExamPage: React.FC = () => {
             <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'all' ? `Todos os ${activeUsers.length} usuários ativos` : `${selectedUserIds.length} usuários`}</strong></p>
           </div>
 
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
+            A prova é criada <strong>inativa</strong>. Os destinatários só vão vê-la e poder iniciá-la depois que você ativá-la em "Provas e Simulados".
+          </div>
+
           <div className="flex justify-between pt-4">
             <button onClick={() => setStep(3)} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">
               Voltar
