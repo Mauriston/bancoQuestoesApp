@@ -7,7 +7,7 @@ export const AdminLoginPage: React.FC = () => {
   const { adminLogin } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('mauriston@oncoortopedia.com');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);

@@ -1,29 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { History, Search, ChevronRight, Calendar, User, FileText } from 'lucide-react';
-import { getAllAttempts } from '../../services/firebaseService';
+import { getAllAttempts, getUsers } from '../../services/firebaseService';
 import { Attempt } from '../../types';
-import { formatDate, formatTimeSeconds } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 
 export const AttemptsPage: React.FC = () => {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAllAttempts()
-      .then(res => setAttempts(res.sort((a, b) => {
-        const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
-        const bT = b.startedAt ? (typeof b.startedAt === 'object' && 'seconds' in b.startedAt ? b.startedAt.seconds : 0) : 0;
-        return bT - aT;
-      })))
+    Promise.all([getAllAttempts(), getUsers()])
+      .then(([res, users]) => {
+        setAttempts(res.sort((a, b) => {
+          const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
+          const bT = b.startedAt ? (typeof b.startedAt === 'object' && 'seconds' in b.startedAt ? b.startedAt.seconds : 0) : 0;
+          return bT - aT;
+        }));
+        // Tentativas antigas podem ter sido gravadas antes do userName ser
+        // desnormalizado no documento — esse mapa cobre esses registros.
+        setUserNameById(Object.fromEntries(users.map(u => [u.id, u.name])));
+      })
       .catch(err => console.error("Erro ao carregar tentativas:", err))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = attempts.filter(a => 
+  const nameOf = (a: Attempt) => a.userName || userNameById[a.userId] || 'Usuário removido';
+
+  const filtered = attempts.filter(a =>
     (a.examName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (a.userName || '').toLowerCase().includes(search.toLowerCase())
+    nameOf(a).toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -68,7 +76,7 @@ export const AttemptsPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-cyan-400 flex items-center gap-1">
                         <User className="w-3.5 h-3.5" />
-                        {att.userName || att.userId}
+                        {nameOf(att)}
                       </span>
                       <span className="text-[11px] text-slate-500">•</span>
                       <span className="text-[11px] text-slate-500">{formatDate(att.completedAt || att.startedAt)}</span>
@@ -80,8 +88,6 @@ export const AttemptsPage: React.FC = () => {
 
                     <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
                       <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>
-                      <span>•</span>
-                      <span>Tempo: <strong>{formatTimeSeconds(att.elapsedSeconds || 0)}</strong></span>
                     </div>
                   </div>
 

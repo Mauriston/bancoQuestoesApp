@@ -1,0 +1,169 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, BookOpen, BarChart3, Users } from 'lucide-react';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats } from '../../services/firebaseService';
+import { Exam, ExamQuestion, QuestionAnswer } from '../../types';
+import { QuestionImage } from '../../components/QuestionImage';
+
+export const ExamViewPage: React.FC = () => {
+  const { examId } = useParams<{ examId: string }>();
+  const [exam, setExam] = useState<Exam | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+  const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
+  const [stats, setStats] = useState<Record<string, { totalAnswered: number; totalCorrect: number }>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadExam() {
+      if (!examId) return;
+      try {
+        setLoading(true);
+        const [examData, examQs, questionStats] = await Promise.all([
+          getExamById(examId),
+          getExamQuestions(examId),
+          getExamQuestionStats(examId)
+        ]);
+        setExam(examData);
+        setQuestions(examQs);
+        setStats(questionStats);
+
+        const keysMap: Record<string, QuestionAnswer> = {};
+        await Promise.all(examQs.map(async (q) => {
+          const key = await getQuestionAnswer(q.originalQuestionId);
+          if (key) keysMap[q.originalQuestionId] = key;
+        }));
+        setAnswerKeys(keysMap);
+      } catch (err) {
+        console.error("Erro ao carregar prova:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadExam();
+  }, [examId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs">Carregando prova...</p>
+      </div>
+    );
+  }
+
+  if (!exam) {
+    return (
+      <div className="space-y-4">
+        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar para Lista de Provas</span>
+        </Link>
+        <p className="text-sm text-slate-400">Prova não encontrada.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-12">
+      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        <span>Voltar para Lista de Provas</span>
+      </Link>
+
+      <div>
+        <h1 className="text-xl font-bold text-white">{exam.name}</h1>
+        {exam.description && <p className="text-xs text-slate-400 mt-1">{exam.description}</p>}
+        <p className="text-[11px] text-slate-500 mt-1">{questions.length} questões — visualização administrativa com gabarito e taxa de acerto</p>
+      </div>
+
+      <section className="space-y-6">
+        {questions.map((q, idx) => {
+          const key = answerKeys[q.originalQuestionId];
+          const qStats = stats[q.id];
+          const accuracyPercent = qStats && qStats.totalAnswered > 0
+            ? Math.round((qStats.totalCorrect / qStats.totalAnswered) * 100)
+            : null;
+
+          return (
+            <div key={q.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                  Questão {idx + 1}
+                </span>
+
+                {accuracyPercent !== null ? (
+                  <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                    accuracyPercent >= 60
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  }`}>
+                    <BarChart3 className="w-3 h-3" />
+                    {accuracyPercent}% de acerto
+                    <span className="flex items-center gap-0.5 font-normal normal-case text-[10px] opacity-80">
+                      <Users className="w-3 h-3" />({qStats!.totalAnswered})
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                    Sem tentativas ainda
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed whitespace-pre-line mb-4">
+                {q.statement}
+              </p>
+
+              {q.imageUrl && <QuestionImage src={q.imageUrl} allowZoom={false} />}
+
+              <div className="space-y-2 mt-2">
+                {(['A', 'B', 'C', 'D'] as const).map((altKey) => {
+                  const text = q.alternatives[altKey];
+                  if (!text) return null;
+                  const isCorrectKey = key?.correctAlternative === altKey;
+
+                  return (
+                    <div
+                      key={altKey}
+                      className={`p-3 rounded-xl border text-xs flex items-start gap-3 transition-all ${
+                        isCorrectKey
+                          ? 'bg-emerald-500/15 border-emerald-500/50 text-white font-semibold'
+                          : 'bg-slate-950 border-slate-800/80 text-slate-300'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
+                        isCorrectKey ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {altKey}
+                      </div>
+                      <span className="leading-relaxed flex-1">{text}</span>
+                      {isCorrectKey && <span className="text-[10px] uppercase font-bold text-emerald-400 shrink-0">Gabarito</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {key && (key.solutionText || key.comments) && (
+                <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 space-y-2">
+                  {key.solutionText && (
+                    <div>
+                      <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
+                      <p className="text-slate-300 leading-relaxed">{key.solutionText}</p>
+                    </div>
+                  )}
+                  {key.comments && (
+                    <div>
+                      <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
+                      <p className="text-slate-300 leading-relaxed">{key.comments}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    </div>
+  );
+};

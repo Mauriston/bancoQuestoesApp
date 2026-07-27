@@ -84,7 +84,6 @@ export interface Exam {
   description?: string;
   status: 'draft' | 'published' | 'archived';
   questionCount: number;
-  durationMinutes?: number;
   shuffleQuestions?: boolean;
   shuffleAlternatives?: boolean;
   showResultAfterFinish?: boolean;
@@ -133,7 +132,6 @@ export interface Attempt {
   status: 'in_progress' | 'grading' | 'completed';
   startedAt?: any;
   completedAt?: any;
-  elapsedSeconds?: number;
   totalQuestions: number;
   correctAnswers?: number;
   wrongAnswers?: number;
@@ -151,7 +149,6 @@ export interface AttemptAnswer {
   themeId: string;
   isCorrect?: boolean;
   correctAlternative?: "A" | "B" | "C" | "D";
-  flaggedForReview?: boolean;
   answeredAt?: any;
 }
 

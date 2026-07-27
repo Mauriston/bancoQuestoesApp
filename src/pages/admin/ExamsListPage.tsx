@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  FileCheck, Plus, Clock, Users, Trash2, Eye, Calendar, Sparkles, CheckCircle2 
+import {
+  FileCheck, Plus, Trash2, Eye
 } from 'lucide-react';
 import { getExams, deleteExam } from '../../services/firebaseService';
 import { Exam } from '../../types';
@@ -33,8 +33,8 @@ export const ExamsListPage: React.FC = () => {
     try {
       await deleteExam(examId);
       await fetchExamsList();
-    } catch (err) {
-      alert("Erro ao excluir prova.");
+    } catch (err: any) {
+      alert("Erro ao excluir prova: " + (err?.message || "erro desconhecido."));
     }
   };
 
@@ -75,7 +75,9 @@ export const ExamsListPage: React.FC = () => {
             {exams.map((ex) => (
               <div
                 key={ex.id}
-                className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-slate-700 transition-all"
+                onClick={() => navigate(`/admin/exams/${ex.id}`)}
+                className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-slate-700 transition-all cursor-pointer"
+                title="Clique para visualizar a prova completa"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-3">
@@ -97,13 +99,20 @@ export const ExamsListPage: React.FC = () => {
 
                   <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-1">
                     <p>• Questões: <strong className="text-slate-200">{ex.questionCount}</strong></p>
-                    <p>• Duração: <strong className="text-slate-200">{ex.durationMinutes ? `${ex.durationMinutes} min` : 'Sem limite'}</strong></p>
                   </div>
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                  <Link
+                    to={`/admin/exams/${ex.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Ver Prova</span>
+                  </Link>
                   <button
-                    onClick={() => handleDelete(ex.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
                     className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
