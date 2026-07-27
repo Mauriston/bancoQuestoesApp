@@ -60,7 +60,19 @@ export const TakeExamPage: React.FC = () => {
         const answeredSet = new Set(savedAns.filter(a => a.selectedAlternative !== null).map(a => a.examQuestionId));
         setAnsweredIds(answeredSet);
         const firstUnanswered = examQuestions.findIndex(q => !answeredSet.has(q.id));
-        setCurrentIndex(firstUnanswered === -1 ? examQuestions.length - 1 : firstUnanswered);
+        const resumeIndex = firstUnanswered === -1 ? examQuestions.length - 1 : firstUnanswered;
+        setCurrentIndex(resumeIndex);
+
+        // Se todas as questões já foram respondidas, a retomada cai de volta
+        // na última questão — que já tem uma resposta salva. Sem isso,
+        // currentAlt ficaria null e um clique em "Revisar e Finalizar"
+        // reseparia essa resposta para null, apagando silenciosamente a
+        // última resposta do candidato antes mesmo de ele confirmar o envio.
+        if (firstUnanswered === -1 && examQuestions.length > 0) {
+          const lastQuestion = examQuestions[resumeIndex];
+          const savedForLast = savedAns.find(a => a.examQuestionId === lastQuestion.id);
+          setCurrentAlt(savedForLast?.selectedAlternative ?? null);
+        }
 
       } catch (err) {
         console.error("Erro ao iniciar prova:", err);
