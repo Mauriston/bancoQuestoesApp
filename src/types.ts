@@ -128,7 +128,9 @@ export interface Attempt {
   userId: string;
   userName?: string;
   assignmentId: string;
-  status: 'in_progress' | 'completed';
+  // 'grading' is a short-lived transactional lock set by finishAndGradeAttempt()
+  // to prevent a concurrent duplicate submit from double-counting userStats.
+  status: 'in_progress' | 'grading' | 'completed';
   startedAt?: any;
   completedAt?: any;
   elapsedSeconds?: number;

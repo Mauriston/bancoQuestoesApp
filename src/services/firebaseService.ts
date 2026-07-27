@@ -1,6 +1,7 @@
-import { 
-   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, 
-   query, where, orderBy, limit, serverTimestamp, writeBatch, Timestamp, addDoc 
+import {
+   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+   query, where, orderBy, limit, serverTimestamp, writeBatch, runTransaction, Timestamp, addDoc,
+   Query, DocumentData
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
@@ -134,7 +135,12 @@ export async function getQuestions(filters?: {
   searchQuery?: string;
 }): Promise<Question[]> {
   
-  let q: any = collection(db, 'questions');
+  // Typed as Query<DocumentData> (not `any`) so doc.data() below keeps its
+  // proper object type instead of widening to `unknown`, which previously
+  // broke `tsc --noEmit` (the project's `npm run lint`) with "Spread types
+  // may only be created from object types" and left the typecheck script
+  // permanently red/unusable for catching real regressions.
+  let q: Query<DocumentData> = collection(db, 'questions');
 
   // Filtros aplicados diretamente no banco de dados (lado do servidor) para performance
   if (filters?.areaId) {
@@ -195,22 +201,25 @@ export async function saveQuestion(
   const qId = questionData.id || generateId('q');
 
   // Public question document
+  // removeUndefined() is required here: the Firestore SDK throws
+  // "Unsupported field value: undefined" on setDoc/updateDoc, and optional
+  // fields like imageUrl are routinely sent as `undefined` by the admin form.
   const qRef = doc(db, 'questions', qId);
-  await setDoc(qRef, {
+  await setDoc(qRef, removeUndefined({
     ...questionData,
     id: qId,
     active: true,
     updatedAt: serverTimestamp(),
     createdAt: questionData.createdAt || serverTimestamp()
-  }, { merge: true });
+  }), { merge: true });
 
   // Protected answer key
   const ansRef = doc(db, 'questionAnswers', qId);
-  await setDoc(ansRef, {
+  await setDoc(ansRef, removeUndefined({
     questionId: qId,
     ...answerData,
     updatedAt: serverTimestamp()
-  }, { merge: true });
+  }), { merge: true });
 
   return qId;
 }
@@ -290,7 +299,11 @@ export async function createAndPublishExam(params: {
   for (let i = 0; i < params.questions.length; i++) {
     const q = params.questions[i];
     const eqRef = doc(db, 'exams', examId, 'questions', `eq_${i + 1}`);
-    const frozenQuestion: ExamQuestion = {
+    // removeUndefined() avoids the Firestore "Unsupported field value: undefined"
+    // error whenever a selected question has no imageUrl (the common case),
+    // which previously made publishing an exam fail as soon as one question
+    // in the selection had no image.
+    const frozenQuestion: ExamQuestion = removeUndefined({
       id: `eq_${i + 1}`,
       examId,
       originalQuestionId: q.id,
@@ -301,7 +314,7 @@ export async function createAndPublishExam(params: {
       statement: q.statement,
       alternatives: q.alternatives,
       imageUrl: q.imageUrl || undefined
-    };
+    });
     batch.set(eqRef, frozenQuestion);
     opCount++;
 
@@ -351,7 +364,43 @@ export async function createAndPublishExam(params: {
 }
 
 export async function deleteExam(examId: string): Promise<void> {
-  await deleteDoc(doc(db, 'exams', examId));
+  // Deleting only the exam document leaves two kinds of orphans behind,
+  // since Firestore never cascade-deletes subcollections or docs in other
+  // collections that merely reference the deleted id:
+  //   1. the frozen `exams/{examId}/questions` subcollection (dead storage
+  //      that getExamQuestions() would still happily serve if the id were
+  //      ever reused);
+  //   2. `examAssignments` docs still pointing residents at a prova that no
+  //      longer exists, which breaks ExamsPage/TakeExamPage for them
+  //      (getExamById returns null but the assignment stays 'available').
+  // Completed `attempts` are intentionally left untouched — they are a
+  // resident's performance history and must survive the source exam being
+  // removed from circulation.
+  const [questionsSnap, assignmentsSnap] = await Promise.all([
+    getDocs(collection(db, 'exams', examId, 'questions')),
+    getDocs(query(collection(db, 'examAssignments'), where('examId', '==', examId)))
+  ]);
+
+  let batch = writeBatch(db);
+  let opCount = 0;
+
+  const queueDelete = async (ref: ReturnType<typeof doc>) => {
+    batch.delete(ref);
+    opCount++;
+    if (opCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  };
+
+  for (const d of questionsSnap.docs) await queueDelete(d.ref);
+  for (const d of assignmentsSnap.docs) await queueDelete(d.ref);
+
+  batch.delete(doc(db, 'exams', examId));
+  opCount++;
+
+  await batch.commit();
 }
 
 // --- ASSIGNMENTS & ATTEMPTS ---
@@ -381,41 +430,50 @@ export async function startExamAttempt(assignmentId: string, userId: string, exa
   if (!exam) throw new Error("Prova não encontrada");
 
   const examQuestions = await getExamQuestions(examId);
+  const assignmentRef = doc(db, 'examAssignments', assignmentId);
 
-  // Check if attempt already exists
-  const qAttempt = query(
-    collection(db, 'attempts'), 
-    where('assignmentId', '==', assignmentId), 
-    where('status', '==', 'in_progress')
-  );
+  // The previous implementation did a plain getDocs() lookup for an existing
+  // 'in_progress' attempt and then a separate setDoc()/updateDoc(). Two
+  // near-simultaneous calls (a second browser tab, a double click, a retried
+  // request) could both see "no existing attempt" and each create their own
+  // attempt doc, leaving the assignment pointing at only one of them while
+  // the resident's answers end up split across two attempts. Claiming the
+  // attempt id inside a transaction, keyed off the assignment document,
+  // makes the "reuse or create" decision atomic.
+  const attemptId = await runTransaction(db, async (tx) => {
+    const assignSnap = await tx.get(assignmentRef);
+    if (!assignSnap.exists()) throw new Error("Atribuição de prova não encontrada");
+    const assignData = assignSnap.data() as ExamAssignment;
 
-  const existingSnaps = await getDocs(qAttempt);
-  if (!existingSnaps.empty) {
-    const existing = existingSnaps.docs[0];
-    return { attemptId: existing.id, examQuestions };
-  }
+    if (assignData.attemptId) {
+      const existingAttemptRef = doc(db, 'attempts', assignData.attemptId);
+      const existingAttemptSnap = await tx.get(existingAttemptRef);
+      if (existingAttemptSnap.exists()) {
+        return assignData.attemptId;
+      }
+    }
 
-  // Create new attempt
-  const attemptId = generateId('att');
-  const attemptRef = doc(db, 'attempts', attemptId);
-  const newAttempt: Attempt = {
-    id: attemptId,
-    examId,
-    examName: exam.name,
-    assignmentId,
-    userId,
-    status: 'in_progress',
-    totalQuestions: examQuestions.length,
-    startedAt: serverTimestamp() as any
-  };
+    const newAttemptId = generateId('att');
+    const attemptRef = doc(db, 'attempts', newAttemptId);
+    const newAttempt: Attempt = {
+      id: newAttemptId,
+      examId,
+      examName: exam.name,
+      assignmentId,
+      userId,
+      status: 'in_progress',
+      totalQuestions: examQuestions.length,
+      startedAt: serverTimestamp() as any
+    };
 
-  await setDoc(attemptRef, newAttempt);
+    tx.set(attemptRef, newAttempt);
+    tx.update(assignmentRef, {
+      status: 'started',
+      startedAt: serverTimestamp(),
+      attemptId: newAttemptId
+    });
 
-  // Update assignment status to 'started'
-  await updateDoc(doc(db, 'examAssignments', assignmentId), {
-    status: 'started',
-    startedAt: serverTimestamp(),
-    attemptId
+    return newAttemptId;
   });
 
   return { attemptId, examQuestions };

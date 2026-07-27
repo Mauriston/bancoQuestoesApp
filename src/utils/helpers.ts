@@ -8,6 +8,11 @@ export function normalizeText(str: string): string {
     .trim();
 }
 
+// Normalize a stored question image URL/path before rendering
+export function formatImageUrl(src: string): string {
+  return src.trim();
+}
+
 // Generate unique clean ID
 export function generateId(prefix = 'id'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
