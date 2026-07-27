@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Stethoscope, User, Search, ShieldCheck, Lock, AlertCircle, ArrowRight, CheckCircle2
+  Trophy, User, Search, Lock, AlertCircle, ArrowRight, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getActiveUsers } from '../services/firebaseService';
@@ -82,10 +82,10 @@ export const HomePage: React.FC = () => {
         {/* Brand Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-teal-500 to-cyan-500 text-white shadow-xl shadow-teal-500/20 mb-4">
-            <Stethoscope className="w-8 h-8" />
+            <Trophy className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Banco de Questões TEOT</h1>
-          <p className="text-xs text-slate-400 mt-1">Sociedade Brasileira de Ortopedia e Traumatologia</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Treinamento TEOT HMA 2027</h1>
+          <p className="text-xs text-slate-400 mt-1">O ano da vitória 🏆</p>
         </div>
 
         {/* Selection Card */}

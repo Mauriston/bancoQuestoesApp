@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Users, UserPlus, Search, Shield, UserCheck, UserX, Edit2, AlertCircle, Check, X 
+import { useNavigate } from 'react-router-dom';
+import {
+  Users, UserPlus, Search, UserCheck, UserX, AlertCircle, X
 } from 'lucide-react';
 import { getUsers, saveUser, updateUserActiveStatus, updateUserRole } from '../../services/firebaseService';
 import { createNewUserWithAuth } from '../../services/authService';
 import { AppUser } from '../../types';
 
 export const UsersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin'>('all');
@@ -157,11 +159,16 @@ export const UsersPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {filtered.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                  <tr
+                    key={u.id}
+                    onClick={() => navigate(`/admin/users/${u.id}`)}
+                    className="hover:bg-slate-800/40 transition-colors cursor-pointer"
+                    title="Clique para ver histórico e desempenho"
+                  >
                     <td className="p-3.5 font-semibold text-white flex items-center gap-2.5">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                        u.role === 'admin' 
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' 
+                        u.role === 'admin'
+                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                           : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
                       }`}>
                         {u.name.charAt(0).toUpperCase()}
@@ -171,7 +178,7 @@ export const UsersPage: React.FC = () => {
 
                     <td className="p-3.5 text-slate-400">{u.email}</td>
 
-                    <td className="p-3.5">
+                    <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={u.role}
                         onChange={(e) => handleChangeRole(u, e.target.value as any)}
@@ -184,8 +191,8 @@ export const UsersPage: React.FC = () => {
 
                     <td className="p-3.5">
                       <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                        u.active 
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                        u.active
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                           : 'bg-red-500/20 text-red-300 border-red-500/30'
                       }`}>
                         {u.active ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
@@ -193,7 +200,7 @@ export const UsersPage: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="p-3.5 text-right space-x-2">
+                    <td className="p-3.5 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleToggleActive(u)}
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors border ${

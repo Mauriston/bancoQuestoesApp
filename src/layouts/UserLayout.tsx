@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { 
-  FileText, History, BarChart3, LogOut, Stethoscope 
+import {
+  FileText, History, BarChart3, LogOut, Trophy
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,6 +21,21 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     { label: 'Meu Desempenho', path: '/app/performance', icon: BarChart3 }
   ];
 
+  // Execução de prova roda em tela cheia: sem topbar, sem navegação para
+  // outras páginas e sem rodapé — só o conteúdo da prova (TakeExamPage já
+  // desenha seu próprio topo minimalista com o ícone do app + nome da prova).
+  const isTakingExam = /^\/app\/exams\/[^/]+$/.test(location.pathname);
+
+  if (isTakingExam) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500 selection:text-white">
+        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
+          {children || <Outlet />}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-teal-500 selection:text-white">
       {/* Top Bar Navigation */}
@@ -32,16 +47,16 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <div className="flex items-center space-x-3">
               <Link to="/app/exams" className="flex items-center gap-2.5 group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform">
-                  <Stethoscope className="w-5 h-5" />
+                  <Trophy className="w-5 h-5" />
                 </div>
                 <div>
                   <h1 className="text-base font-bold text-white tracking-tight leading-tight flex items-center gap-1.5">
-                    Banco TEOT
+                    Treinamento TEOT HMA 2027
                     <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
                       Candidato
                     </span>
                   </h1>
-                  <p className="text-[11px] text-slate-400">Sociedade Brasileira de Ortopedia</p>
+                  <p className="text-[11px] text-slate-400">O ano da vitória 🏆</p>
                 </div>
               </Link>
             </div>
@@ -120,7 +135,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/80 py-6 text-center text-xs text-slate-500">
-        <p>Banco de Questões TEOT • Sociedade Brasileira de Ortopedia e Traumatologia (SBOT)</p>
+        <p>2026. Developed by Mauriston Martins. Powered by Claude Code / Google AI Studio.</p>
       </footer>
     </div>
   );
