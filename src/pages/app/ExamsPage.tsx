@@ -4,7 +4,7 @@ import {
   FileText, CheckCircle2, Play, ChevronRight, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserAssignments } from '../../services/firebaseService';
+import { getUserAssignments, isExamActive } from '../../services/firebaseService';
 import { ExamAssignment, Exam } from '../../types';
 import { formatDate } from '../../utils/helpers';
 
@@ -35,7 +35,12 @@ export const ExamsPage: React.FC = () => {
     );
   }
 
-  const availableExams = assignments.filter(a => a.status === 'available' || a.status === 'started');
+  // Uma prova recém-desativada não pode ser mais iniciada, mas quem já
+  // estava no meio dela não é interrompido — só não aparecem mais provas
+  // 'available' cuja prova de origem está inativa.
+  const availableExams = assignments.filter(a =>
+    a.status === 'started' || (a.status === 'available' && isExamActive(a.exam))
+  );
   const completedExams = assignments.filter(a => a.status === 'completed');
 
   return (

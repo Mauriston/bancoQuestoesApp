@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats } from '../../services/firebaseService';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff } from 'lucide-react';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
 
@@ -12,6 +12,7 @@ export const ExamViewPage: React.FC = () => {
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
   const [stats, setStats] = useState<Record<string, { totalAnswered: number; totalCorrect: number }>>({});
   const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     async function loadExam() {
@@ -42,6 +43,20 @@ export const ExamViewPage: React.FC = () => {
     loadExam();
   }, [examId]);
 
+  const handleToggleActive = async () => {
+    if (!exam) return;
+    setToggling(true);
+    try {
+      const nextActive = !isExamActive(exam);
+      await updateExamActiveStatus(exam.id, nextActive);
+      setExam({ ...exam, active: nextActive });
+    } catch (err: any) {
+      alert("Erro ao alterar status da prova: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setToggling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -70,10 +85,34 @@ export const ExamViewPage: React.FC = () => {
         <span>Voltar para Lista de Provas</span>
       </Link>
 
-      <div>
-        <h1 className="text-xl font-bold text-white">{exam.name}</h1>
-        {exam.description && <p className="text-xs text-slate-400 mt-1">{exam.description}</p>}
-        <p className="text-[11px] text-slate-500 mt-1">{questions.length} questões — visualização administrativa com gabarito e taxa de acerto</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <h1 className="text-xl font-bold text-white">{exam.name}</h1>
+            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+              isExamActive(exam)
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}>
+              {isExamActive(exam) ? 'Ativa' : 'Inativa'}
+            </span>
+          </div>
+          {exam.description && <p className="text-xs text-slate-400 mt-1">{exam.description}</p>}
+          <p className="text-[11px] text-slate-500 mt-1">{questions.length} questões — visualização administrativa com gabarito e taxa de acerto</p>
+        </div>
+
+        <button
+          onClick={handleToggleActive}
+          disabled={toggling}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors disabled:opacity-40 ${
+            isExamActive(exam)
+              ? 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10'
+              : 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10'
+          }`}
+        >
+          {isExamActive(exam) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+          <span>{isExamActive(exam) ? 'Desativar Prova' : 'Ativar Prova'}</span>
+        </button>
       </div>
 
       <section className="space-y-6">

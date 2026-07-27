@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { History, Search, ChevronRight, Calendar, User, FileText } from 'lucide-react';
-import { getAllAttempts, getUsers } from '../../services/firebaseService';
+import { History, Search, ChevronRight, User, Trash2 } from 'lucide-react';
+import { getAllAttempts, getUsers, deleteAttempt } from '../../services/firebaseService';
 import { Attempt } from '../../types';
 import { formatDate } from '../../utils/helpers';
 
@@ -10,9 +10,11 @@ export const AttemptsPage: React.FC = () => {
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([getAllAttempts(), getUsers()])
+  const fetchAttempts = () => {
+    setLoading(true);
+    return Promise.all([getAllAttempts(), getUsers()])
       .then(([res, users]) => {
         setAttempts(res.sort((a, b) => {
           const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
@@ -25,7 +27,24 @@ export const AttemptsPage: React.FC = () => {
       })
       .catch(err => console.error("Erro ao carregar tentativas:", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchAttempts();
   }, []);
+
+  const handleDelete = async (attemptId: string) => {
+    if (!confirm("Excluir esta tentativa do histórico do residente? A nota e as respostas dela deixam de existir, e a prova volta a ficar disponível para ele refazer.")) return;
+    setDeletingId(attemptId);
+    try {
+      await deleteAttempt(attemptId);
+      await fetchAttempts();
+    } catch (err: any) {
+      alert("Erro ao excluir tentativa: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const nameOf = (a: Attempt) => a.userName || userNameById[a.userId] || 'Usuário removido';
 
@@ -110,6 +129,15 @@ export const AttemptsPage: React.FC = () => {
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
                     )}
+
+                    <button
+                      onClick={() => handleDelete(att.id)}
+                      disabled={deletingId === att.id}
+                      title="Excluir esta tentativa do histórico"
+                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
 
                 </div>
