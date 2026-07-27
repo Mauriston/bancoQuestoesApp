@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  FileText, Clock, CheckCircle2, Play, ChevronRight, AlertCircle, Sparkles, BookOpen 
+import {
+  FileText, CheckCircle2, Play, ChevronRight, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAssignments } from '../../services/firebaseService';
@@ -79,21 +79,12 @@ export const ExamsPage: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                        isStarted 
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' 
+                        isStarted
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                           : 'bg-teal-500/20 text-teal-300 border-teal-500/30'
                       }`}>
                         {isStarted ? 'Em Andamento' : 'Disponível'}
                       </span>
-
-                      {asgn.exam?.durationMinutes ? (
-                        <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          {asgn.exam.durationMinutes} min
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-400">Sem limite de tempo</span>
-                      )}
                     </div>
 
                     <h3 className="text-sm font-bold text-white group-hover:text-teal-300 transition-colors line-clamp-2">

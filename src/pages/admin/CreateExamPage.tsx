@@ -52,7 +52,8 @@ export const CreateExamPage: React.FC = () => {
         setAllQuestions(qList);
         setAreas(arList);
         setThemes(thList);
-        setActiveUsers(uList);
+        // O admin não realiza provas, então não pode ser destinatário.
+        setActiveUsers(uList.filter(u => u.role !== 'admin'));
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
       } finally {
@@ -61,6 +62,8 @@ export const CreateExamPage: React.FC = () => {
     }
     loadResources();
   }, []);
+
+  const themesForAreaFilter = areaFilter ? themes.filter(t => t.areaId === areaFilter) : themes;
 
   const filteredQuestions = allQuestions.filter(q => {
     const matchesArea = !areaFilter || q.areaId === areaFilter;
@@ -248,7 +251,10 @@ export const CreateExamPage: React.FC = () => {
             />
             <select
               value={areaFilter}
-              onChange={(e) => setAreaFilter(e.target.value)}
+              onChange={(e) => {
+                setAreaFilter(e.target.value);
+                setThemeFilter('');
+              }}
               className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
             >
               <option value="">Todas as Áreas</option>
@@ -257,10 +263,11 @@ export const CreateExamPage: React.FC = () => {
             <select
               value={themeFilter}
               onChange={(e) => setThemeFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
+              disabled={!areaFilter}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 disabled:opacity-50"
             >
-              <option value="">Todos os Temas</option>
-              {themes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <option value="">{areaFilter ? 'Todos os Temas' : 'Selecione uma área'}</option>
+              {themesForAreaFilter.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
 

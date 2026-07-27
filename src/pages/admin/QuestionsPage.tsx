@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload 
+import {
+  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload
 } from 'lucide-react';
 import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer } from '../../services/firebaseService';
 import { Question, Area, Theme } from '../../types';
+import { QuestionImage } from '../../components/QuestionImage';
 
 export const QuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -18,12 +19,19 @@ export const QuestionsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hasImageFilter, setHasImageFilter] = useState<boolean | undefined>(undefined);
 
+  // Full-question preview modal (exatamente como o candidato vê na prova)
+  const [viewingQuestion, setViewingQuestion] = useState<Question | null>(null);
+
   // Edit/Create Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingQId, setEditingQId] = useState<string | null>(null);
-  
+
   const [areaId, setAreaId] = useState('');
   const [themeId, setThemeId] = useState('');
+  // Temas do formulário do modal, dependentes da área escolhida ali dentro —
+  // mantidos separados de `themes` (que alimenta o filtro da listagem) para
+  // que escolher uma área no modal não altere o filtro da tela por trás dele.
+  const [modalThemes, setModalThemes] = useState<Theme[]>([]);
   const [sourceExam, setSourceExam] = useState('SBOT');
   const [statement, setStatement] = useState('');
   const [altA, setAltA] = useState('');
@@ -65,9 +73,10 @@ export const QuestionsPage: React.FC = () => {
     fetchQuestionsList();
   }, [selectedAreaId, selectedThemeId, sourceExamFilter, hasImageFilter, searchQuery]);
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = async () => {
+    const defaultAreaId = areas[0]?.id || '';
     setEditingQId(null);
-    setAreaId(areas[0]?.id || '');
+    setAreaId(defaultAreaId);
     setThemeId('');
     setSourceExam('SBOT');
     setStatement('');
@@ -80,6 +89,7 @@ export const QuestionsPage: React.FC = () => {
     setComments('');
     setImageUrl(null);
     setImageFile(null);
+    setModalThemes(defaultAreaId ? await getThemes(defaultAreaId) : []);
     setModalOpen(true);
   };
 
@@ -95,6 +105,7 @@ export const QuestionsPage: React.FC = () => {
     setAltD(q.alternatives.D);
     setImageUrl(q.imageUrl || null);
     setImageFile(null);
+    setModalThemes(await getThemes(q.areaId));
 
     // Fetch answer key
     const ansKey = await getQuestionAnswer(q.id);
@@ -242,38 +253,52 @@ export const QuestionsPage: React.FC = () => {
         ) : (
           <div className="divide-y divide-slate-800/80">
             {questions.map((q) => (
-              <div key={q.id} className="p-4 sm:p-5 hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1.5 max-w-3xl">
-                  <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase font-bold">
-                    <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      {q.areaName || q.areaId}
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                      {q.themeName || q.themeId}
-                    </span>
-                    {q.imageUrl && (
-                      <span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1">
-                        <ImageIcon className="w-3 h-3" />
-                        Com Imagem
+              <div
+                key={q.id}
+                onClick={() => setViewingQuestion(q)}
+                className="p-4 sm:p-5 hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer"
+                title="Clique para visualizar a questão completa"
+              >
+                <div className="flex items-start gap-3 max-w-3xl">
+                  {q.imageUrl && (
+                    <img
+                      src={q.imageUrl}
+                      alt="Miniatura da imagem da questão"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
+                    />
+                  )}
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase font-bold">
+                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                        {q.areaName || q.areaId}
                       </span>
-                    )}
-                  </div>
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                        {q.themeName || q.themeId}
+                      </span>
+                      {q.imageUrl && (
+                        <span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1">
+                          <ImageIcon className="w-3 h-3" />
+                          Com Imagem
+                        </span>
+                      )}
+                    </div>
 
-                  <p className="text-xs sm:text-sm font-semibold text-white line-clamp-2 leading-relaxed">
-                    {q.statement}
-                  </p>
+                    <p className="text-xs sm:text-sm font-semibold text-white line-clamp-2 leading-relaxed">
+                      {q.statement}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                   <button
-                    onClick={() => handleOpenEditModal(q)}
+                    onClick={(e) => { e.stopPropagation(); handleOpenEditModal(q); }}
                     className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
                     title="Editar Questão"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(q.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
                     className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
                     title="Excluir Questão"
                   >
@@ -308,8 +333,10 @@ export const QuestionsPage: React.FC = () => {
                   <select
                     value={areaId}
                     onChange={(e) => {
-                      setAreaId(e.target.value);
-                      getThemes(e.target.value).then(res => setThemes(res));
+                      const newAreaId = e.target.value;
+                      setAreaId(newAreaId);
+                      setThemeId('');
+                      getThemes(newAreaId || undefined).then(res => setModalThemes(res));
                     }}
                     required
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
@@ -325,10 +352,11 @@ export const QuestionsPage: React.FC = () => {
                     value={themeId}
                     onChange={(e) => setThemeId(e.target.value)}
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                    disabled={!areaId}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 disabled:opacity-50"
                   >
-                    <option value="">Selecione o Tema</option>
-                    {themes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    <option value="">{areaId ? 'Selecione o Tema' : 'Selecione a área primeiro'}</option>
+                    {modalThemes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -443,6 +471,56 @@ export const QuestionsPage: React.FC = () => {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Visualização completa: exatamente como o candidato vê na execução da prova */}
+      {viewingQuestion && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setViewingQuestion(null)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 p-4 sticky top-0 bg-slate-900 z-10">
+              <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
+                Pré-visualização da Questão
+              </span>
+              <button onClick={() => setViewingQuestion(null)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
+                {viewingQuestion.statement}
+              </p>
+
+              {viewingQuestion.imageUrl && (
+                <QuestionImage src={viewingQuestion.imageUrl} allowZoom={false} />
+              )}
+
+              <div className="space-y-3 mt-2">
+                {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                  const text = viewingQuestion.alternatives[letter];
+                  if (!text) return null;
+                  return (
+                    <div
+                      key={letter}
+                      className="w-full p-4 rounded-xl border text-left flex items-start gap-3.5 bg-slate-950/80 border-slate-800 text-slate-300"
+                    >
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 bg-slate-800 text-slate-400 border border-slate-700">
+                        {letter}
+                      </div>
+                      <span className="text-xs sm:text-sm leading-relaxed font-normal flex-1">{text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}

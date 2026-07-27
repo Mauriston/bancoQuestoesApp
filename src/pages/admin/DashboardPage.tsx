@@ -1,25 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Users, FileCheck, History, Award, Clock, Download, TrendingUp, AlertTriangle, ArrowUpRight 
+import {
+  Users, FileCheck, Award, ClipboardCheck, Download, TrendingUp
 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
-import { getActiveUsers, getExams, getAllAttempts, getAreas } from '../../services/firebaseService';
+import { getActiveUsers, getUsers, getExams, getAllAttempts, getAreas } from '../../services/firebaseService';
 import { AppUser, Exam, Attempt, Area } from '../../types';
-import { exportToCSV, formatTimeSeconds } from '../../utils/helpers';
+import { exportToCSV } from '../../utils/helpers';
 
 export const DashboardPage: React.FC = () => {
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
         setLoading(true);
-        const [uList, eList, aList, arList] = await Promise.all([
+        const [uList, allUsers, eList, aList, arList] = await Promise.all([
           getActiveUsers(),
+          getUsers(),
           getExams(),
           getAllAttempts(),
           getAreas()
@@ -28,6 +29,9 @@ export const DashboardPage: React.FC = () => {
         setExams(eList);
         setAttempts(aList);
         setAreas(arList);
+        // Tentativas antigas podem ter sido gravadas antes do userName ser
+        // desnormalizado no documento — esse mapa cobre esses registros.
+        setUserNameById(Object.fromEntries(allUsers.map(u => [u.id, u.name])));
       } catch (err) {
         console.error("Erro ao carregar dashboard admin:", err);
       } finally {
@@ -52,18 +56,14 @@ export const DashboardPage: React.FC = () => {
   const totalQuestionsSum = completedAttempts.reduce((sum, a) => sum + (a.totalQuestions || 0), 0);
   const overallAvgScore = totalQuestionsSum > 0 ? Math.round((totalCorrectSum / totalQuestionsSum) * 100) : 0;
 
-  const totalTimeSum = completedAttempts.reduce((sum, a) => sum + (a.elapsedSeconds || 0), 0);
-  const avgDurationSeconds = completedAttempts.length > 0 ? Math.round(totalTimeSum / completedAttempts.length) : 0;
-
   const handleExportAttemptsCSV = () => {
     const csvData = completedAttempts.map(a => ({
       'ID Tentativa': a.id,
-      'Usuário': a.userName || a.userId,
+      'Usuário': a.userName || userNameById[a.userId] || 'Usuário removido',
       'Prova': a.examName || a.examId,
       'Total Questões': a.totalQuestions,
       'Acertos': a.correctAnswers || 0,
       'Aproveitamento (%)': a.scorePercentage || 0,
-      'Tempo (segundos)': a.elapsedSeconds || 0,
       'Status': a.status
     }));
 
@@ -137,11 +137,11 @@ export const DashboardPage: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
+              <ClipboardCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs text-slate-400">Tempo Médio / Prova</p>
-              <p className="text-xl font-black text-white mt-0.5">{formatTimeSeconds(avgDurationSeconds)}</p>
+              <p className="text-xs text-slate-400">Tentativas Concluídas</p>
+              <p className="text-xl font-black text-white mt-0.5">{completedAttempts.length}</p>
             </div>
           </div>
         </div>
@@ -164,14 +164,13 @@ export const DashboardPage: React.FC = () => {
                   <th className="p-3">Usuário</th>
                   <th className="p-3">Acertos</th>
                   <th className="p-3">Aproveitamento</th>
-                  <th className="p-3">Tempo Spent</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {completedAttempts.slice(0, 10).map((att) => (
                   <tr key={att.id} className="hover:bg-slate-800/40">
                     <td className="p-3 font-semibold text-white">{att.examName || 'Simulado'}</td>
-                    <td className="p-3 text-slate-300">{att.userName || att.userId}</td>
+                    <td className="p-3 text-slate-300">{att.userName || userNameById[att.userId] || 'Usuário removido'}</td>
                     <td className="p-3 font-bold text-teal-400">{att.correctAnswers} / {att.totalQuestions}</td>
                     <td className="p-3">
                       <span className={`font-bold ${
@@ -180,7 +179,6 @@ export const DashboardPage: React.FC = () => {
                         {att.scorePercentage}%
                       </span>
                     </td>
-                    <td className="p-3 text-slate-400">{formatTimeSeconds(att.elapsedSeconds || 0)}</td>
                   </tr>
                 ))}
               </tbody>

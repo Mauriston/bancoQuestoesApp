@@ -18,6 +18,7 @@ import { UsersPage } from '../pages/admin/UsersPage';
 import { QuestionsPage } from '../pages/admin/QuestionsPage';
 import { ImportPage } from '../pages/admin/ImportPage';
 import { ExamsListPage } from '../pages/admin/ExamsListPage';
+import { ExamViewPage } from '../pages/admin/ExamViewPage';
 import { CreateExamPage } from '../pages/admin/CreateExamPage';
 import { AttemptsPage } from '../pages/admin/AttemptsPage';
 
@@ -99,6 +100,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="import" element={<ImportPage />} />
         <Route path="exams" element={<ExamsListPage />} />
         <Route path="exams/new" element={<CreateExamPage />} />
+        <Route path="exams/:examId" element={<ExamViewPage />} />
         <Route path="attempts" element={<AttemptsPage />} />
       </Route>
 

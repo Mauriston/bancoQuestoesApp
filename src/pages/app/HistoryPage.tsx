@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { History, Search, ChevronRight, CheckCircle2, Clock, Calendar } from 'lucide-react';
+import { History, Search, ChevronRight, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAttempts } from '../../services/firebaseService';
 import { Attempt } from '../../types';
-import { formatDate, formatTimeSeconds } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 
 export const HistoryPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -99,8 +99,6 @@ export const HistoryPage: React.FC = () => {
 
                     <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
                       <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>
-                      <span>•</span>
-                      <span>Tempo: <strong>{formatTimeSeconds(att.elapsedSeconds || 0)}</strong></span>
                     </div>
                   </div>
 

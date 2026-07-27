@@ -330,7 +330,9 @@ export async function createAndPublishExam(params: {
   let targetUserIds: string[] = [];
   if (params.assignedUserIds.includes('all')) {
     const activeUsers = await getActiveUsers();
-    targetUserIds = activeUsers.map(u => u.id);
+    // O admin não realiza provas — mesmo que "all" seja escolhido, ele nunca
+    // deve virar candidato de uma prova.
+    targetUserIds = activeUsers.filter(u => u.role !== 'admin').map(u => u.id);
   } else {
     targetUserIds = params.assignedUserIds;
   }
@@ -376,31 +378,44 @@ export async function deleteExam(examId: string): Promise<void> {
   // Completed `attempts` are intentionally left untouched — they are a
   // resident's performance history and must survive the source exam being
   // removed from circulation.
-  const [questionsSnap, assignmentsSnap] = await Promise.all([
-    getDocs(collection(db, 'exams', examId, 'questions')),
-    getDocs(query(collection(db, 'examAssignments'), where('examId', '==', examId)))
-  ]);
+  //
+  // The exam document itself is deleted first, on its own — that's the part
+  // the admin actually asked for and it must not get stuck behind cleanup.
+  // A single atomic batch spanning every resident's examAssignments doc used
+  // to mean one denied/failed delete in that batch (any Firestore write
+  // batch fails as a whole if one operation is rejected) silently took the
+  // exam-document delete down with it, making "Excluir" look broken even
+  // though the request itself was fine. Cleanup now runs after, best-effort.
+  await deleteDoc(doc(db, 'exams', examId));
 
-  let batch = writeBatch(db);
-  let opCount = 0;
+  try {
+    const [questionsSnap, assignmentsSnap] = await Promise.all([
+      getDocs(collection(db, 'exams', examId, 'questions')),
+      getDocs(query(collection(db, 'examAssignments'), where('examId', '==', examId)))
+    ]);
 
-  const queueDelete = async (ref: ReturnType<typeof doc>) => {
-    batch.delete(ref);
-    opCount++;
-    if (opCount >= 400) {
+    let batch = writeBatch(db);
+    let opCount = 0;
+
+    const queueDelete = async (ref: ReturnType<typeof doc>) => {
+      batch.delete(ref);
+      opCount++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opCount = 0;
+      }
+    };
+
+    for (const d of questionsSnap.docs) await queueDelete(d.ref);
+    for (const d of assignmentsSnap.docs) await queueDelete(d.ref);
+
+    if (opCount > 0) {
       await batch.commit();
-      batch = writeBatch(db);
-      opCount = 0;
     }
-  };
-
-  for (const d of questionsSnap.docs) await queueDelete(d.ref);
-  for (const d of assignmentsSnap.docs) await queueDelete(d.ref);
-
-  batch.delete(doc(db, 'exams', examId));
-  opCount++;
-
-  await batch.commit();
+  } catch (cleanupErr) {
+    console.warn(`Prova ${examId} excluída, mas a limpeza de dados órfãos (questões congeladas/atribuições) falhou:`, cleanupErr);
+  }
 }
 
 // --- ASSIGNMENTS & ATTEMPTS ---
@@ -429,7 +444,10 @@ export async function startExamAttempt(assignmentId: string, userId: string, exa
   const exam = await getExamById(examId);
   if (!exam) throw new Error("Prova não encontrada");
 
-  const examQuestions = await getExamQuestions(examId);
+  const [examQuestions, user] = await Promise.all([
+    getExamQuestions(examId),
+    getUserById(userId)
+  ]);
   const assignmentRef = doc(db, 'examAssignments', assignmentId);
 
   // The previous implementation did a plain getDocs() lookup for an existing
@@ -455,16 +473,17 @@ export async function startExamAttempt(assignmentId: string, userId: string, exa
 
     const newAttemptId = generateId('att');
     const attemptRef = doc(db, 'attempts', newAttemptId);
-    const newAttempt: Attempt = {
+    const newAttempt: Attempt = removeUndefined({
       id: newAttemptId,
       examId,
       examName: exam.name,
       assignmentId,
       userId,
+      userName: user?.name,
       status: 'in_progress',
       totalQuestions: examQuestions.length,
       startedAt: serverTimestamp() as any
-    };
+    });
 
     tx.set(attemptRef, newAttempt);
     tx.update(assignmentRef, {
@@ -480,13 +499,12 @@ export async function startExamAttempt(assignmentId: string, userId: string, exa
 }
 
 export async function saveAttemptAnswer(
-  attemptId: string, 
-  examQuestionId: string, 
+  attemptId: string,
+  examQuestionId: string,
   originalQuestionId: string,
   selectedAlternative: "A" | "B" | "C" | "D" | null,
   areaId: string,
-  themeId: string,
-  flaggedForReview?: boolean
+  themeId: string
 ): Promise<void> {
   const answerRef = doc(db, 'attempts', attemptId, 'answers', examQuestionId);
   await setDoc(answerRef, {
@@ -497,7 +515,6 @@ export async function saveAttemptAnswer(
     selectedAlternative,
     areaId,
     themeId,
-    flaggedForReview: flaggedForReview || false,
     answeredAt: serverTimestamp()
   }, { merge: true });
 }
@@ -536,6 +553,40 @@ export async function getAllAttempts(): Promise<Attempt[]> {
     attempts.push({ id: doc.id, ...doc.data() } as Attempt);
   });
   return attempts;
+}
+
+export async function getAttemptsForExam(examId: string): Promise<Attempt[]> {
+  const q = query(collection(db, 'attempts'), where('examId', '==', examId));
+  const snapshot = await getDocs(q);
+  const attempts: Attempt[] = [];
+  snapshot.forEach(doc => {
+    attempts.push({ id: doc.id, ...doc.data() } as Attempt);
+  });
+  return attempts;
+}
+
+// Per-question accuracy across every completed attempt of a given prova —
+// used by the admin exam-review screen to show, alongside the gabarito, how
+// many candidates got each question right.
+export async function getExamQuestionStats(examId: string): Promise<Record<string, { totalAnswered: number; totalCorrect: number }>> {
+  const attempts = (await getAttemptsForExam(examId)).filter(a => a.status === 'completed');
+
+  const statsByExamQuestionId: Record<string, { totalAnswered: number; totalCorrect: number }> = {};
+
+  const perAttemptAnswers = await Promise.all(attempts.map(a => getAttemptAnswers(a.id)));
+
+  for (const answers of perAttemptAnswers) {
+    for (const ans of answers) {
+      if (!ans.selectedAlternative) continue; // não respondida, não entra na taxa de acerto
+      if (!statsByExamQuestionId[ans.examQuestionId]) {
+        statsByExamQuestionId[ans.examQuestionId] = { totalAnswered: 0, totalCorrect: 0 };
+      }
+      statsByExamQuestionId[ans.examQuestionId].totalAnswered += 1;
+      if (ans.isCorrect) statsByExamQuestionId[ans.examQuestionId].totalCorrect += 1;
+    }
+  }
+
+  return statsByExamQuestionId;
 }
 
 // --- USER STATS ---

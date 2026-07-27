@@ -1,26 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, ArrowRight, Bookmark, CheckCircle2, 
-  X, ZoomIn, Send 
+import {
+  ArrowRight, CheckCircle2, X, ZoomIn, Send
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  getExamById, getExamQuestions, startExamAttempt, getAttemptAnswers, 
-  saveAttemptAnswer, getUserAssignments 
+import {
+  getExamById, getExamQuestions, startExamAttempt, getAttemptAnswers,
+  saveAttemptAnswer, getUserAssignments
 } from '../../services/firebaseService';
 import { finishAndGradeAttempt } from '../../services/gradingService';
-import { Exam, ExamQuestion, AttemptAnswer } from '../../types';
+import { Exam, ExamQuestion } from '../../types';
 
 export const TakeExamPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  
+
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [attemptId, setAttemptId] = useState<string>('');
-  const [answers, setAnswers] = useState<Record<string, { alt: "A"|"B"|"C"|"D"|null; flagged: boolean }>>({});
+  // Só guarda a resposta da questão atual — usuário não pode voltar para
+  // revisar/alterar questões já respondidas, então não há por que manter um
+  // mapa completo de respostas em memória durante a execução. Guardamos os
+  // ids (não as respostas) das questões já respondidas apenas para contar
+  // corretamente o progresso sem depender de reler o Firestore a cada clique.
+  const [currentAlt, setCurrentAlt] = useState<"A" | "B" | "C" | "D" | null>(null);
+  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -35,29 +40,39 @@ export const TakeExamPage: React.FC = () => {
         const allAssignments = await getUserAssignments(currentUser.id);
         const asgn = allAssignments.find(a => a.id === assignmentId);
         if (!asgn) throw new Error("Atribuição de prova não encontrada");
-        
+
         const examData = await getExamById(asgn.examId);
         if (!examData) throw new Error("Dados da prova não encontrados");
         setExam(examData);
 
         const { attemptId: attId, examQuestions } = await startExamAttempt(
-          assignmentId, 
-          currentUser.id, 
+          assignmentId,
+          currentUser.id,
           asgn.examId
         );
-        
+
         setAttemptId(attId);
         setQuestions(examQuestions);
 
+        // Retomando uma tentativa em andamento: avança automaticamente para
+        // a primeira questão ainda não respondida (não é possível voltar).
         const savedAns = await getAttemptAnswers(attId);
-        const ansMap: Record<string, { alt: "A"|"B"|"C"|"D"|null; flagged: boolean }> = {};
-        savedAns.forEach(a => {
-          ansMap[a.examQuestionId] = {
-            alt: a.selectedAlternative,
-            flagged: !!a.flaggedForReview
-          };
-        });
-        setAnswers(ansMap);
+        const answeredSet = new Set(savedAns.filter(a => a.selectedAlternative !== null).map(a => a.examQuestionId));
+        setAnsweredIds(answeredSet);
+        const firstUnanswered = examQuestions.findIndex(q => !answeredSet.has(q.id));
+        const resumeIndex = firstUnanswered === -1 ? examQuestions.length - 1 : firstUnanswered;
+        setCurrentIndex(resumeIndex);
+
+        // Se todas as questões já foram respondidas, a retomada cai de volta
+        // na última questão — que já tem uma resposta salva. Sem isso,
+        // currentAlt ficaria null e um clique em "Revisar e Finalizar"
+        // reseparia essa resposta para null, apagando silenciosamente a
+        // última resposta do candidato antes mesmo de ele confirmar o envio.
+        if (firstUnanswered === -1 && examQuestions.length > 0) {
+          const lastQuestion = examQuestions[resumeIndex];
+          const savedForLast = savedAns.find(a => a.examQuestionId === lastQuestion.id);
+          setCurrentAlt(savedForLast?.selectedAlternative ?? null);
+        }
 
       } catch (err) {
         console.error("Erro ao iniciar prova:", err);
@@ -69,55 +84,43 @@ export const TakeExamPage: React.FC = () => {
   }, [assignmentId, currentUser]);
 
   const currentQ = questions[currentIndex];
-  const currentAns = currentQ ? answers[currentQ.id] : null;
+  const isLastQuestion = currentIndex === questions.length - 1;
+  const answeredCount = answeredIds.size;
 
-  const handleSelectOption = async (alt: "A" | "B" | "C" | "D") => {
-    if (!currentQ || !attemptId) return;
-    const newAlt = currentAns?.alt === alt ? null : alt; 
-    const newFlag = currentAns?.flagged || false;
-    
-    setAnswers(prev => ({
-      ...prev,
-      [currentQ.id]: { alt: newAlt, flagged: newFlag }
-    }));
-    
-    try {
-      await saveAttemptAnswer(
-        attemptId,
-        currentQ.id,
-        currentQ.originalQuestionId,
-        newAlt,
-        currentQ.areaId,
-        currentQ.themeId,
-        newFlag
-      );
-    } catch (e) {
-      console.error("Erro ao salvar resposta no banco:", e);
-    }
+  const handleSelectOption = (alt: "A" | "B" | "C" | "D") => {
+    setCurrentAlt(prev => (prev === alt ? null : alt));
   };
 
-  const handleToggleFlag = async () => {
-    if (!currentQ || !attemptId) return;
-    const newFlag = !currentAns?.flagged;
-    const currentSelected = currentAns?.alt || null;
-    
-    setAnswers(prev => ({
-      ...prev,
-      [currentQ.id]: { alt: currentSelected, flagged: newFlag }
-    }));
-    
+  const handleAdvance = async () => {
+    if (!currentQ || !attemptId || submitting) return;
+    setSubmitting(true);
     try {
       await saveAttemptAnswer(
         attemptId,
         currentQ.id,
         currentQ.originalQuestionId,
-        currentSelected,
+        currentAlt,
         currentQ.areaId,
-        currentQ.themeId,
-        newFlag
+        currentQ.themeId
       );
+      setAnsweredIds(prev => {
+        const next = new Set(prev);
+        if (currentAlt !== null) next.add(currentQ.id);
+        else next.delete(currentQ.id);
+        return next;
+      });
+
+      if (isLastQuestion) {
+        setFinishModalOpen(true);
+      } else {
+        setCurrentIndex(prev => prev + 1);
+        setCurrentAlt(null);
+      }
     } catch (e) {
-      console.error("Erro ao salvar flag:", e);
+      console.error("Erro ao salvar resposta no banco:", e);
+      alert("Ocorreu um erro ao salvar sua resposta. Tente novamente.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -145,12 +148,11 @@ export const TakeExamPage: React.FC = () => {
     );
   }
 
-  const answeredCount = Object.values(answers).filter(a => a.alt !== null).length;
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
 
   return (
-    <div className="space-y-6 pb-12">
-      
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+
       {/* Top Header Bar */}
       <div className="sticky top-16 z-30 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -161,180 +163,94 @@ export const TakeExamPage: React.FC = () => {
             Questão {currentIndex + 1} de {questions.length} ({answeredCount} respondidas)
           </p>
         </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setFinishModalOpen(true)}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-teal-500/20 transition-all"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Finalizar Prova</span>
-          </button>
-        </div>
+        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+          Não é possível retornar a questões anteriores
+        </p>
       </div>
 
       {/* Progress Bar */}
       <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800/80">
-        <div 
+        <div
           className="bg-gradient-to-r from-teal-500 to-cyan-500 h-full transition-all duration-300"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
 
-      {/* Main Exam Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
-        {/* Question Content Box */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            
-            {/* Question Top Tags */}
-            <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800/80">
-              <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
-                Questão #{currentIndex + 1}
-              </span>
+      {/* Question Content Box */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800/80">
+          <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
+            Questão #{currentIndex + 1}
+          </span>
+        </div>
+
+        {/* Enunciado */}
+        <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
+          {currentQ.statement}
+        </p>
+
+        {/* Image Preview se houver */}
+        {currentQ.imageUrl && (
+          <div className="mb-6 p-3 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-md">
+            <div className="relative group cursor-pointer" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
+              <img
+                src={currentQ.imageUrl}
+                alt="Imagem da questão"
+                className="rounded-xl max-h-72 w-auto object-contain mx-auto"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+                <ZoomIn className="w-4 h-4" />
+                <span>Clique para ampliar</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Alternativas */}
+        <div className="space-y-3">
+          {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+            const text = currentQ.alternatives[letter];
+            if (!text) return null;
+            const isSelected = currentAlt === letter;
+
+            return (
               <button
-                onClick={handleToggleFlag}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  currentAns?.flagged 
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                key={letter}
+                onClick={() => handleSelectOption(letter)}
+                className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 transition-all ${
+                  isSelected
+                    ? 'bg-teal-500/15 border-teal-500/60 text-white shadow-md shadow-teal-500/10'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <Bookmark className={`w-3.5 h-3.5 ${currentAns?.flagged ? 'fill-amber-400 text-amber-400' : ''}`} />
-                <span>{currentAns?.flagged ? 'Marcar para Revisar' : 'Marcar para Revisar'}</span>
-              </button>
-            </div>
-
-            {/* Enunciado */}
-            <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
-              {currentQ.statement}
-            </p>
-
-            {/* Image Preview se houver */}
-            {currentQ.imageUrl && (
-              <div className="mb-6 p-3 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-md">
-                <div className="relative group cursor-pointer" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
-                  <img
-                    src={currentQ.imageUrl}
-                    alt="Imagem da questão"
-                    className="rounded-xl max-h-72 w-auto object-contain mx-auto"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
-                    <ZoomIn className="w-4 h-4" />
-                    <span>Clique para ampliar</span>
-                  </div>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
+                  isSelected
+                    ? 'bg-teal-500 text-slate-950 shadow-sm'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}>
+                  {letter}
                 </div>
-              </div>
-            )}
-
-            {/* Alternativas */}
-            <div className="space-y-3">
-              {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-                const text = currentQ.alternatives[letter];
-                if (!text) return null;
-                const isSelected = currentAns?.alt === letter;
-                
-                return (
-                  <button
-                    key={letter}
-                    onClick={() => handleSelectOption(letter)}
-                    className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 transition-all ${
-                      isSelected
-                        ? 'bg-teal-500/15 border-teal-500/60 text-white shadow-md shadow-teal-500/10'
-                        : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                    }`}
-                  >
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
-                      isSelected
-                        ? 'bg-teal-500 text-slate-950 shadow-sm'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}>
-                      {letter}
-                    </div>
-                    <span className="text-xs sm:text-sm leading-relaxed font-normal flex-1">{text}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Navegação Inferior */}
-            <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentIndex === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Anterior</span>
+                <span className="text-xs sm:text-sm leading-relaxed font-normal flex-1">{text}</span>
               </button>
-              
-              <button
-                onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                disabled={currentIndex === questions.length - 1}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
-              >
-                <span>Próxima</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
 
-        {/* Menu Lateral de Navegação das Questões */}
-        <div className="space-y-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-            <h3 className="text-xs font-bold text-slate-200 mb-3 uppercase tracking-wider">
-              Navegação das Questões
-            </h3>
-            <div className="grid grid-cols-5 gap-2">
-              {questions.map((q, idx) => {
-                const ans = answers[q.id];
-                const isCurrent = idx === currentIndex;
-                const isAnswered = ans && ans.alt !== null;
-                const isFlagged = ans && ans.flagged;
-
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center relative transition-all ${
-                      isCurrent
-                        ? 'ring-2 ring-teal-400 bg-teal-500 text-slate-950'
-                        : isAnswered
-                        ? 'bg-slate-800 text-teal-300 border border-teal-500/30'
-                        : 'bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-800'
-                    }`}
-                  >
-                    {idx + 1}
-                    {isFlagged && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-teal-500/20 border border-teal-500/40" />
-                <span>Respondida</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-amber-400" />
-                <span>Marcada p/ Revisão</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-slate-950 border border-slate-800" />
-                <span>Pendente</span>
-              </div>
-            </div>
-          </div>
+        {/* Avançar (sem opção de voltar) */}
+        <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-end">
+          <button
+            onClick={handleAdvance}
+            disabled={submitting}
+            className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-600/20"
+          >
+            <span>{isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}</span>
+            {isLastQuestion ? <Send className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+          </button>
         </div>
-
       </div>
 
       {/* Modal de Imagem */}
@@ -362,21 +278,22 @@ export const TakeExamPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">Finalizar Prova?</h3>
-                <p className="text-xs text-slate-400">Confirme o envio definitivo das suas respostas.</p>
+                <p className="text-xs text-slate-400">Essa foi a última questão. Confirme o envio definitivo das suas respostas.</p>
               </div>
             </div>
-            
+
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
               <p>✔ Respondidas: <strong className="text-teal-400">{answeredCount}</strong> de {questions.length}</p>
-              <p>⏳ Pendentes: <strong className="text-amber-400">{questions.length - answeredCount}</strong></p>
+              <p>⏳ Sem resposta: <strong className="text-amber-400">{questions.length - answeredCount}</strong></p>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setFinishModalOpen(false)}
+                disabled={submitting}
                 className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:bg-slate-800"
               >
-                Voltar à Prova
+                Ajustar Última Resposta
               </button>
               <button
                 onClick={handleFinishExam}
