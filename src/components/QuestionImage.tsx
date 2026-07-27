@@ -55,7 +55,6 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
             src={formattedUrl}
             alt={alt}
             referrerPolicy="no-referrer"
-            crossOrigin="anonymous"
             className={`rounded-xl ${maxHeightClass} w-auto object-contain mx-auto shadow-md transition-transform duration-200 group-hover:scale-[1.01]`}
             onError={() => {
               setHasError(true);

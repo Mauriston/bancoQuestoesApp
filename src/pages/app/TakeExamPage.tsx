@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, CheckCircle2, X, ZoomIn, Send
+  ArrowRight, CheckCircle2, X, ZoomIn, Send, Trophy
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -19,13 +19,14 @@ export const TakeExamPage: React.FC = () => {
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [attemptId, setAttemptId] = useState<string>('');
-  // Só guarda a resposta da questão atual — usuário não pode voltar para
-  // revisar/alterar questões já respondidas, então não há por que manter um
-  // mapa completo de respostas em memória durante a execução. Guardamos os
-  // ids (não as respostas) das questões já respondidas apenas para contar
-  // corretamente o progresso sem depender de reler o Firestore a cada clique.
   const [currentAlt, setCurrentAlt] = useState<"A" | "B" | "C" | "D" | null>(null);
-  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
+  // Mapa examQuestionId → alternativa salva (mesmo para questões que ainda
+  // não foram visitadas nesta sessão do navegador). Usado para contar o
+  // progresso e, principalmente, para hidratar currentAlt sempre que o índice
+  // muda — cobre tanto a retomada quanto tentativas antigas que possam ter
+  // lacunas não-contíguas, sem depender de currentIndex sempre avançar em
+  // ordem estritamente crescente sobre dados 100% "limpos".
+  const [savedAlt, setSavedAlt] = useState<Record<string, "A" | "B" | "C" | "D" | null>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -57,22 +58,14 @@ export const TakeExamPage: React.FC = () => {
         // Retomando uma tentativa em andamento: avança automaticamente para
         // a primeira questão ainda não respondida (não é possível voltar).
         const savedAns = await getAttemptAnswers(attId);
-        const answeredSet = new Set(savedAns.filter(a => a.selectedAlternative !== null).map(a => a.examQuestionId));
-        setAnsweredIds(answeredSet);
-        const firstUnanswered = examQuestions.findIndex(q => !answeredSet.has(q.id));
+        const altMap: Record<string, "A" | "B" | "C" | "D" | null> = {};
+        savedAns.forEach(a => { altMap[a.examQuestionId] = a.selectedAlternative; });
+        setSavedAlt(altMap);
+
+        const firstUnanswered = examQuestions.findIndex(q => !altMap[q.id]);
         const resumeIndex = firstUnanswered === -1 ? examQuestions.length - 1 : firstUnanswered;
         setCurrentIndex(resumeIndex);
-
-        // Se todas as questões já foram respondidas, a retomada cai de volta
-        // na última questão — que já tem uma resposta salva. Sem isso,
-        // currentAlt ficaria null e um clique em "Revisar e Finalizar"
-        // reseparia essa resposta para null, apagando silenciosamente a
-        // última resposta do candidato antes mesmo de ele confirmar o envio.
-        if (firstUnanswered === -1 && examQuestions.length > 0) {
-          const lastQuestion = examQuestions[resumeIndex];
-          const savedForLast = savedAns.find(a => a.examQuestionId === lastQuestion.id);
-          setCurrentAlt(savedForLast?.selectedAlternative ?? null);
-        }
+        setCurrentAlt(altMap[examQuestions[resumeIndex]?.id] ?? null);
 
       } catch (err) {
         console.error("Erro ao iniciar prova:", err);
@@ -85,14 +78,18 @@ export const TakeExamPage: React.FC = () => {
 
   const currentQ = questions[currentIndex];
   const isLastQuestion = currentIndex === questions.length - 1;
-  const answeredCount = answeredIds.size;
 
   const handleSelectOption = (alt: "A" | "B" | "C" | "D") => {
     setCurrentAlt(prev => (prev === alt ? null : alt));
   };
 
   const handleAdvance = async () => {
-    if (!currentQ || !attemptId || submitting) return;
+    // A prova não pode ser finalizada com questões sem resposta. Como não é
+    // possível voltar a uma questão anterior, a forma correta de garantir
+    // isso é nunca permitir avançar da questão atual sem uma alternativa
+    // selecionada — inclusive na última, onde "avançar" é abrir a
+    // confirmação de envio.
+    if (!currentQ || !attemptId || submitting || currentAlt === null) return;
     setSubmitting(true);
     try {
       await saveAttemptAnswer(
@@ -103,18 +100,14 @@ export const TakeExamPage: React.FC = () => {
         currentQ.areaId,
         currentQ.themeId
       );
-      setAnsweredIds(prev => {
-        const next = new Set(prev);
-        if (currentAlt !== null) next.add(currentQ.id);
-        else next.delete(currentQ.id);
-        return next;
-      });
+      setSavedAlt(prev => ({ ...prev, [currentQ.id]: currentAlt }));
 
       if (isLastQuestion) {
         setFinishModalOpen(true);
       } else {
-        setCurrentIndex(prev => prev + 1);
-        setCurrentAlt(null);
+        const nextIndex = currentIndex + 1;
+        setCurrentIndex(nextIndex);
+        setCurrentAlt(savedAlt[questions[nextIndex]?.id] ?? null);
       }
     } catch (e) {
       console.error("Erro ao salvar resposta no banco:", e);
@@ -151,21 +144,16 @@ export const TakeExamPage: React.FC = () => {
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+    <div className="max-w-3xl mx-auto space-y-6 py-6">
 
-      {/* Top Header Bar */}
-      <div className="sticky top-16 z-30 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-bold text-white leading-tight">
-            {exam?.name || 'Simulado Ortopedia'}
-          </h2>
-          <p className="text-xs text-slate-400">
-            Questão {currentIndex + 1} de {questions.length} ({answeredCount} respondidas)
-          </p>
+      {/* Top: só o ícone do app + nome da prova em execução */}
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur flex items-center gap-2.5 py-2">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-teal-500/20 shrink-0">
+          <Trophy className="w-4 h-4" />
         </div>
-        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-          Não é possível retornar a questões anteriores
-        </p>
+        <h2 className="text-sm font-bold text-white leading-tight truncate">
+          {exam?.name || 'Simulado Ortopedia'}
+        </h2>
       </div>
 
       {/* Progress Bar */}
@@ -240,12 +228,15 @@ export const TakeExamPage: React.FC = () => {
           })}
         </div>
 
-        {/* Avançar (sem opção de voltar) */}
-        <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-end">
+        {/* Avançar (sem opção de voltar; exige resposta selecionada) */}
+        <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+          {currentAlt === null && (
+            <p className="text-[11px] text-amber-400 font-medium">Selecione uma alternativa para continuar.</p>
+          )}
           <button
             onClick={handleAdvance}
-            disabled={submitting}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-600/20"
+            disabled={submitting || currentAlt === null}
+            className="ml-auto flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
           >
             <span>{isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}</span>
             {isLastQuestion ? <Send className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
@@ -283,8 +274,7 @@ export const TakeExamPage: React.FC = () => {
             </div>
 
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
-              <p>✔ Respondidas: <strong className="text-teal-400">{answeredCount}</strong> de {questions.length}</p>
-              <p>⏳ Sem resposta: <strong className="text-amber-400">{questions.length - answeredCount}</strong></p>
+              <p>✔ Todas as <strong className="text-teal-400">{questions.length}</strong> questões foram respondidas.</p>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">

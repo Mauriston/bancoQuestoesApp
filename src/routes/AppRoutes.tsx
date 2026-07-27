@@ -15,6 +15,7 @@ import { PerformancePage } from '../pages/app/PerformancePage';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { DashboardPage } from '../pages/admin/DashboardPage';
 import { UsersPage } from '../pages/admin/UsersPage';
+import { UserDetailPage } from '../pages/admin/UserDetailPage';
 import { QuestionsPage } from '../pages/admin/QuestionsPage';
 import { ImportPage } from '../pages/admin/ImportPage';
 import { ExamsListPage } from '../pages/admin/ExamsListPage';
@@ -96,6 +97,7 @@ export const AppRoutes: React.FC = () => {
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="users/:userId" element={<UserDetailPage />} />
         <Route path="questions" element={<QuestionsPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="exams" element={<ExamsListPage />} />
