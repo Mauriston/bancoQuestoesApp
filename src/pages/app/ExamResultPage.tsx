@@ -4,8 +4,9 @@ import {
   CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, BarChart3
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes } from '../../services/firebaseService';
+import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds } from '../../services/firebaseService';
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme } from '../../types';
+import { getSourceExamChipClass } from '../../constants';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -14,6 +15,9 @@ export const ExamResultPage: React.FC = () => {
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, AttemptAnswer>>({});
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
+  // `sourceExam` não faz parte da cópia congelada em exams/{id}/questions —
+  // buscado à parte só para colorir o chip de origem ao lado de "Questão X".
+  const [sourceExamById, setSourceExamById] = useState<Record<string, string>>({});
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +43,16 @@ export const ExamResultPage: React.FC = () => {
         userAns.forEach(a => { ansMap[a.examQuestionId] = a; });
         setAnswers(ansMap);
 
-        const [areaList, themeList] = await Promise.all([getAreas(), getThemes()]);
+        const [areaList, themeList, originalQuestions] = await Promise.all([
+          getAreas(),
+          getThemes(),
+          getQuestionsByIds(examQs.map(q => q.originalQuestionId))
+        ]);
         setAreas(areaList);
         setThemes(themeList);
+        const sourceMap: Record<string, string> = {};
+        Object.values(originalQuestions).forEach(oq => { sourceMap[oq.id] = oq.sourceExam; });
+        setSourceExamById(sourceMap);
 
         if (!examData || examData.showCommentsAfterFinish !== false) {
           const keysMap: Record<string, QuestionAnswer> = {};
@@ -236,9 +247,16 @@ export const ExamResultPage: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
-                    <span className="text-xs font-bold text-slate-300">
-                      Questão {idx + 1}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-300">
+                        Questão {idx + 1}
+                      </span>
+                      {sourceExamById[q.originalQuestionId] && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSourceExamChipClass(sourceExamById[q.originalQuestionId])}`}>
+                          {sourceExamById[q.originalQuestionId]}
+                        </span>
+                      )}
+                    </div>
                     {isCorrect ? (
                       <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />

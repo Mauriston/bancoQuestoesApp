@@ -217,6 +217,29 @@ export async function getQuestionAnswersByIds(questionIds: string[]): Promise<Re
   return result;
 }
 
+// Busca em lote várias questões originais do banco por id (mesmo particiona-
+// mento em blocos de 30 do operador `in`). Usado para recuperar campos que
+// não fazem parte da cópia congelada em `exams/{id}/questions`, como
+// `sourceExam` — necessário para o chip de origem (Banco Próprio/TARO/TEOT)
+// no relatório do candidato e na visualização de provas do admin.
+export async function getQuestionsByIds(questionIds: string[]): Promise<Record<string, Question>> {
+  const result: Record<string, Question> = {};
+  const uniqueIds = Array.from(new Set(questionIds));
+  if (uniqueIds.length === 0) return result;
+
+  const chunkSize = 30;
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize);
+    const q = query(collection(db, 'questions'), where(documentId(), 'in', chunk));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(docSnap => {
+      result[docSnap.id] = { id: docSnap.id, ...docSnap.data() } as Question;
+    });
+  }
+
+  return result;
+}
+
 // Lista as provas (nome + id) em que uma questão original já foi utilizada,
 // pesquisando via collection group em todas as subcoleções
 // `exams/{examId}/questions`, filtrando por `originalQuestionId`. Usado pelo
