@@ -120,10 +120,10 @@ export async function loginAdminWithPassword(email: string, pass: string): Promi
     authUid = userCredential.user.uid;
   } catch (authErr: any) {
     console.warn("Firebase Auth sign-in failed, attempting account registration or fallback:", authErr);
-    
+
     // If account does not exist in Firebase Auth yet, auto-create it with the provided password!
     if (
-      authErr.code === 'auth/user-not-found' || 
+      authErr.code === 'auth/user-not-found' ||
       authErr.code === 'auth/invalid-credential' ||
       authErr.code === 'auth/invalid-email'
     ) {
@@ -137,19 +137,19 @@ export async function loginAdminWithPassword(email: string, pass: string): Promi
         } else if (createErr.code === 'auth/weak-password') {
           throw new Error("A senha deve ter no mínimo 6 caracteres.");
         }
-        
-        // Fallback: If user exists in Firestore as active admin, allow session start
-        if (appUser && appUser.role === 'admin' && appUser.active) {
-          localStorage.setItem(SESSION_KEY, appUser.id);
-          return appUser;
-        }
 
-        throw new Error("Credenciais inválidas ou erro ao conectar com o serviço de autenticação.");
+        // Não há fallback aqui: retornar um AppUser sem uma sessão real do
+        // Firebase Auth por trás (request.auth continuaria null) deixava o
+        // usuário "logado" na UI enquanto toda operação protegida por
+        // Security Rules (ex.: upload de imagem no Storage) falhava sem
+        // explicação nenhuma — o app achava que estava tudo certo, mas o
+        // Storage/Firestore recusavam a requisição por falta de auth real.
+        throw new Error("Não foi possível autenticar no Firebase. Verifique sua conexão e tente novamente.");
       }
     } else if (appUser && appUser.role === 'admin' && appUser.active) {
-      // Fallback if password or network issue occurs but admin exists in Firestore
-      localStorage.setItem(SESSION_KEY, appUser.id);
-      return appUser;
+      // Mesmo raciocínio do bloco acima: um erro de rede/serviço aqui não
+      // deve liberar acesso sem uma sessão real do Firebase Auth.
+      throw new Error("Não foi possível autenticar no Firebase. Verifique sua conexão e tente novamente.");
     } else {
       throw new Error("Senha incorreta. Verifique suas credenciais.");
     }
