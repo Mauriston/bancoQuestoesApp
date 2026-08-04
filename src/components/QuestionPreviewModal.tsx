@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, FileCheck, CheckCircle2 } from 'lucide-react';
+import { X, FileCheck, CheckCircle2, Copy, Check } from 'lucide-react';
 import { Question, ExamQuestion, QuestionAnswer } from '../types';
 import { QuestionImage } from './QuestionImage';
 import { getExamsContainingQuestion, getQuestionAnswer } from '../services/firebaseService';
@@ -21,6 +21,16 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
 
   const [examsUsedIn, setExamsUsedIn] = useState<{ examId: string; examName: string }[]>([]);
   const [answer, setAnswer] = useState<QuestionAnswer | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(originalQuestionId)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(err => console.error("Erro ao copiar id da questão:", err));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -51,8 +61,20 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
           </button>
         </div>
 
+        <div className="flex items-center gap-1.5 px-6 pt-3 text-[10px] text-slate-500">
+          <span className="font-mono truncate">ID: {originalQuestionId}</span>
+          <button
+            type="button"
+            onClick={handleCopyId}
+            title="Copiar ID para a área de transferência"
+            className="text-slate-500 hover:text-slate-300 transition-colors shrink-0"
+          >
+            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          </button>
+        </div>
+
         {examsUsedIn.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 px-6 pt-4">
+          <div className="flex flex-wrap items-center gap-1.5 px-6 pt-2">
             <span className="text-[10px] uppercase font-bold text-slate-500 mr-1">Já utilizada em:</span>
             {examsUsedIn.map(e => (
               <span
