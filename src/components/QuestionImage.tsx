@@ -1,44 +1,56 @@
+// ==========================================
+// ARQUIVO: src/components/QuestionImage.tsx
+// ==========================================
 import React, { useState } from 'react';
-import { ZoomIn, Image as ImageIcon, ExternalLink, AlertTriangle, X } from 'lucide-react';
-import { formatImageUrl } from '../utils/helpers';
+import { AlertTriangle, ExternalLink, ZoomIn } from 'lucide-react';
 
 interface QuestionImageProps {
-  src?: string | null;
+  src: string;
   alt?: string;
-  className?: string;
-  maxHeightClass?: string;
   allowZoom?: boolean;
 }
 
 export const QuestionImage: React.FC<QuestionImageProps> = ({
   src,
-  alt = "Imagem da questão",
-  className = "",
-  maxHeightClass = "max-h-80",
+  alt = 'Imagem da questão',
   allowZoom = true
 }) => {
   const [hasError, setHasError] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
-  if (!src) return null;
+  // Documentação: Função utilitária para tratar URLs de imagem.
+  // Garante que caminhos relativos como '/imagens_questoes/...' 
+  // sejam convertidos para URLs completas e válidas no navegador.
+  const getFullImageUrl = (path: string): string => {
+    if (!path) return '';
+    
+    // Se já for uma URL completa da web (ex: Imgur, Cloudinary)
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
 
-  const formattedUrl = formatImageUrl(src);
+    # Se for um caminho relativo iniciado por '/', junta com a origem do site
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${window.location.origin}${cleanPath}`;
+  };
+
+  const formattedSrc = getFullImageUrl(src);
 
   if (hasError) {
     return (
-      <div className="my-4 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-slate-400 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span>A imagem da questão não pôde ser carregada diretamente.</span>
+      <div className="my-4 p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>Não foi possível carregar a imagem diretamente do servidor.</span>
         </div>
         <a
-          href={src}
+          href={formattedSrc}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-400 font-semibold text-xs border border-slate-700 transition shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold transition-colors shrink-0"
         >
           <ExternalLink className="w-3.5 h-3.5" />
-          <span>Abrir imagem em nova aba</span>
+          <span>Abrir link da imagem</span>
         </a>
       </div>
     );
@@ -46,60 +58,38 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
 
   return (
     <>
-      <div className={`my-4 p-3 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-full ${className}`}>
+      <div className="my-4 p-2 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-full">
         <div 
           className={`relative group ${allowZoom ? 'cursor-pointer' : ''}`}
-          onClick={() => allowZoom && setIsModalOpen(true)}
+          onClick={() => allowZoom && setIsZoomed(true)}
         >
           <img
-            src={formattedUrl}
+            src={formattedSrc}
             alt={alt}
-            referrerPolicy="no-referrer"
-            className={`rounded-xl ${maxHeightClass} w-auto object-contain mx-auto shadow-md transition-transform duration-200 group-hover:scale-[1.01]`}
-            onError={() => {
-              setHasError(true);
-            }}
+            onError={() => setHasError(true)}
+            className="max-h-80 w-auto object-contain rounded-xl mx-auto"
           />
           {allowZoom && (
-            <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-bold backdrop-blur-[2px]">
-              <ZoomIn className="w-4 h-4 text-teal-400" />
-              <span>Ampliar Imagem</span>
+            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+              <ZoomIn className="w-4 h-4" />
+              <span>Clique para ampliar</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Lightbox Modal */}
-      {isModalOpen && (
+      {/* Modal de ampliação de imagem */}
+      {isZoomed && (
         <div 
           className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setIsModalOpen(false)}
+          onClick={() => setIsZoomed(false)}
         >
-          <div 
-            className="relative max-w-5xl w-full max-h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-2xl flex flex-col items-center justify-center overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-full flex items-center justify-between pb-3 mb-2 border-b border-slate-800 px-2">
-              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-teal-400" />
-                <span>Visualização Ampliada (Raio-X / Imagem TEOT)</span>
-              </span>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="overflow-auto max-h-[78vh] w-full flex items-center justify-center p-2 bg-slate-950 rounded-2xl">
-              <img
-                src={formattedUrl}
-                alt={alt}
-                referrerPolicy="no-referrer"
-                className="max-h-[75vh] w-auto object-contain rounded-xl shadow-2xl"
-              />
-            </div>
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center">
+            <img 
+              src={formattedSrc} 
+              alt={alt} 
+              className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain" 
+            />
           </div>
         </div>
       )}
