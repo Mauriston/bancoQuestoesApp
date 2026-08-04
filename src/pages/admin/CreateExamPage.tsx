@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2, ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getQuestions, getAreas, getThemes, getActiveUsers, createAndPublishExam, getQuestionAnswersByIds } from '../../services/firebaseService';
+import {
+  getQuestions, getAreas, getThemes, getActiveUsers, createAndPublishExam, getQuestionAnswersByIds,
+  getExamById, getExamQuestions, getAttemptsForExam, isExamActive, updateExamContent
+} from '../../services/firebaseService';
 import { Question, Area, Theme, AppUser, QuestionAnswer } from '../../types';
 import { SOURCE_EXAM_OPTIONS } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
@@ -12,8 +15,14 @@ import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 export const CreateExamPage: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  // Presença de :examId na rota (/admin/exams/:examId/edit) decide o modo:
+  // editar uma prova existente (inativa e sem tentativas — ver o gate logo
+  // abaixo) reaproveitando o mesmo assistente, em vez de criar uma nova.
+  const { examId } = useParams<{ examId: string }>();
+  const isEditMode = !!examId;
   const [step, setStep] = useState(1);
-  
+  const [gateError, setGateError] = useState('');
+
   // Step 1: Basic info
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -66,14 +75,51 @@ export const CreateExamPage: React.FC = () => {
         getQuestionAnswersByIds(qList.map(q => q.id))
           .then(setAnswersById)
           .catch(err => console.error("Erro ao carregar gabaritos:", err));
+
+        if (examId) {
+          // Mesmo gate de updateExamContent() no firebaseService, checado
+          // aqui antes de deixar o admin mexer no formulário — evita abrir o
+          // assistente para uma prova que na verdade não pode mais ser
+          // editada (ativada ou já respondida por alguém entre um clique e
+          // outro).
+          const [exam, attempts, examQuestions] = await Promise.all([
+            getExamById(examId),
+            getAttemptsForExam(examId),
+            getExamQuestions(examId)
+          ]);
+
+          if (!exam) {
+            setGateError("Prova não encontrada.");
+          } else if (isExamActive(exam)) {
+            setGateError('Esta prova está ativa e não pode ser editada. Desative-a primeiro em "Provas e Simulados".');
+          } else if (attempts.length > 0) {
+            setGateError("Esta prova já tem tentativas registradas e não pode mais ser editada.");
+          } else {
+            setName(exam.name);
+            setDescription(exam.description || '');
+            setShuffleQuestions(!!exam.shuffleQuestions);
+            setShuffleAlternatives(!!exam.shuffleAlternatives);
+            setShowResultAfterFinish(exam.showResultAfterFinish !== false);
+            setShowCommentsAfterFinish(exam.showCommentsAfterFinish !== false);
+            setAllowReviewAfterFinish(exam.allowReviewAfterFinish !== false);
+
+            // Questões atualmente na prova, casadas de volta com o banco
+            // (para permitir marcar/desmarcar normalmente na Etapa 2). Uma
+            // questão congelada cujo original tenha sido excluído do banco
+            // simplesmente não aparece pré-selecionada.
+            const originalIds = new Set(examQuestions.map(eq => eq.originalQuestionId));
+            setSelectedQuestions(qList.filter(q => originalIds.has(q.id)));
+          }
+        }
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
+        if (examId) setGateError("Não foi possível carregar os dados desta prova.");
       } finally {
         setLoadingQuestions(false);
       }
     }
     loadResources();
-  }, []);
+  }, [examId]);
 
   const themesForAreaFilter = areaFilter ? themes.filter(t => t.areaId === areaFilter) : themes;
 
@@ -148,6 +194,59 @@ export const CreateExamPage: React.FC = () => {
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!examId || !name || selectedQuestions.length === 0) {
+      setErrorMsg("Preencha todos os campos e selecione pelo menos uma questão.");
+      return;
+    }
+    setPublishing(true);
+    setErrorMsg('');
+
+    try {
+      await updateExamContent({
+        examId,
+        examData: {
+          name,
+          description,
+          shuffleQuestions,
+          shuffleAlternatives,
+          showResultAfterFinish,
+          showCommentsAfterFinish,
+          allowReviewAfterFinish
+        },
+        questions: selectedQuestions
+      });
+      navigate('/admin/exams');
+    } catch (err: any) {
+      setErrorMsg("Erro ao salvar alterações: " + err.message);
+      setPublishing(false);
+    }
+  };
+
+  if (isEditMode && loadingQuestions) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs">Carregando dados da prova...</p>
+      </div>
+    );
+  }
+
+  if (gateError) {
+    return (
+      <div className="max-w-md mx-auto flex flex-col items-center justify-center text-center py-20 text-slate-400 gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <p className="text-sm text-slate-200 font-semibold">{gateError}</p>
+        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 font-semibold">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Voltar para Lista de Provas</span>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
       
@@ -159,20 +258,30 @@ export const CreateExamPage: React.FC = () => {
       <div>
         <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <FileCheck className="w-5 h-5 text-cyan-400" />
-          Assistente de Criação de Prova
+          {isEditMode ? 'Editar Prova' : 'Assistente de Criação de Prova'}
         </h1>
-        <p className="text-xs text-slate-400 mt-1">Siga as 4 etapas para publicar um novo simulado.</p>
+        <p className="text-xs text-slate-400 mt-1">
+          {isEditMode
+            ? 'Ajuste os dados e as questões desta prova, ainda inativa e sem tentativas registradas.'
+            : 'Siga as 4 etapas para publicar um novo simulado.'}
+        </p>
       </div>
 
-      {/* Step Indicator Header */}
+      {/* Step Indicator Header — sem a etapa de atribuição de usuários no
+          modo de edição, já que os destinatários já existem e não são
+          mexidos aqui. */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-4 text-xs font-semibold">
         <span className={step >= 1 ? 'text-cyan-400' : 'text-slate-500'}>1. Dados Básicos</span>
         <ChevronRight className="w-4 h-4 text-slate-600" />
         <span className={step >= 2 ? 'text-cyan-400' : 'text-slate-500'}>2. Seleção de Questões ({selectedQuestions.length})</span>
         <ChevronRight className="w-4 h-4 text-slate-600" />
-        <span className={step >= 3 ? 'text-cyan-400' : 'text-slate-500'}>3. Atribuição de Usuários</span>
-        <ChevronRight className="w-4 h-4 text-slate-600" />
-        <span className={step >= 4 ? 'text-cyan-400' : 'text-slate-500'}>4. Revisão e Publicação</span>
+        {!isEditMode && (
+          <>
+            <span className={step >= 3 ? 'text-cyan-400' : 'text-slate-500'}>3. Atribuição de Usuários</span>
+            <ChevronRight className="w-4 h-4 text-slate-600" />
+          </>
+        )}
+        <span className={step >= 4 ? 'text-cyan-400' : 'text-slate-500'}>{isEditMode ? '3. Revisão e Salvamento' : '4. Revisão e Publicação'}</span>
       </div>
 
       {errorMsg && (
@@ -419,18 +528,18 @@ export const CreateExamPage: React.FC = () => {
             </button>
             <button
               disabled={selectedQuestions.length === 0}
-              onClick={() => setStep(3)}
+              onClick={() => setStep(isEditMode ? 4 : 3)}
               className="flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 px-5 rounded-xl disabled:opacity-40"
             >
-              <span>Avançar para Atribuição de Usuários</span>
+              <span>{isEditMode ? 'Avançar para Revisão' : 'Avançar para Atribuição de Usuários'}</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: User Assignment */}
-      {step === 3 && (
+      {/* STEP 3: User Assignment — não existe no modo de edição */}
+      {step === 3 && !isEditMode && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
           <h2 className="text-sm font-bold text-[#050f41] mb-2">Etapa 3: Atribuir a Prova aos Candidatos</h2>
           
@@ -500,34 +609,42 @@ export const CreateExamPage: React.FC = () => {
         </div>
       )}
 
-      {/* STEP 4: Review & Publish */}
+      {/* STEP 4: Review & Publish (ou Revisão e Salvamento, no modo de edição) */}
       {step === 4 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
           <h2 className="text-sm font-bold text-[#050f41] border-b border-slate-800 pb-3">
-            Etapa 4: Resumo e Confirmação de Publicação
+            {isEditMode ? 'Etapa 3: Resumo e Confirmação das Alterações' : 'Etapa 4: Resumo e Confirmação de Publicação'}
           </h2>
-          
+
           <div className="space-y-2 text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800">
             <p>• Nome da Prova: <strong className="text-[#050f41]">{name}</strong></p>
             <p>• Total de Questões: <strong className="text-teal-400">{selectedQuestions.length}</strong></p>
-            <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'all' ? `Todos os ${activeUsers.length} usuários ativos` : `${selectedUserIds.length} usuários`}</strong></p>
+            {!isEditMode && (
+              <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'all' ? `Todos os ${activeUsers.length} usuários ativos` : `${selectedUserIds.length} usuários`}</strong></p>
+            )}
           </div>
 
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
-            A prova é criada <strong>inativa</strong>. Os destinatários só vão vê-la e poder iniciá-la depois que você ativá-la em "Provas e Simulados".
+            {isEditMode
+              ? 'A prova continua inativa após salvar. Ative-a novamente em "Provas e Simulados" quando estiver pronta.'
+              : 'A prova é criada inativa. Os destinatários só vão vê-la e poder iniciá-la depois que você ativá-la em "Provas e Simulados".'}
           </div>
 
           <div className="flex justify-between pt-4">
-            <button onClick={() => setStep(3)} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">
+            <button onClick={() => setStep(isEditMode ? 2 : 3)} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">
               Voltar
             </button>
             <button
-              onClick={handlePublish}
+              onClick={isEditMode ? handleSaveEdit : handlePublish}
               disabled={publishing}
               className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-teal-500/20 disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
-              <span>{publishing ? 'Publicando...' : 'Publicar Prova Agora'}</span>
+              <span>
+                {publishing
+                  ? (isEditMode ? 'Salvando...' : 'Publicando...')
+                  : (isEditMode ? 'Salvar Alterações' : 'Publicar Prova Agora')}
+              </span>
             </button>
           </div>
         </div>

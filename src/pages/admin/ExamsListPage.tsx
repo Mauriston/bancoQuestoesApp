@@ -1,29 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Eye, Power, PowerOff
+  FileCheck, Plus, Trash2, Eye, Power, PowerOff, Pencil
 } from 'lucide-react';
-import { getExams, deleteExam, updateExamActiveStatus, isExamActive } from '../../services/firebaseService';
+import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts } from '../../services/firebaseService';
 import { Exam } from '../../types';
 import { formatDate } from '../../utils/helpers';
 
 export const ExamsListPage: React.FC = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState<Exam[]>([]);
+  // Nº de tentativas por prova — usado só para decidir se a prova pode ser
+  // editada (inativa + zero tentativas registradas). Ver isEditable().
+  const [attemptCountByExamId, setAttemptCountByExamId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchExamsList = async () => {
     setLoading(true);
     try {
-      const list = await getExams();
+      const [list, attempts] = await Promise.all([getExams(), getAllAttempts()]);
       setExams(list);
+      const counts: Record<string, number> = {};
+      attempts.forEach(a => { counts[a.examId] = (counts[a.examId] || 0) + 1; });
+      setAttemptCountByExamId(counts);
     } catch (err) {
       console.error("Erro ao carregar provas:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Só é seguro editar (acrescentar/retirar questões, mudar dados básicos)
+  // uma prova que ainda ninguém começou a responder — e ela precisa estar
+  // inativa, ou um candidato poderia estar com ela em andamento neste exato
+  // momento. updateExamContent() no firebaseService repete essa checagem.
+  const isEditable = (exam: Exam) => !isExamActive(exam) && !attemptCountByExamId[exam.id];
 
   useEffect(() => {
     fetchExamsList();
@@ -130,6 +142,17 @@ export const ExamsListPage: React.FC = () => {
                   </Link>
 
                   <div className="flex items-center gap-3">
+                    {isEditable(ex) && (
+                      <Link
+                        to={`/admin/exams/${ex.id}/edit`}
+                        onClick={(e) => e.stopPropagation()}
+                        title="Editar dados e questões desta prova"
+                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </Link>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggleActive(ex); }}
                       disabled={togglingId === ex.id}

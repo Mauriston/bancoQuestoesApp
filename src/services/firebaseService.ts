@@ -457,6 +457,94 @@ export async function createAndPublishExam(params: {
   return examId;
 }
 
+// Edita uma prova já publicada: dados básicos + a seleção de questões
+// (acrescentar/retirar). Só permitido enquanto a prova está inativa e sem
+// nenhuma tentativa registrada — checado aqui como última linha de defesa
+// (a UI já esconde a opção de editar fora desse cenário), para não haver
+// como reescrever o conteúdo de uma prova que candidatos já começaram a
+// responder.
+export async function updateExamContent(params: {
+  examId: string;
+  examData: Pick<Exam,
+    'name' | 'description' | 'shuffleQuestions' | 'shuffleAlternatives' |
+    'showResultAfterFinish' | 'showCommentsAfterFinish' | 'allowReviewAfterFinish'
+  >;
+  questions: Question[];
+}): Promise<void> {
+  const { examId, examData, questions } = params;
+
+  const [exam, existingAttempts, existingQuestionsSnap] = await Promise.all([
+    getExamById(examId),
+    getAttemptsForExam(examId),
+    getDocs(collection(db, 'exams', examId, 'questions'))
+  ]);
+
+  if (!exam) throw new Error("Prova não encontrada.");
+  if (isExamActive(exam)) {
+    throw new Error("Só é possível editar provas inativas.");
+  }
+  if (existingAttempts.length > 0) {
+    throw new Error("Esta prova já tem tentativas registradas e não pode mais ser editada.");
+  }
+
+  let batch = writeBatch(db);
+  let opCount = 0;
+
+  const queueSet = async (ref: ReturnType<typeof doc>, data: any) => {
+    batch.set(ref, data);
+    opCount++;
+    if (opCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  };
+  const queueDelete = async (ref: ReturnType<typeof doc>) => {
+    batch.delete(ref);
+    opCount++;
+    if (opCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  };
+
+  // Remove todas as questões congeladas atuais para reconstruir do zero a
+  // partir da nova seleção — mais simples e seguro que tentar reconciliar
+  // qual questão foi adicionada, removida ou reordenada.
+  for (const d of existingQuestionsSnap.docs) {
+    await queueDelete(d.ref);
+  }
+
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const eqRef = doc(db, 'exams', examId, 'questions', `eq_${i + 1}`);
+    const frozenQuestion: ExamQuestion = removeUndefined({
+      id: `eq_${i + 1}`,
+      examId,
+      originalQuestionId: q.id,
+      orderIndex: i + 1,
+      order: i + 1,
+      areaId: q.areaId,
+      themeId: q.themeId,
+      statement: q.statement,
+      alternatives: q.alternatives,
+      imageUrl: q.imageUrl || undefined
+    });
+    await queueSet(eqRef, frozenQuestion);
+  }
+
+  await queueSet(doc(db, 'exams', examId), removeUndefined({
+    ...examData,
+    questionCount: questions.length,
+    updatedAt: serverTimestamp()
+  }));
+
+  if (opCount > 0) {
+    await batch.commit();
+  }
+}
+
 // Reverte o efeito de uma tentativa corrigida sobre o agregado userStats do
 // residente (contraparte do somatório feito em finishAndGradeAttempt, em
 // gradingService.ts). Usado tanto para excluir uma tentativa avulsa quanto
