@@ -202,21 +202,23 @@ export const TakeExamPage: React.FC = () => {
           {currentQ.statement}
         </p>
 
-        {/* Image Preview se houver */}
+        {/* Image Preview se houver — centralizada na página; clique amplia em modal */}
         {currentQ.imageUrl && (
-          <div className="mb-6 p-3 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-md">
-            <div className="relative group cursor-pointer" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
-              <img
-                src={currentQ.imageUrl}
-                alt="Imagem da questão"
-                className="rounded-xl max-h-72 w-auto object-contain mx-auto"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-              <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
-                <ZoomIn className="w-4 h-4" />
-                <span>Clique para ampliar</span>
+          <div className="mb-6 flex justify-center">
+            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 max-w-md">
+              <div className="relative group cursor-pointer" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
+                <img
+                  src={currentQ.imageUrl}
+                  alt="Imagem da questão"
+                  className="rounded-xl max-h-72 w-auto object-contain mx-auto"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+                  <ZoomIn className="w-4 h-4" />
+                  <span>Clique para ampliar</span>
+                </div>
               </div>
             </div>
           </div>
