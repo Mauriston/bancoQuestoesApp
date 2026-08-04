@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff } from 'lucide-r
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
+import { CommentMedia } from '../../components/CommentMedia';
 import { getSourceExamChipClass } from '../../constants';
 
 export const ExamViewPage: React.FC = () => {
@@ -199,7 +200,7 @@ export const ExamViewPage: React.FC = () => {
                 })}
               </div>
 
-              {key && (key.solutionText || key.comments) && (
+              {key && (key.solutionText || key.comments || key.commentMediaUrl) && (
                 <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 space-y-2">
                   {key.solutionText && (
                     <div>
@@ -213,6 +214,7 @@ export const ExamViewPage: React.FC = () => {
                       <p className="text-slate-300 leading-relaxed">{key.comments}</p>
                     </div>
                   )}
+                  {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                 </div>
               )}
             </div>

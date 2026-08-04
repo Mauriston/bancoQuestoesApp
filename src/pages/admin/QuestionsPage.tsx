@@ -48,6 +48,7 @@ export const QuestionsPage: React.FC = () => {
   const [correctAlt, setCorrectAlt] = useState<"A"|"B"|"C"|"D">('A');
   const [solutionText, setSolutionText] = useState('');
   const [comments, setComments] = useState('');
+  const [commentMediaUrl, setCommentMediaUrl] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +113,7 @@ export const QuestionsPage: React.FC = () => {
     setCorrectAlt('A');
     setSolutionText('');
     setComments('');
+    setCommentMediaUrl('');
     setImageUrl(null);
     setImageFile(null);
     setModalThemes(defaultAreaId ? await getThemes(defaultAreaId) : []);
@@ -138,6 +140,7 @@ export const QuestionsPage: React.FC = () => {
       setCorrectAlt(ansKey.correctAlternative);
       setSolutionText(ansKey.solutionText || '');
       setComments(ansKey.comments || '');
+      setCommentMediaUrl(ansKey.commentMediaUrl || '');
     }
 
     setModalOpen(true);
@@ -184,7 +187,8 @@ export const QuestionsPage: React.FC = () => {
         {
           correctAlternative: correctAlt,
           solutionText,
-          comments
+          comments,
+          commentMediaUrl: commentMediaUrl || undefined
         }
       );
 
@@ -513,6 +517,17 @@ export const QuestionsPage: React.FC = () => {
                   rows={2}
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Mídia do Comentário (URL de imagem ou vídeo do YouTube)</label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={commentMediaUrl}
+                  onChange={(e) => setCommentMediaUrl(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                 />
               </div>

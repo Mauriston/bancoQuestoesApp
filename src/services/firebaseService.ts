@@ -267,7 +267,7 @@ export async function getExamsContainingQuestion(originalQuestionId: string): Pr
 
 export async function saveQuestion(
   questionData: Omit<Question, 'id'> & { id?: string },
-  answerData: { correctAlternative: "A" | "B" | "C" | "D"; solutionText: string; comments: string }
+  answerData: { correctAlternative: "A" | "B" | "C" | "D"; solutionText: string; comments: string; commentMediaUrl?: string }
 ): Promise<string> {
   const qId = questionData.id || generateId('q');
 
