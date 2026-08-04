@@ -81,6 +81,8 @@ bancoQuestoesApp/
 ├── metadata.json                  # Metadados do app (nome, descrição)
 ├── arvore_temas.json              # Árvore estática de áreas/temas de ortopedia (usada em ImportPage como banco padrão para importação)
 ├── .env.example                   # Modelo de variáveis de ambiente
+├── scripts/
+│   └── import-question-images.mjs # Importador em lote de imagens para o Storage (ver seção Firebase Storage)
 └── src/
     ├── main.tsx                   # Bootstrap do React (ReactDOM.createRoot)
     ├── App.tsx                    # BrowserRouter + AuthProvider + AppRoutes
@@ -214,9 +216,25 @@ Bucket: **`gen-lang-client-0316191622.firebasestorage.app`**.
 Existem hoje **duas origens/convenções de caminho** para imagens no bucket, refletindo a migração de "URLs externas" para "Storage nativo":
 
 1. **`question-images/{questionId}/{timestamp}.{ext}`** — caminho **canônico**, gerado automaticamente pelo upload feito na UI administrativa (`firebaseService.uploadQuestionImage`, usado em `QuestionsPage`). O admin escolhe um arquivo de imagem ao criar/editar uma questão, o app faz `uploadBytes` para esse caminho e grava a `getDownloadURL()` resultante no campo `imageUrl` do documento em `questions`.
-2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados manualmente** ao Storage (fora do fluxo de upload da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Essas URLs completas (`https://firebasestorage.googleapis.com/v0/b/.../o/imagens_questoes%2F...?alt=media`) precisam ser gravadas manualmente (ou por script) no campo `imageUrl` de cada `question` correspondente.
+2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados em conjunto** ao Storage (fora do fluxo de upload individual da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Esse caminho é alimentado por `scripts/import-question-images.mjs` (ver abaixo), que já cuida de gravar a URL pública correspondente no campo `imageUrl` de cada `question` — não é mais necessário fazer esse casamento manualmente.
 
-> **Recomendação daqui para frente**: prefira sempre o fluxo 1 (upload pela UI de `QuestionsPage`), que já grava a URL correta automaticamente e não exige nenhum passo manual de "casamento" entre arquivo do bucket e documento da questão. O caminho 2 deve ser tratado como legado/exceção — não existe hoje, neste repositório, um importador automático que normalize os dois formatos em um só (esse seria o próximo passo natural caso a divergência continue incomodando: um script único de importação que sempre grava em `question-images/{questionId}/...` independentemente da origem do arquivo).
+> **Recomendação de uso**: para adicionar/editar a imagem de **uma** questão, use o fluxo 1 (upload pela UI de `QuestionsPage`). Para importar um **lote** de imagens já rotuladas por número de questão de uma prova inteira (ex.: um PDF de prova escaneado e recortado em uma imagem por questão), use `scripts/import-question-images.mjs`.
+
+### Importação em lote de imagens (`scripts/import-question-images.mjs`)
+
+Script Node (`firebase-admin`) que envia um conjunto de arquivos de imagem para `imagens_questoes/{PROVA}/{arquivo}` e atualiza o campo `imageUrl` de cada `questions/{id}` correspondente, a partir de um arquivo de mapeamento `{ "<questionId>": "<nomeDoArquivo>" }`.
+
+```bash
+npm install   # garante a dependência firebase-admin (devDependency)
+
+# Pré-visualizar sem gravar nada:
+npm run import:images -- --prova TEOT_TEORICA_2022 --dir ./imagens --map ./mapeamento.json --dry-run --key ./service-account.json
+
+# Executar de verdade:
+npm run import:images -- --prova TEOT_TEORICA_2022 --dir ./imagens --map ./mapeamento.json --key ./service-account.json
+```
+
+Requer credenciais de administrador do projeto Firebase (`firebase login` local, ou uma Service Account Key baixada do Console do Firebase e passada via `--key`/`GOOGLE_APPLICATION_CREDENTIALS`) — **nunca versione essa chave no repositório**. Detalhes completos de uso no cabeçalho do próprio arquivo.
 
 Independentemente da origem, todo campo `imageUrl` do domínio é tratado como uma **URL absoluta e pronta para uso** (`<img src={question.imageUrl}>`), consumida diretamente em:
 
@@ -374,6 +392,7 @@ Definidos em `package.json`:
 | `build` | `vite build` | Gera o bundle estático de produção em `dist/` (é o único passo executado no deploy real) |
 | `preview` | `vite preview` | Serve `dist/` localmente, para conferir o build de produção antes do deploy |
 | `lint` | `tsc --noEmit` | Checagem de tipos TypeScript, sem produzir saída |
+| `import:images` | `node scripts/import-question-images.mjs` | Importação em lote de imagens de questões para o Storage (ver [Firebase Storage](#firebase-storage--imagens-das-questões)) |
 
 ## Pontos de atenção / dívidas técnicas conhecidas
 
@@ -382,7 +401,7 @@ Os itens abaixo foram identificados numa revisão anterior e já foram endereça
 1. ~~`npm start` estava quebrado~~ — **resolvido**: o app nunca teve (nem precisa de) um servidor Node/Express em produção — o Firebase Hosting já serve o `dist/` estático diretamente. O `server.ts` (Express, usado só localmente para modo dev + endpoint de geração de questões por IA) foi removido por completo junto com a funcionalidade de IA (ver item 6). `dev` agora roda o Vite diretamente (`vite`) e existe um script `preview` (`vite preview`) para conferir o build de produção localmente — sem depender de Express/Node custom nem de um passo de bundling que não existia mais.
 2. ~~Dois arquivos de tipos do domínio divergentes~~ — **resolvido**: `src/types/index.ts` nunca era de fato importado por nenhum módulo (toda importação usava o caminho relativo `../types`, que a resolução de módulos do TypeScript/Node satisfaz primeiro com o arquivo `types.ts`, antes de considerar o diretório `types/`) — ou seja, era código morto. Ele foi removido, e `src/types.ts` passou a ser a única fonte de tipos do domínio. De quebra, os campos "legados" do tipo `Question` (`area`, `tema`, `enunciado`, `opcoes`, `respostaCorreta`, `explicacao`, `pontosChave`, `referencia`) e os tipos `AreaTema`, `QuizAttempt`, `SavedQuestion`, `Flashcard`, `QuestionAnswerLog` também saíram — existiam só para dar suporte ao protótipo de "quiz livre com IA" removido no item 6.
 3. ~~Regras de Segurança do Firestore/Storage não versionadas~~ — **resolvido**: ver [seção dedicada](#regras-de-segurança-firestorestorage) acima (`firestore.rules`/`storage.rules`). Continuam existindo duas limitações arquiteturais que as regras sozinhas não resolvem (gabarito lido do cliente; sem isolamento real por dono do documento) — documentadas na mesma seção.
-4. **Duas convenções de caminho de imagem no Storage** (`question-images/{questionId}/...` gerado pela UI vs. `imagens_questoes/{PROVA}/...` de uploads manuais em lote) — isso é uma característica dos **dados já existentes no bucket**, não algo que uma mudança de código neste repositório possa corrigir retroativamente (exigiria acesso ao bucket para mover/renomear arquivos e reescrever `imageUrl` nos documentos afetados, fora do escopo de uma alteração de código). Ficou documentado como recomendação em [Firebase Storage](#firebase-storage--imagens-das-questões): tratar o caminho da UI (`question-images/...`) como canônico daqui para frente.
+4. ~~Duas convenções de caminho de imagem no Storage sem importador único~~ — **parcialmente resolvido**: `question-images/{questionId}/...` (upload individual pela UI) e `imagens_questoes/{PROVA}/...` (lotes por prova) continuam coexistindo — são casos de uso genuinamente diferentes, não um bug —, mas agora existe `scripts/import-question-images.mjs` para popular o segundo caminho de forma consistente (upload + `imageUrl` sempre no mesmo passo, sem casamento manual). Ver [Firebase Storage](#firebase-storage--imagens-das-questões).
 5. ~~`VITE_FIREBASE_*` vestigiais~~ — **resolvido**: `src/services/firebase.ts` agora lê `import.meta.env.VITE_FIREBASE_*` como overrides reais sobre `firebase-applet-config.json`, permitindo apontar um build para outro projeto Firebase (ex.: staging) só com variáveis de ambiente, sem editar código.
 6. ~~Geração de questões por IA (`GEMINI_API_KEY`/`server.ts`)~~ — **removida por completo**, a pedido: nunca esteve disponível no app publicado (só funcionava localmente via `server.ts`/Express, que não roda em produção), então mantinha código morto e uma dependência (`@google/genai`) sem uso real. Foram removidos: `server.ts`; `POST /api/generate-questions`; a dependência `@google/genai`, `express` e `@types/express`; a variável `GEMINI_API_KEY` (`.env.example`, `.github/workflows/deploy.yml`); `MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API` (`metadata.json`); e todo o cluster de UI que só existia para consumir esse endpoint e nunca esteve conectado a nenhuma rota real do app (`QuizEngine.tsx`, `QuizResultView.tsx`, `StatsView.tsx`, `FlashcardsView.tsx`, `SavedQuestionsView.tsx`, `ArvoreTemasView.tsx`, `Header.tsx` e `src/data/prebakedQuestions.ts` — nenhum desses componentes era importado por `AppRoutes.tsx` ou por qualquer página em uso). As dependências `canvas-confetti` e `tsx`, usadas apenas por esse mesmo cluster morto, também saíram do `package.json`.
 7. **`vite.config.ts` precisa manter o plugin `tailwindcss()` registrado.** Uma regressão anterior removeu esse plugin do array `plugins`, quebrando toda a geração de classes utilitárias do Tailwind no build de produção (o CSS gerado passava a conter a diretiva `@tailwind utilities;` **não processada**, resultando em uma tela sem nenhum estilo aplicado). Já corrigido, mas fica registrado como algo a não repetir.
