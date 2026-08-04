@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { X, FileCheck } from 'lucide-react';
-import { Question, ExamQuestion } from '../types';
+import { X, FileCheck, CheckCircle2 } from 'lucide-react';
+import { Question, ExamQuestion, QuestionAnswer } from '../types';
 import { QuestionImage } from './QuestionImage';
-import { getExamsContainingQuestion } from '../services/firebaseService';
+import { getExamsContainingQuestion, getQuestionAnswer } from '../services/firebaseService';
 
 interface QuestionPreviewModalProps {
   question: Question | ExamQuestion;
   onClose: () => void;
 }
 
-// Pré-visualização administrativa de uma questão, exatamente no mesmo
-// layout usado pelo candidato durante a execução da prova (sem gabarito).
-// Usada em QuestionsPage e CreateExamPage.
+// Pré-visualização administrativa de uma questão — ao contrário da mesma
+// tela no fluxo do candidato, aqui o gabarito é exibido de propósito
+// (alternativa correta destacada + comentário), já que só o admin acessa
+// esta modal. Usada em QuestionsPage e CreateExamPage.
 export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ question, onClose }) => {
   // `ExamQuestion` (cópia congelada dentro de exams/{id}/questions) guarda o
   // id da questão original em `originalQuestionId`; `Question` (banco de
@@ -19,12 +20,16 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
   const originalQuestionId = 'originalQuestionId' in question ? question.originalQuestionId : question.id;
 
   const [examsUsedIn, setExamsUsedIn] = useState<{ examId: string; examName: string }[]>([]);
+  const [answer, setAnswer] = useState<QuestionAnswer | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     getExamsContainingQuestion(originalQuestionId)
       .then(res => { if (!cancelled) setExamsUsedIn(res); })
       .catch(err => console.error("Erro ao buscar provas que usam esta questão:", err));
+    getQuestionAnswer(originalQuestionId)
+      .then(res => { if (!cancelled) setAnswer(res); })
+      .catch(err => console.error("Erro ao buscar gabarito da questão:", err));
     return () => { cancelled = true; };
   }, [originalQuestionId]);
 
@@ -72,19 +77,51 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
             {(['A', 'B', 'C', 'D'] as const).map((letter) => {
               const text = question.alternatives[letter];
               if (!text) return null;
+              const isCorrect = answer?.correctAlternative === letter;
               return (
                 <div
                   key={letter}
-                  className="w-full p-4 rounded-xl border text-left flex items-start gap-3.5 bg-slate-950/80 border-slate-800 text-slate-300"
+                  className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 ${
+                    isCorrect
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-[#050f41]'
+                      : 'bg-slate-950/80 border-slate-800 text-slate-300'
+                  }`}
                 >
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 bg-slate-800 text-slate-400 border border-slate-700">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
+                    isCorrect
+                      ? 'bg-emerald-500 text-slate-950'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  }`}>
                     {letter}
                   </div>
                   <span className="text-xs sm:text-sm leading-relaxed font-normal flex-1">{text}</span>
+                  {isCorrect && (
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 shrink-0 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Gabarito
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {answer && (answer.solutionText || answer.comments) && (
+            <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs sm:text-sm text-slate-300 space-y-2">
+              {answer.solutionText && (
+                <div>
+                  <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
+                  <p className="text-slate-300 leading-relaxed">{answer.solutionText}</p>
+                </div>
+              )}
+              {answer.comments && (
+                <div>
+                  <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
+                  <p className="text-slate-300 leading-relaxed">{answer.comments}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
