@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, HelpCircle 
+import {
+  CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, BarChart3
 } from 'lucide-react';
-import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById } from '../../services/firebaseService';
-import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam } from '../../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes } from '../../services/firebaseService';
+import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme } from '../../types';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -13,6 +14,8 @@ export const ExamResultPage: React.FC = () => {
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, AttemptAnswer>>({});
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,12 +33,16 @@ export const ExamResultPage: React.FC = () => {
         
         const examQs = await getExamQuestions(att.examId);
         setQuestions(examQs);
-        
+
         const userAns = await getAttemptAnswers(attemptId);
         const ansMap: Record<string, AttemptAnswer> = {};
         userAns.forEach(a => { ansMap[a.examQuestionId] = a; });
         setAnswers(ansMap);
-        
+
+        const [areaList, themeList] = await Promise.all([getAreas(), getThemes()]);
+        setAreas(areaList);
+        setThemes(themeList);
+
         if (!examData || examData.showCommentsAfterFinish !== false) {
           const keysMap: Record<string, QuestionAnswer> = {};
           
@@ -58,6 +65,43 @@ export const ExamResultPage: React.FC = () => {
     }
     loadResult();
   }, [attemptId]);
+
+  // Desempenho desta prova especificamente, por Área e Tema — só entram
+  // questões efetivamente respondidas. Serve tanto para os gráficos abaixo
+  // quanto de insumo futuro para sugestões de estudo no dashboard do usuário.
+  const areaBreakdown = useMemo(() => {
+    const map: Record<string, { areaId: string; total: number; correct: number }> = {};
+    questions.forEach(q => {
+      const ans = answers[q.id];
+      if (!ans || !ans.selectedAlternative) return;
+      if (!map[q.areaId]) map[q.areaId] = { areaId: q.areaId, total: 0, correct: 0 };
+      map[q.areaId].total += 1;
+      if (ans.isCorrect) map[q.areaId].correct += 1;
+    });
+    return Object.values(map).map(a => ({
+      ...a,
+      name: areas.find(ar => ar.id === a.areaId)?.name || a.areaId,
+      accuracy: a.total > 0 ? Math.round((a.correct / a.total) * 100) : 0
+    }));
+  }, [questions, answers, areas]);
+
+  const themeBreakdown = useMemo(() => {
+    const map: Record<string, { themeId: string; total: number; correct: number }> = {};
+    questions.forEach(q => {
+      const ans = answers[q.id];
+      if (!ans || !ans.selectedAlternative) return;
+      if (!map[q.themeId]) map[q.themeId] = { themeId: q.themeId, total: 0, correct: 0 };
+      map[q.themeId].total += 1;
+      if (ans.isCorrect) map[q.themeId].correct += 1;
+    });
+    return Object.values(map)
+      .map(t => ({
+        ...t,
+        name: themes.find(th => th.id === t.themeId)?.name || t.themeId,
+        accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0
+      }))
+      .sort((a, b) => a.accuracy - b.accuracy);
+  }, [questions, answers, themes]);
 
   if (loading || !attempt) {
     return (
@@ -108,24 +152,60 @@ export const ExamResultPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-6 border-t border-slate-800">
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-            <p className="text-xs text-slate-400">Acertos</p>
-            <p className="text-base font-bold text-[#050f41] mt-0.5">{attempt.correctAnswers}</p>
+        {/* Desempenho por Área e Tema nesta prova — substitui os cards de
+            Acertos/Erros/Sem Resposta por análises gráficas mais úteis para
+            identificar pontos fracos e alimentar sugestões futuras de estudo. */}
+        {areaBreakdown.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-slate-800 space-y-6">
+            <div>
+              <h3 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-teal-400" />
+                Desempenho por Área nesta Prova
+              </h3>
+              <p className="text-xs text-slate-400 mb-2">Percentual de acerto entre as questões respondidas, por área.</p>
+              <div className="h-56 sm:h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={areaBreakdown} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
+                    <CartesianGrid stroke="#dbe0f0" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#7680ac', fontSize: 10 }} unit="%" />
+                    <YAxis type="category" dataKey="name" width={110} tick={{ fill: '#4b567f', fontSize: 11 }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                      formatter={(value: number) => [`${value}%`, 'Aproveitamento']}
+                    />
+                    <Bar dataKey="accuracy" radius={[0, 6, 6, 0]}>
+                      {areaBreakdown.map(a => (
+                        <Cell key={a.areaId} fill={a.accuracy >= 60 ? '#079551' : a.accuracy >= 40 ? '#fab932' : '#dc2626'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {themeBreakdown.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-[#050f41] mb-3">Temas desta Prova (do mais fraco ao mais forte)</h3>
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {themeBreakdown.map(t => {
+                    const tone = t.accuracy >= 60 ? 'text-emerald-400' : t.accuracy >= 40 ? 'text-amber-400' : 'text-red-400';
+                    return (
+                      <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
+                        <span className="text-slate-300 truncate">{t.name}</span>
+                        <span className={`font-bold shrink-0 ${tone}`}>
+                          {t.accuracy}% <span className="text-xs text-slate-500 font-normal">({t.correct}/{t.total})</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-3 italic">
+                  Esses dados também alimentam as sugestões de revisão em "Meu Desempenho".
+                </p>
+              </div>
+            )}
           </div>
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
-            <XCircle className="w-5 h-5 text-red-400 mx-auto mb-1" />
-            <p className="text-xs text-slate-400">Erros</p>
-            <p className="text-base font-bold text-[#050f41] mt-0.5">{attempt.wrongAnswers}</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
-            <HelpCircle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
-            <p className="text-xs text-slate-400">Sem Resposta</p>
-            <p className="text-base font-bold text-[#050f41] mt-0.5">{attempt.unansweredQuestions}</p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Detailed Question Review List */}

@@ -67,7 +67,7 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
             src={formattedSrc}
             alt={alt}
             onError={() => setHasError(true)}
-            className="max-h-80 w-auto object-contain rounded-xl mx-auto"
+            className="max-h-80 lg:max-h-[28rem] w-auto object-contain rounded-xl mx-auto"
           />
           {allowZoom && (
             <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
