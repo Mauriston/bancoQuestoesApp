@@ -773,6 +773,15 @@ export async function getUserStats(userId: string): Promise<UserStats | null> {
   return null;
 }
 
+// Estatísticas agregadas de todos os usuários — usado para calcular a média
+// dos colegas por área/tema em PerformancePage (comparação de desempenho).
+export async function getAllUserStats(): Promise<UserStats[]> {
+  const snapshot = await getDocs(collection(db, 'userStats'));
+  const stats: UserStats[] = [];
+  snapshot.forEach(doc => stats.push(doc.data() as UserStats));
+  return stats;
+}
+
 export async function addAdminLog(adminId: string, adminName: string, action: string, details: string): Promise<void> {
   const logId = generateId('log');
   await setDoc(doc(db, 'adminLogs', logId), {

@@ -190,7 +190,7 @@ export const TakeExamPage: React.FC = () => {
       </div>
 
       {/* Question Content Box */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
 
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800/80">
           <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
@@ -199,7 +199,7 @@ export const TakeExamPage: React.FC = () => {
         </div>
 
         {/* Enunciado */}
-        <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
+        <p className="text-base sm:text-lg font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
           {currentQ.statement}
         </p>
 
@@ -240,14 +240,14 @@ export const TakeExamPage: React.FC = () => {
                     : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-[#050f41]'
                 }`}
               >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
                   isSelected
                     ? 'bg-teal-500 text-slate-950 shadow-sm'
                     : 'bg-slate-800 text-slate-400 border border-slate-700'
                 }`}>
                   {letter}
                 </div>
-                <span className="text-xs sm:text-sm leading-relaxed font-normal flex-1">{text}</span>
+                <span className="text-sm sm:text-base leading-relaxed font-normal flex-1">{text}</span>
               </button>
             );
           })}
@@ -256,12 +256,12 @@ export const TakeExamPage: React.FC = () => {
         {/* Avançar (sem opção de voltar; exige resposta selecionada) */}
         <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
           {currentAlt === null && (
-            <p className="text-[11px] text-amber-400 font-medium">Selecione uma alternativa para continuar.</p>
+            <p className="text-xs text-amber-400 font-medium">Selecione uma alternativa para continuar.</p>
           )}
           <button
             onClick={handleAdvance}
             disabled={submitting || currentAlt === null}
-            className="ml-auto flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
+            className="ml-auto flex items-center gap-1.5 px-5 py-3 rounded-xl text-sm font-bold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
           >
             <span>{isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}</span>
             {isLastQuestion ? <Send className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
@@ -294,11 +294,11 @@ export const TakeExamPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-[#050f41]">Finalizar Prova?</h3>
-                <p className="text-xs text-slate-400">Essa foi a última questão. Confirme o envio definitivo das suas respostas.</p>
+                <p className="text-sm text-slate-400">Essa foi a última questão. Confirme o envio definitivo das suas respostas.</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-300 space-y-1">
               <p>✔ Todas as <strong className="text-teal-400">{questions.length}</strong> questões foram respondidas.</p>
             </div>
 
