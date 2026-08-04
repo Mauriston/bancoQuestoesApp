@@ -78,74 +78,75 @@ export const AttemptsPage: React.FC = () => {
         />
       </div>
 
-      {/* List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">Carregando registro de tentativas...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">Nenhuma tentativa encontrada.</div>
-        ) : (
-          <div className="divide-y divide-slate-800/80">
-            {filtered.map((att) => {
-              const isPassed = (att.scorePercentage || 0) >= 60;
-              return (
-                <div key={att.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-800/40 transition-colors">
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-cyan-400 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" />
-                        {nameOf(att)}
-                      </span>
-                      <span className="text-[11px] text-slate-500">•</span>
-                      <span className="text-[11px] text-slate-500">{formatDate(att.completedAt || att.startedAt)}</span>
-                    </div>
+      {/* List — grid de cards para não desperdiçar a largura da tela em telas
+          largas (cada tentativa fica compacta em vez de ocupar 1 linha inteira) */}
+      {loading ? (
+        <div className="p-8 text-center text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">Carregando registro de tentativas...</div>
+      ) : filtered.length === 0 ? (
+        <div className="p-8 text-center text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">Nenhuma tentativa encontrada.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((att) => {
+            const isPassed = (att.scorePercentage || 0) >= 60;
+            return (
+              <div key={att.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl hover:border-slate-700 transition-all flex flex-col justify-between">
 
-                    <h3 className="text-sm font-bold text-[#050f41]">
-                      {att.examName || 'Simulado Ortopedia'}
-                    </h3>
-
-                    <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
-                      <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>
-                    </div>
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <span className="text-xs font-bold text-cyan-400 flex items-center gap-1 min-w-0">
+                      <User className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{nameOf(att)}</span>
+                    </span>
+                    <button
+                      onClick={() => handleDelete(att.id)}
+                      disabled={deletingId === att.id}
+                      title="Excluir esta tentativa do histórico"
+                      className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors disabled:opacity-40 shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
-                    {att.status === 'completed' && (
-                      <div className="text-left sm:text-right">
+                  <h3 className="text-sm font-bold text-[#050f41] line-clamp-2">
+                    {att.examName || 'Simulado Ortopedia'}
+                  </h3>
+
+                  <p className="text-[11px] text-slate-500 mt-1">{formatDate(att.completedAt || att.startedAt)}</p>
+
+                  <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
+                    <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                  {att.status === 'completed' ? (
+                    <>
+                      <div>
                         <span className={`text-lg font-black ${isPassed ? 'text-teal-400' : 'text-amber-400'}`}>
                           {att.scorePercentage}%
                         </span>
                         <p className="text-[10px] text-slate-500">Aproveitamento</p>
                       </div>
-                    )}
-
-                    {att.status === 'completed' && (
                       <Link
                         to={`/app/attempts/${att.id}/result`}
-                        className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl"
+                        className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl shrink-0"
                       >
                         <span>Ver Relatório</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
-                    )}
-
-                    <button
-                      onClick={() => handleDelete(att.id)}
-                      disabled={deletingId === att.id}
-                      title="Excluir esta tentativa do histórico"
-                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
+                    </>
+                  ) : (
+                    <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Em Andamento
+                    </span>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+              </div>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );
