@@ -1,0 +1,124 @@
+rules_version = '2';
+
+// ATENÇÃO — LEIA ANTES DE FAZER DEPLOY DESTE ARQUIVO
+//
+// Este arquivo passou a existir para que as Regras de Segurança do Firestore
+// parem de viver só no console do Firebase (sem revisão de código nem
+// histórico auditável). Ele foi escrito com base no comportamento observado
+// no código deste repositório (quais telas leem/escrevem cada coleção, e se
+// isso acontece antes ou depois de qualquer login), e NÃO foi extraído das
+// regras atualmente publicadas no projeto `gen-lang-client-0316191622`.
+//
+// Antes do primeiro `firebase deploy --only firestore:rules`, compare este
+// arquivo com o que está hoje publicado no console do Firebase e ajuste o
+// que for necessário — um deploy às cegas pode tanto quebrar o app quanto
+// abrir mais acesso do que o pretendido.
+//
+// Duas limitações arquiteturais importantes que estas regras NÃO resolvem
+// (ver README.md, seção "Pontos de atenção"):
+//
+// 1. O gabarito de cada questão (`questionAnswers`) é lido diretamente do
+//    navegador por `gradingService.ts` — não existe Cloud Function
+//    intermediando a correção. Qualquer sessão autenticada (inclusive
+//    anônima, usada pelos candidatos) consegue, tecnicamente, ler o
+//    documento de gabarito de QUALQUER questão via SDK, não só da questão
+//    que está respondendo no momento.
+//
+// 2. `examAssignments.userId`, `attempts.userId` etc. guardam o ID interno
+//    do app (coleção `users`), não `request.auth.uid`. Sessões de candidato
+//    usam Firebase Auth anônimo e nunca persistem o vínculo entre o
+//    `authUid` anônimo e o documento do usuário. Por isso não é possível,
+//    hoje, restringir por "dono real" do documento (`request.auth.uid ==
+//    dado.userId`) só com Security Rules — qualquer sessão autenticada tem
+//    acesso equivalente a qualquer outra. Corrigir isso de verdade exigiria
+//    persistir esse vínculo no login e/ou mover a correção para uma Cloud
+//    Function.
+//
+// Dado isso, a política abaixo é a linha de base alcançável hoje: exigir
+// pelo menos uma sessão do Firebase Auth (anônima ou de admin) para
+// qualquer leitura/escrita, com exceção da coleção `users`, que precisa ser
+// publicamente legível porque a tela inicial (`HomePage`) lista os
+// candidatos ativos ANTES de qualquer login/Auth anônimo.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Necessário público para a tela de seleção de candidato em "/"
+    // (HomePage → getActiveUsers()), que roda antes de qualquer Auth.
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /areas/{areaId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /themes/{themeId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /questions/{questionId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Ver limitação (1) no cabeçalho deste arquivo.
+    match /questionAnswers/{questionId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /exams/{examId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+
+      match /questions/{examQuestionId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+
+    // Ver limitação (2) no cabeçalho deste arquivo.
+    match /examAssignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /attempts/{attemptId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+
+      match /answers/{answerId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+
+    match /userStats/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /adminLogs/{logId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /imports/{importId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Nega explicitamente qualquer coleção não listada acima.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

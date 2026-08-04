@@ -28,7 +28,7 @@ jobs:
       - name: 4. Instalar as dependências do projeto
         run: bun install
 
-      - name: 5. Compilar o Projeto (Frontend e Backend)
+      - name: 5. Compilar o Projeto (Frontend)
         run: bun run build
 
       - name: 6. Instalar Firebase CLI Globalmente
@@ -44,4 +44,3 @@ jobs:
         run: firebase deploy --only hosting --project gen-lang-client-0316191622
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

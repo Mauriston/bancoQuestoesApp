@@ -1,8 +1,3 @@
-export interface AreaTema {
-  Área: string;
-  temas: string[];
-}
-
 export type UserRole = 'user' | 'admin';
 
 export interface AppUser {
@@ -52,15 +47,6 @@ export interface Question {
   updatedAt?: any;
   createdBy?: string;
   dificuldade?: string;
-  // Legacy compatibility fields
-  area?: string;
-  tema?: string;
-  enunciado?: string;
-  opcoes?: string[];
-  respostaCorreta?: number;
-  explicacao?: string;
-  pontosChave?: string[];
-  referencia?: string;
 }
 
 export interface QuestionAnswer {
@@ -69,13 +55,6 @@ export interface QuestionAnswer {
   solutionText?: string;
   comments?: string;
   updatedAt?: any;
-}
-
-export interface QuestionAnswerLog {
-  question: Question;
-  selectedOption: number;
-  isCorrect: boolean;
-  timeSpentSeconds: number;
 }
 
 export interface Exam {
@@ -233,29 +212,3 @@ export interface QuestionBankJsonRaw {
   }>;
 }
 
-export interface QuizAttempt {
-  id: string;
-  date: string;
-  area: string;
-  tema?: string;
-  mode: 'estudo' | 'simulado' | 'rapido' | 'tema';
-  totalQuestions: number;
-  correctAnswers: number;
-  timeSpentSeconds: number;
-  answers: QuestionAnswerLog[];
-}
-
-export interface SavedQuestion {
-  question: Question;
-  savedAt: string;
-  notes?: string;
-}
-
-export interface Flashcard {
-  id: string;
-  area: string;
-  tema: string;
-  frente: string;
-  verso: string;
-  detalhes?: string;
-}

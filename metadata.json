@@ -1,6 +1,5 @@
 {
   "name": "Treinamento TEOT HMA 2027",
   "description": "Banco de questões e simulados interativos para TEOT e exames de Ortopedia e Traumatologia baseados na árvore de temas.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": []
 }
