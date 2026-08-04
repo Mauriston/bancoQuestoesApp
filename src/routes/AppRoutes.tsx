@@ -104,6 +104,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="import" element={<ImportPage />} />
         <Route path="exams" element={<ExamsListPage />} />
         <Route path="exams/new" element={<CreateExamPage />} />
+        <Route path="exams/:examId/edit" element={<CreateExamPage />} />
         <Route path="exams/:examId" element={<ExamViewPage />} />
         <Route path="attempts" element={<AttemptsPage />} />
       </Route>
