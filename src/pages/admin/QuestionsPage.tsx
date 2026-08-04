@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds, getDistinctSourceExams } from '../../services/firebaseService';
+import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, QuestionAnswer } from '../../types';
+import { SOURCE_EXAM_OPTIONS } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 
 export const QuestionsPage: React.FC = () => {
@@ -19,11 +20,8 @@ export const QuestionsPage: React.FC = () => {
   const [selectedAreaId, setSelectedAreaId] = useState('');
   const [selectedThemeId, setSelectedThemeId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  // Fonte da Questão: menu suspenso com caixas de seleção. As opções vêm dos
-  // valores de `sourceExam` já cadastrados (campo de texto livre no
-  // formulário — ex.: "TEOT 2023", "TARO 2021", "BANCO PRÓPRIO"), buscados
-  // uma única vez e independentes dos demais filtros.
-  const [sourceExamOptions, setSourceExamOptions] = useState<string[]>([]);
+  // Fonte da Questão: menu suspenso com caixas de seleção, com a lista fixa
+  // de fontes definida pelo admin (ver SOURCE_EXAM_OPTIONS).
   const [selectedSourceExams, setSelectedSourceExams] = useState<string[]>([]);
   const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
   const sourceDropdownRef = useRef<HTMLDivElement>(null);
@@ -83,12 +81,6 @@ export const QuestionsPage: React.FC = () => {
   useEffect(() => {
     fetchQuestionsList();
   }, [selectedAreaId, selectedThemeId, selectedSourceExams, searchQuery]);
-
-  useEffect(() => {
-    getDistinctSourceExams()
-      .then(setSourceExamOptions)
-      .catch(err => console.error("Erro ao carregar fontes de questões:", err));
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -279,35 +271,29 @@ export const QuestionsPage: React.FC = () => {
 
           {sourceDropdownOpen && (
             <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
-              {sourceExamOptions.length === 0 ? (
-                <p className="text-[11px] text-slate-500 px-2 py-1.5">Nenhuma fonte cadastrada ainda.</p>
-              ) : (
-                <>
-                  {selectedSourceExams.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSourceExams([])}
-                      className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
-                    >
-                      Limpar seleção
-                    </button>
-                  )}
-                  {sourceExamOptions.map(opt => (
-                    <label
-                      key={opt}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedSourceExams.includes(opt)}
-                        onChange={() => toggleSourceExam(opt)}
-                        className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
-                      />
-                      <span className="truncate">{opt}</span>
-                    </label>
-                  ))}
-                </>
+              {selectedSourceExams.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedSourceExams([])}
+                  className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
+                >
+                  Limpar seleção
+                </button>
               )}
+              {SOURCE_EXAM_OPTIONS.map(opt => (
+                <label
+                  key={opt}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSourceExams.includes(opt)}
+                    onChange={() => toggleSourceExam(opt)}
+                    className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                  />
+                  <span className="truncate">{opt}</span>
+                </label>
+              ))}
             </div>
           )}
         </div>
