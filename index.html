@@ -10,16 +10,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Capturador de Erros de Diagnóstico -->
+    <!-- Capturador Global de Erros e Promises -->
     <script>
-      window.addEventListener('error', function(e) {
+      function mostrarErro(mensagem, arquivo) {
         var root = document.getElementById('root');
         if (root && root.innerHTML === '') {
           root.innerHTML = '<div style="padding: 20px; color: red; font-family: sans-serif;">' +
-            '<h2>⚠️ Erro ao carregar a aplicação React</h2>' +
-            '<p><b>Mensagem:</b> ' + e.message + '</p>' +
-            '<p><b>Arquivo:</b> ' + (e.filename || 'Desconhecido') + ' (Linha: ' + (e.lineno || '0') + ')</p>' +
+            '<h2>⚠️ Erro ao inicializar o React</h2>' +
+            '<p><b>Detalhes:</b> ' + mensagem + '</p>' +
+            '<p><b>Origem:</b> ' + arquivo + '</p>' +
             '</div>';
         }
+      }
+      
+      window.addEventListener('error', function(e) {
+        mostrarErro(e.message, e.filename || 'Desconhecido');
+      });
+
+      window.addEventListener('unhandledrejection', function(e) {
+        mostrarErro(e.reason ? e.reason.message || e.reason : 'Erro Assíncrono Desconhecido', 'Falha em Promise/Firebase');
       });
     </script>
   </head>
