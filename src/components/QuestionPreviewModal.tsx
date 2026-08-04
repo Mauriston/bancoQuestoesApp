@@ -14,7 +14,7 @@ interface QuestionPreviewModalProps {
 export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ question, onClose }) => {
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -25,7 +25,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
           <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
             Pré-visualização da Questão
           </span>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-[#050f41]">
             <X className="w-4 h-4" />
           </button>
         </div>

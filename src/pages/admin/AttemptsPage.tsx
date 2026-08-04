@@ -57,7 +57,7 @@ export const AttemptsPage: React.FC = () => {
     <div className="space-y-6 pb-12">
       
       <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <History className="w-5 h-5 text-cyan-400" />
           Monitoramento de Tentativas e Resultados
         </h1>
@@ -74,7 +74,7 @@ export const AttemptsPage: React.FC = () => {
           placeholder="Buscar por nome do residente ou da prova..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] placeholder-slate-500 focus:outline-none focus:border-cyan-500"
         />
       </div>
 
@@ -101,7 +101,7 @@ export const AttemptsPage: React.FC = () => {
                       <span className="text-[11px] text-slate-500">{formatDate(att.completedAt || att.startedAt)}</span>
                     </div>
 
-                    <h3 className="text-sm font-bold text-white">
+                    <h3 className="text-sm font-bold text-[#050f41]">
                       {att.examName || 'Simulado Ortopedia'}
                     </h3>
 

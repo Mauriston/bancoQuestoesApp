@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { 
-  LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud, 
-  LogOut, ShieldAlert, Menu, X, Sparkles 
+import {
+  LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
+  LogOut, ShieldAlert, Menu, X, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -27,33 +27,33 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
-      
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
+
       {/* Top Admin Bar */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-slate-800">
+      <header className="sticky top-0 z-40 bg-[#050f41] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            
+
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                className="lg:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
 
               <Link to="/admin/dashboard" className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+                <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20">
                   <ShieldAlert className="w-5 h-5" />
                 </div>
                 <div>
                   <h1 className="text-base font-bold text-white tracking-tight leading-tight flex items-center gap-1.5">
                     Painel Administrativo
-                    <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/10 text-[#FAB932] border border-white/10">
                       ADMIN
                     </span>
                   </h1>
-                  <p className="text-[11px] text-slate-400">Plataforma TEOT Ortopedia</p>
+                  <p className="text-[11px] text-white/60">Plataforma TEOT Ortopedia</p>
                 </div>
               </Link>
             </div>
@@ -61,13 +61,13 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             {/* Admin User Info & Logout */}
             <div className="flex items-center gap-3">
               {currentUser && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-cyan-600/30 text-cyan-300 flex items-center justify-center font-bold text-[11px]">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px]">
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold text-slate-200 leading-none">{currentUser.name}</p>
-                    <p className="text-[10px] text-slate-400 leading-none mt-0.5">{currentUser.email}</p>
+                    <p className="font-semibold text-white leading-none">{currentUser.name}</p>
+                    <p className="text-[10px] text-white/60 leading-none mt-0.5">{currentUser.email}</p>
                   </div>
                 </div>
               )}
@@ -75,7 +75,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
               <button
                 onClick={handleLogout}
                 title="Sair do Painel"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Sair</span>
@@ -88,15 +88,15 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
 
       {/* Main Shell with Sidebar */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
-        
+
         {/* Desktop Sidebar / Mobile Overlay */}
         <aside className={`
-          fixed lg:static inset-y-0 left-0 z-30 w-64 bg-slate-900 lg:bg-transparent border-r lg:border-r-0 border-slate-800 p-4 lg:p-0 transition-transform duration-200 flex flex-col
+          fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#050f41] rounded-none lg:rounded-2xl border border-white/10 p-4 transition-transform duration-200 flex flex-col shadow-xl lg:shadow-md lg:h-fit
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
-          <div className="lg:hidden flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
-            <span className="text-sm font-semibold text-slate-300">Navegação Admin</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400">
+          <div className="lg:hidden flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+            <span className="text-sm font-semibold text-white">Navegação Admin</span>
+            <button onClick={() => setMobileMenuOpen(false)} className="text-white/70">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -112,20 +112,20 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-gradient-to-r from-cyan-600/20 to-blue-600/20 text-cyan-300 border border-cyan-500/30 font-semibold shadow-sm'
-                      : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                      ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="mt-8 p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 space-y-2">
-            <p className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="mt-8 p-4 rounded-xl bg-white/10 border border-white/10 text-xs text-white/70 space-y-2">
+            <p className="font-semibold text-white flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#FAB932]" />
               Banco Protegido TEOT
             </p>
             <p className="text-[11px] leading-relaxed">Gabaritos e relatórios são restritos. Operações registradas em log.</p>
@@ -139,7 +139,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
 
       </div>
 
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-600">
+      <footer className="border-t border-white/10 bg-[#050f41] py-4 text-center text-xs text-white/50">
         <p>Sistema Administrativo TEOT • SBOT</p>
       </footer>
 

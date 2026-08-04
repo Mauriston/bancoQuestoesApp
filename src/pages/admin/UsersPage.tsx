@@ -97,7 +97,7 @@ export const UsersPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
             <Users className="w-5 h-5 text-cyan-400" />
             Gerenciamento de Usuários
           </h1>
@@ -124,7 +124,7 @@ export const UsersPage: React.FC = () => {
             placeholder="Filtrar por nome ou e-mail..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] placeholder-slate-500 focus:outline-none focus:border-cyan-500"
           />
         </div>
 
@@ -165,7 +165,7 @@ export const UsersPage: React.FC = () => {
                     className="hover:bg-slate-800/40 transition-colors cursor-pointer"
                     title="Clique para ver histórico e desempenho"
                   >
-                    <td className="p-3.5 font-semibold text-white flex items-center gap-2.5">
+                    <td className="p-3.5 font-semibold text-[#050f41] flex items-center gap-2.5">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
                         u.role === 'admin'
                           ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
@@ -222,14 +222,14 @@ export const UsersPage: React.FC = () => {
 
       {/* Modal Create User */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-cyan-400" />
                 Cadastrar Novo Usuário
               </h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-[#050f41]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -250,7 +250,7 @@ export const UsersPage: React.FC = () => {
                   placeholder="Ex: Dr. Roberto Alcantara"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
@@ -262,7 +262,7 @@ export const UsersPage: React.FC = () => {
                   placeholder="roberto@ortopedia.br"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
@@ -287,7 +287,7 @@ export const UsersPage: React.FC = () => {
                   placeholder="Mínimo 6 caracteres (deixe em branco para acesso direto)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
                   {role === 'admin' 

@@ -69,7 +69,7 @@ export const ExamViewPage: React.FC = () => {
   if (!exam) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white">
+        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41]">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Lista de Provas</span>
         </Link>
@@ -80,7 +80,7 @@ export const ExamViewPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Lista de Provas</span>
       </Link>
@@ -88,7 +88,7 @@ export const ExamViewPage: React.FC = () => {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <h1 className="text-xl font-bold text-white">{exam.name}</h1>
+            <h1 className="text-xl font-bold text-[#050f41]">{exam.name}</h1>
             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
               isExamActive(exam)
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -167,7 +167,7 @@ export const ExamViewPage: React.FC = () => {
                       key={altKey}
                       className={`p-3 rounded-xl border text-xs flex items-start gap-3 transition-all ${
                         isCorrectKey
-                          ? 'bg-emerald-500/15 border-emerald-500/50 text-white font-semibold'
+                          ? 'bg-emerald-500/15 border-emerald-500/50 text-[#050f41] font-semibold'
                           : 'bg-slate-950 border-slate-800/80 text-slate-300'
                       }`}
                     >

@@ -76,7 +76,7 @@ export const DashboardPage: React.FC = () => {
       {/* Header with Export Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-cyan-400" />
             Dashboard Geral de Desempenho
           </h1>
@@ -87,7 +87,7 @@ export const DashboardPage: React.FC = () => {
 
         <button
           onClick={handleExportAttemptsCSV}
-          className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-[#050f41] px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition-all self-start sm:self-auto"
         >
           <Download className="w-4 h-4 text-cyan-400" />
           <span>Exportar Relatório CSV</span>
@@ -103,7 +103,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Usuários Ativos</p>
-              <p className="text-xl font-black text-white mt-0.5">{activeUsers.length}</p>
+              <p className="text-xl font-black text-[#050f41] mt-0.5">{activeUsers.length}</p>
             </div>
           </div>
         </div>
@@ -115,7 +115,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Provas Publicadas</p>
-              <p className="text-xl font-black text-white mt-0.5">
+              <p className="text-xl font-black text-[#050f41] mt-0.5">
                 {exams.filter(e => e.status === 'published').length}
               </p>
             </div>
@@ -141,7 +141,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Tentativas Concluídas</p>
-              <p className="text-xl font-black text-white mt-0.5">{completedAttempts.length}</p>
+              <p className="text-xl font-black text-[#050f41] mt-0.5">{completedAttempts.length}</p>
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@ export const DashboardPage: React.FC = () => {
 
       {/* Recent Attempts Log Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-sm font-bold text-white flex items-center justify-between">
+        <h2 className="text-sm font-bold text-[#050f41] flex items-center justify-between">
           <span>Últimas Tentativas Concluídas ({completedAttempts.length})</span>
         </h2>
 
@@ -169,7 +169,7 @@ export const DashboardPage: React.FC = () => {
               <tbody className="divide-y divide-slate-800/80">
                 {completedAttempts.slice(0, 10).map((att) => (
                   <tr key={att.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-semibold text-white">{att.examName || 'Simulado'}</td>
+                    <td className="p-3 font-semibold text-[#050f41]">{att.examName || 'Simulado'}</td>
                     <td className="p-3 text-slate-300">{att.userName || userNameById[att.userId] || 'Usuário removido'}</td>
                     <td className="p-3 font-bold text-teal-400">{att.correctAnswers} / {att.totalQuestions}</td>
                     <td className="p-3">

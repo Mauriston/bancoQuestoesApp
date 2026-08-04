@@ -48,7 +48,7 @@ export const ExamsPage: React.FC = () => {
       
       {/* Page Title Header */}
       <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <FileText className="w-5 h-5 text-teal-400" />
           Provas & Simulados Atribuídos
         </h1>
@@ -92,7 +92,7 @@ export const ExamsPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <h3 className="text-sm font-bold text-white group-hover:text-teal-300 transition-colors line-clamp-2">
+                    <h3 className="text-sm font-bold text-[#050f41] group-hover:text-teal-300 transition-colors line-clamp-2">
                       {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
                     </h3>
 
@@ -113,8 +113,8 @@ export const ExamsPage: React.FC = () => {
                       onClick={() => navigate(`/app/exams/${asgn.id}`)}
                       className={`w-full flex items-center justify-center gap-2 font-bold py-2.5 px-4 rounded-xl shadow-lg transition-all text-xs ${
                         isStarted
-                          ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
-                          : 'bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-teal-500/20'
+                          ? 'bg-amber-500 hover:bg-[#e5a52c] text-[#050f41] shadow-amber-500/20'
+                          : 'bg-teal-500 hover:bg-teal-400 text-white shadow-teal-500/20'
                       }`}
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />

@@ -66,7 +66,7 @@ export const ImportPage: React.FC = () => {
     <div className="space-y-6 pb-12">
       
       <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <UploadCloud className="w-5 h-5 text-cyan-400" />
           Importação do Banco de Questões (JSON)
         </h1>
@@ -81,7 +81,7 @@ export const ImportPage: React.FC = () => {
         {/* Custom JSON Drop */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2 mb-2">
               <FileJson className="w-4 h-4 text-cyan-400" />
               Upload de Arquivo JSON
             </h3>
@@ -100,7 +100,7 @@ export const ImportPage: React.FC = () => {
         {/* Built-in Tree JSON */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-teal-400" />
               Usar Banco Padrão TEOT (arvore_temas.json)
             </h3>
@@ -122,7 +122,7 @@ export const ImportPage: React.FC = () => {
       {jsonPreview && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-white">Pré-visualização e Validação do JSON</h3>
+            <h3 className="text-sm font-bold text-[#050f41]">Pré-visualização e Validação do JSON</h3>
             <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               Estrutura Válida
             </span>

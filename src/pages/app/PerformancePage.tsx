@@ -76,7 +76,7 @@ export const PerformancePage: React.FC = () => {
     <div className="space-y-8 pb-12">
       
       <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-teal-400" />
           Análise Individual de Desempenho
         </h1>
@@ -94,7 +94,7 @@ export const PerformancePage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Total de Questões Respondidas</p>
-              <p className="text-xl font-black text-white mt-0.5">{totalSolved}</p>
+              <p className="text-xl font-black text-[#050f41] mt-0.5">{totalSolved}</p>
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@ export const PerformancePage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Acertos Totais</p>
-              <p className="text-xl font-black text-white mt-0.5">{totalCorrect}</p>
+              <p className="text-xl font-black text-[#050f41] mt-0.5">{totalCorrect}</p>
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@ export const PerformancePage: React.FC = () => {
       {/* Bar Chart Section */}
       {chartData.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-[#050f41] mb-4 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-teal-400" />
             Aproveitamento por Área (%)
           </h2>
@@ -169,7 +169,7 @@ export const PerformancePage: React.FC = () => {
 
       {/* Area Breakdown Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-sm font-bold text-white">Desempenho Detalhado por Área</h2>
+        <h2 className="text-sm font-bold text-[#050f41]">Desempenho Detalhado por Área</h2>
 
         {areaPerformanceList.length === 0 ? (
           <p className="text-xs text-slate-500 italic">Complete simulados para visualizar a estatística por Área.</p>

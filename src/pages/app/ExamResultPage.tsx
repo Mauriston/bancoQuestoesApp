@@ -73,7 +73,7 @@ export const ExamResultPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       
-      <Link to="/app/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+      <Link to="/app/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Minhas Provas</span>
       </Link>
@@ -89,7 +89,7 @@ export const ExamResultPage: React.FC = () => {
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
               Resultado Oficial
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41] mt-2">
               {attempt.examName || 'Simulado Ortopedia TEOT'}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
@@ -113,17 +113,17 @@ export const ExamResultPage: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Acertos</p>
-            <p className="text-base font-bold text-white mt-0.5">{attempt.correctAnswers}</p>
+            <p className="text-base font-bold text-[#050f41] mt-0.5">{attempt.correctAnswers}</p>
           </div>
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <XCircle className="w-5 h-5 text-red-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Erros</p>
-            <p className="text-base font-bold text-white mt-0.5">{attempt.wrongAnswers}</p>
+            <p className="text-base font-bold text-[#050f41] mt-0.5">{attempt.wrongAnswers}</p>
           </div>
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 text-center">
             <HelpCircle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
             <p className="text-xs text-slate-400">Sem Resposta</p>
-            <p className="text-base font-bold text-white mt-0.5">{attempt.unansweredQuestions}</p>
+            <p className="text-base font-bold text-[#050f41] mt-0.5">{attempt.unansweredQuestions}</p>
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@ export const ExamResultPage: React.FC = () => {
                       let style = 'bg-slate-950 border-slate-800/80 text-slate-300';
                       
                       if (isCorrectKey) {
-                        style = 'bg-emerald-500/15 border-emerald-500/50 text-white font-semibold';
+                        style = 'bg-emerald-500/15 border-emerald-500/50 text-[#050f41] font-semibold';
                       } else if (isSelectedByUser && !isCorrectKey) {
                         style = 'bg-red-500/15 border-red-500/50 text-red-200';
                       }

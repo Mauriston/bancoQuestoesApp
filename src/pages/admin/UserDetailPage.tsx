@@ -70,7 +70,7 @@ export const UserDetailPage: React.FC = () => {
   if (!user) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white">
+        <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41]">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Usuários</span>
         </Link>
@@ -92,7 +92,7 @@ export const UserDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+      <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Usuários</span>
       </Link>
@@ -102,7 +102,7 @@ export const UserDetailPage: React.FC = () => {
           {user.name.charAt(0).toUpperCase()}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">{user.name}</h1>
+          <h1 className="text-xl font-bold text-[#050f41]">{user.name}</h1>
           <p className="text-xs text-slate-400">{user.email}</p>
         </div>
         <span className={`ml-auto text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
@@ -121,7 +121,7 @@ export const UserDetailPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Questões Respondidas</p>
-              <p className="text-xl font-black text-white mt-0.5">{totalSolved}</p>
+              <p className="text-xl font-black text-[#050f41] mt-0.5">{totalSolved}</p>
             </div>
           </div>
         </div>
@@ -133,7 +133,7 @@ export const UserDetailPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Provas Concluídas</p>
-              <p className="text-xl font-black text-white mt-0.5">{completedAttempts.length}</p>
+              <p className="text-xl font-black text-[#050f41] mt-0.5">{completedAttempts.length}</p>
             </div>
           </div>
         </div>
@@ -153,7 +153,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Area Breakdown */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-sm font-bold text-white">Desempenho por Área</h2>
+        <h2 className="text-sm font-bold text-[#050f41]">Desempenho por Área</h2>
         {areaPerformanceList.length === 0 ? (
           <p className="text-xs text-slate-500 italic">Nenhuma questão respondida ainda.</p>
         ) : (
@@ -178,7 +178,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Attempts History */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <h2 className="text-sm font-bold text-white p-6 pb-3">Histórico de Tentativas ({attempts.length})</h2>
+        <h2 className="text-sm font-bold text-[#050f41] p-6 pb-3">Histórico de Tentativas ({attempts.length})</h2>
         {attempts.length === 0 ? (
           <p className="text-xs text-slate-500 italic px-6 pb-6">Nenhuma tentativa registrada ainda.</p>
         ) : (
@@ -198,7 +198,7 @@ export const UserDetailPage: React.FC = () => {
                       </span>
                       <span className="text-[11px] text-slate-500">{formatDate(att.completedAt || att.startedAt)}</span>
                     </div>
-                    <h3 className="text-sm font-bold text-white">{att.examName || 'Simulado Ortopedia'}</h3>
+                    <h3 className="text-sm font-bold text-[#050f41]">{att.examName || 'Simulado Ortopedia'}</h3>
                     <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
                       <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>
                     </div>
