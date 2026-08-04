@@ -169,7 +169,7 @@ export const TakeExamPage: React.FC = () => {
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 py-6">
+    <div className="max-w-3xl mx-auto space-y-6 py-6 pb-24">
 
       {/* Top: ícone do app + nome da prova + contador de questão (economiza espaço vertical) */}
       <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur flex items-center justify-between gap-2.5 py-2">
@@ -254,20 +254,23 @@ export const TakeExamPage: React.FC = () => {
           })}
         </div>
 
-        {/* Avançar (sem opção de voltar; exige resposta selecionada) — botão
-            reduzido a ícone para economizar espaço vertical no mobile. */}
-        <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
-          <button
-            onClick={handleAdvance}
-            disabled={submitting || currentAlt === null}
-            title={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
-            aria-label={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
-            className="flex items-center justify-center w-12 h-12 rounded-xl bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
-          >
-            {isLastQuestion ? <Send className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
-          </button>
-        </div>
       </div>
+
+      {/* Avançar (sem opção de voltar) — FAB verde só com ícone, que só
+          aparece depois que uma alternativa é selecionada; fixo no canto
+          inferior direito para ficar sempre alcançável, sem ocupar espaço
+          fixo no fluxo da página. */}
+      {currentAlt !== null && (
+        <button
+          onClick={handleAdvance}
+          disabled={submitting}
+          title={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
+          aria-label={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
+          className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/30"
+        >
+          {isLastQuestion ? <Send className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+        </button>
+      )}
 
       {/* Modal de Imagem */}
       {previewImageUrl && (
