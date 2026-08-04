@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, FileCheck, CheckCircle2, Copy, Check } from 'lucide-react';
 import { Question, ExamQuestion, QuestionAnswer } from '../types';
 import { QuestionImage } from './QuestionImage';
+import { CommentMedia } from './CommentMedia';
 import { getExamsContainingQuestion, getQuestionAnswer } from '../services/firebaseService';
 
 interface QuestionPreviewModalProps {
@@ -128,7 +129,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
             })}
           </div>
 
-          {answer && (answer.solutionText || answer.comments) && (
+          {answer && (answer.solutionText || answer.comments || answer.commentMediaUrl) && (
             <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs sm:text-sm text-slate-300 space-y-2">
               {answer.solutionText && (
                 <div>
@@ -142,6 +143,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
                   <p className="text-slate-300 leading-relaxed">{answer.comments}</p>
                 </div>
               )}
+              {answer.commentMediaUrl && <CommentMedia url={answer.commentMediaUrl} />}
             </div>
           )}
         </div>

@@ -54,6 +54,10 @@ export interface QuestionAnswer {
   correctAlternative: "A" | "B" | "C" | "D";
   solutionText?: string;
   comments?: string;
+  // URL de imagem ou vídeo do YouTube renderizado junto dos comentários do
+  // gabarito (relatório do candidato, banco de questões, visualização de
+  // provas do admin) — ver componente CommentMedia.
+  commentMediaUrl?: string;
   updatedAt?: any;
 }
 

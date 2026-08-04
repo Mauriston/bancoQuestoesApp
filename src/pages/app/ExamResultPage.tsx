@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Toolti
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds } from '../../services/firebaseService';
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme } from '../../types';
 import { getSourceExamChipClass } from '../../constants';
+import { CommentMedia } from '../../components/CommentMedia';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -323,7 +324,7 @@ export const ExamResultPage: React.FC = () => {
                     })}
                   </div>
 
-                  {key && (key.comments || key.solutionText) && (
+                  {key && (key.comments || key.solutionText || key.commentMediaUrl) && (
                     <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 space-y-2">
                       {key.solutionText && (
                         <div>
@@ -337,6 +338,7 @@ export const ExamResultPage: React.FC = () => {
                           <p className="text-slate-300 leading-relaxed">{key.comments}</p>
                         </div>
                       )}
+                      {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                     </div>
                   )}
                 </div>
