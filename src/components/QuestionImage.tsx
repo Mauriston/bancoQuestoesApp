@@ -29,7 +29,7 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
       return path;
     }
 
-    # Se for um caminho relativo iniciado por '/', junta com a origem do site
+    // Documentação: Se for um caminho relativo iniciado por '/', junta com a origem do site
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${window.location.origin}${cleanPath}`;
   };
