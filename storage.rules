@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// ATENÇÃO — mesma ressalva de firestore.rules: escrito a partir do
+// comportamento observado no código (não extraído do console do Firebase).
+// Revise contra as regras hoje publicadas no bucket
+// `gen-lang-client-0316191622.firebasestorage.app` antes de fazer
+// `firebase deploy --only storage`.
+//
+// Leitura pública é proposital: as imagens de questão são carregadas via
+// <img src="..."> comum (TakeExamPage, ExamResultPage, QuestionImage.tsx),
+// inclusive em telas que podem ser abertas sem login prévio — não há como
+// autenticar essas requisições de imagem sem reescrever esse carregamento
+// para passar pelo SDK do Storage. Escrita exige sessão do Firebase Auth
+// (o upload só acontece a partir do painel administrativo).
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Upload feito pela UI administrativa (QuestionsPage → uploadQuestionImage).
+    match /question-images/{questionId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    // Lotes de imagens enviados manualmente ao bucket (fora da UI), ex.:
+    // imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg
+    match /imagens_questoes/{prova}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

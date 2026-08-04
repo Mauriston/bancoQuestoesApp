@@ -22,13 +22,14 @@ Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authen
 5. [Firebase Authentication](#firebase-authentication)
 6. [Firestore — modelo de dados](#firestore--modelo-de-dados)
 7. [Firebase Storage — imagens das questões](#firebase-storage--imagens-das-questões)
-8. [Firebase Hosting e deploy (CI/CD)](#firebase-hosting-e-deploy-cicd)
-9. [Rotas da aplicação](#rotas-da-aplicação)
-10. [Variáveis de ambiente e configuração](#variáveis-de-ambiente-e-configuração)
-11. [Rodando localmente](#rodando-localmente)
-12. [Scripts npm/bun](#scripts-npmbun)
-13. [Pontos de atenção / dívidas técnicas conhecidas](#pontos-de-atenção--dívidas-técnicas-conhecidas)
-14. [Histórico relevante recente](#histórico-relevante-recente)
+8. [Regras de Segurança (Firestore/Storage)](#regras-de-segurança-firestorestorage)
+9. [Firebase Hosting e deploy (CI/CD)](#firebase-hosting-e-deploy-cicd)
+10. [Rotas da aplicação](#rotas-da-aplicação)
+11. [Variáveis de ambiente e configuração](#variáveis-de-ambiente-e-configuração)
+12. [Rodando localmente](#rodando-localmente)
+13. [Scripts npm/bun](#scripts-npmbun)
+14. [Pontos de atenção / dívidas técnicas conhecidas](#pontos-de-atenção--dívidas-técnicas-conhecidas)
+15. [Histórico relevante recente](#histórico-relevante-recente)
 
 ---
 
@@ -41,12 +42,9 @@ Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authen
 | Build/Bundler | Vite 6 (`@vitejs/plugin-react`) |
 | Estilo | Tailwind CSS v4 (`@tailwindcss/vite`) |
 | Ícones | lucide-react |
-| Animações | motion (Framer Motion) |
 | Gráficos | recharts |
 | Validação | zod |
 | Backend/dados | Firebase (Auth, Firestore, Storage, Hosting) |
-| Servidor de desenvolvimento/API auxiliar | Express + `tsx` (`server.ts`) |
-| Geração de questões por IA (opcional) | `@google/genai` (Gemini) — apenas no servidor Express, não usado em produção estática |
 | Gerenciador de pacotes | Bun (usado no CI); `bun.lock` versionado |
 | Hospedagem | Firebase Hosting (SPA estática) |
 | CI/CD | GitHub Actions (`.github/workflows/deploy.yml`) |
@@ -65,23 +63,22 @@ Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authen
                                        └──────────────────────────────────────┘
 ```
 
-Em **produção**, o app é um SPA 100% estático: `vite build` gera `dist/`, e o Firebase Hosting serve esse diretório, redirecionando qualquer rota para `index.html` (roteamento fica todo no cliente, via React Router). Todo acesso a dados é feito **diretamente do navegador** para o Firestore/Storage através do SDK cliente do Firebase (`firebase` npm package) — não existe uma API própria intermediando essas chamadas em produção.
-
-Existe também um **servidor Express local** (`server.ts`, rodado via `bun run dev` / `npm run dev`) usado **apenas em desenvolvimento** para servir o Vite em modo middleware e expor um endpoint auxiliar de geração de questões via IA (`POST /api/generate-questions`, usando Gemini quando `GEMINI_API_KEY` está definido, com fallback para questões geradas localmente). Esse servidor **não é usado no deploy real** (ver [Pontos de atenção](#pontos-de-atenção--dívidas-técnicas-conhecidas)).
+O app é um SPA **100% estático**: `vite build` gera `dist/`, e o Firebase Hosting serve esse diretório, redirecionando qualquer rota para `index.html` (roteamento fica todo no cliente, via React Router). Todo acesso a dados é feito **diretamente do navegador** para o Firestore/Storage através do SDK cliente do Firebase (`firebase` npm package) — **não existe nenhum servidor de aplicação próprio**, nem em desenvolvimento nem em produção. Não há API intermediária, backend Node/Express, nem função serverless custom neste repositório.
 
 ## Estrutura de pastas
 
 ```
 bancoQuestoesApp/
 ├── .github/workflows/deploy.yml   # CI: build + deploy no Firebase Hosting (push em main)
-├── firebase.json                  # Config do Firebase Hosting (public dir, rewrites SPA)
+├── firebase.json                  # Config do Firebase Hosting/Firestore/Storage
+├── firestore.rules                # Regras de Segurança do Firestore (ver seção dedicada)
+├── storage.rules                  # Regras de Segurança do Storage (ver seção dedicada)
 ├── .firebaserc                    # Projeto Firebase padrão (gen-lang-client-0316191622)
 ├── firebase-applet-config.json    # Config pública do Firebase Web App (apiKey, projectId, etc.)
 ├── vite.config.ts                 # Build do frontend (React + Tailwind)
-├── server.ts                      # Servidor Express (dev + endpoint de IA), não usado no deploy
 ├── index.html                     # Entry HTML (com capturador global de erros)
 ├── metadata.json                  # Metadados do app (nome, descrição)
-├── arvore_temas.json              # Árvore estática de áreas/temas de ortopedia (usada no dev server e em ArvoreTemasView)
+├── arvore_temas.json              # Árvore estática de áreas/temas de ortopedia (usada em ImportPage como banco padrão para importação)
 ├── .env.example                   # Modelo de variáveis de ambiente
 └── src/
     ├── main.tsx                   # Bootstrap do React (ReactDOM.createRoot)
@@ -94,7 +91,7 @@ bancoQuestoesApp/
     │   ├── HomePage.tsx, AdminLoginPage.tsx, UnauthorizedPage.tsx
     │   ├── app/                   # Telas do candidato: provas, tentativa, resultado, histórico, desempenho
     │   └── admin/                 # Telas do admin: dashboard, usuários, questões, importação, provas, tentativas
-    ├── components/                # QuestionImage, QuizEngine, StatsView, Header, etc.
+    ├── components/                # QuestionImage e QuestionPreviewModal (únicos componentes reutilizáveis em uso)
     ├── services/
     │   ├── firebase.ts            # Inicialização do Firebase App/Auth/Firestore/Storage
     │   ├── firebaseService.ts     # Toda a camada de acesso a dados (Firestore + Storage)
@@ -103,7 +100,7 @@ bancoQuestoesApp/
     │   └── importService.ts       # Importação em massa de banco de questões via JSON
     ├── firebase/config.ts         # Reexporta app/auth/db/storage/firebaseConfig para o resto do app
     ├── schemas/index.ts           # Schemas Zod (validação de payloads, ex.: importação)
-    ├── types.ts / types/index.ts  # Definições de tipos TypeScript do domínio (ver observação abaixo)
+    ├── types.ts                   # Definições de tipos TypeScript do domínio (fonte única — ver histórico)
     └── utils/helpers.ts           # normalizeText, generateId, shuffleArray, formatDate, exportToCSV...
 ```
 
@@ -118,10 +115,17 @@ bancoQuestoesApp/
 | **Storage Bucket** | `gen-lang-client-0316191622.firebasestorage.app` |
 | **Hosting (URL pública)** | `https://gen-lang-client-0316191622.web.app` |
 
-A configuração pública do Web App fica versionada em **`firebase-applet-config.json`** na raiz do repo e é importada diretamente por `src/services/firebase.ts`:
+A configuração pública do Web App fica versionada em **`firebase-applet-config.json`** na raiz do repo e é importada por `src/services/firebase.ts`:
 
 ```ts
 import firebaseConfigJson from "../../firebase-applet-config.json";
+
+// VITE_FIREBASE_* (ver .env.example) funcionam como overrides opcionais —
+// se não definidas, cai no config commitado abaixo.
+export const firebaseConfig = {
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
+  // ...
+};
 
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
@@ -129,21 +133,19 @@ export const db = getFirestore(app, firestoreDatabaseId); // banco nomeado, não
 export const storage = getStorage(app);
 ```
 
-> A `apiKey` do Firebase Web App **não é secreta** por design (ela apenas identifica o projeto ao SDK cliente) — a segurança real dos dados é garantida pelas **Regras de Segurança** do Firestore/Storage configuradas no console do Firebase, que **não estão versionadas neste repositório** (não há `firestore.rules` nem `storage.rules` no código-fonte). Isso é um ponto de atenção — ver seção de dívidas técnicas.
-
-Também existem `VITE_FIREBASE_*` declaradas em `.env.example` / `src/vite-env.d.ts` como *overrides* opcionais dessas mesmas configurações, mas **nenhum arquivo do código atualmente lê `import.meta.env.VITE_FIREBASE_*`** — a fonte de verdade em uso é o `firebase-applet-config.json`. Essas variáveis existem para uma futura migração para configuração via ambiente, mas hoje são vestigiais.
+> A `apiKey` do Firebase Web App **não é secreta** por design (ela apenas identifica o projeto ao SDK cliente) — a segurança real dos dados é garantida pelas **Regras de Segurança** do Firestore/Storage, agora versionadas em `firestore.rules`/`storage.rules` (ver [seção dedicada](#regras-de-segurança-firestorestorage)).
 
 ## Firebase Authentication
 
 O app usa um modelo **híbrido** de identidade, combinando Firebase Auth com um cadastro de usuários próprio no Firestore (coleção `users`):
 
-- **Candidatos (`role: "user"`)** não digitam senha. O fluxo (`HomePage` → `authService.loginUserBySelection`) é: o candidato escolhe seu nome numa lista de usuários ativos cadastrados pelo admin, o app grava o `userId` selecionado em `localStorage` (`teot_active_session_user_id`) e autentica no Firebase via **login anônimo** (`signInAnonymously`) apenas para satisfazer as Regras de Segurança do Firestore/Storage (que provavelmente exigem `request.auth != null`).
+- **Candidatos (`role: "user"`)** não digitam senha. O fluxo (`HomePage` → `authService.loginUserBySelection`) é: o candidato escolhe seu nome numa lista de usuários ativos cadastrados pelo admin, o app grava o `userId` selecionado em `localStorage` (`teot_active_session_user_id`) e autentica no Firebase via **login anônimo** (`signInAnonymously`) apenas para satisfazer as Regras de Segurança do Firestore/Storage (que exigem `request.auth != null`).
 - **Administradores (`role: "admin"`)** fazem login com e-mail/senha reais (`AdminLoginPage` → `authService.loginAdminWithPassword`), usando `signInWithEmailAndPassword`. Há lógica de auto-bootstrap: se o e-mail ainda não existir no Firebase Auth, o app tenta criar a conta na hora (`createUserWithEmailAndPassword`) e, se não existir documento correspondente em `users`, cria um automaticamente com `role: "admin"`.
 - `firebaseService.ensureAdminUserExists()` roda automaticamente ao carregar o módulo de serviços e garante a existência de um admin "seed" (`usr_mauriston_admin`, e-mail `mauriston@oncoortopedia.com`) na coleção `users`.
 - `AuthContext` (`src/contexts/AuthContext.tsx`) é a fonte de verdade do usuário logado na UI: ele lê o `userId` da sessão local, busca o documento correspondente em `users` no Firestore, e também escuta `onAuthStateChanged` do Firebase Auth para re-sincronizar.
 - `AppRoutes.tsx` implementa dois *route guards*: `UserProtectedRoute` (exige `currentUser.active`) e `AdminProtectedRoute` (exige adicionalmente `role === "admin"`), redirecionando para `/`, `/inactive` ou `/unauthorized` conforme o caso.
 
-> Ou seja: o Firebase Auth garante que toda sessão (mesmo de candidato) tenha um `request.auth` válido perante as Regras de Segurança, mas a **autorização de negócio** (quem é admin, quem está ativo) é decidida pelo documento em `users` no Firestore, não por *custom claims* do Firebase Auth.
+> Ou seja: o Firebase Auth garante que toda sessão (mesmo de candidato) tenha um `request.auth` válido perante as Regras de Segurança, mas a **autorização de negócio** (quem é admin, quem está ativo) é decidida pelo documento em `users` no Firestore, não por *custom claims* do Firebase Auth. **Importante**: sessões de candidato (Auth anônimo) nunca persistem o vínculo entre o `authUid` anônimo gerado pelo Firebase e o `AppUser.id` correspondente — ver a limitação detalhada em [Regras de Segurança](#regras-de-segurança-firestorestorage).
 
 ## Firestore — modelo de dados
 
@@ -194,15 +196,33 @@ Bucket: **`gen-lang-client-0316191622.firebasestorage.app`**.
 
 Existem hoje **duas origens/convenções de caminho** para imagens no bucket, refletindo a migração de "URLs externas" para "Storage nativo":
 
-1. **`question-images/{questionId}/{timestamp}.{ext}`** — caminho gerado automaticamente pelo upload feito na UI administrativa (`firebaseService.uploadQuestionImage`, usado em `QuestionsPage`). O admin escolhe um arquivo de imagem ao criar/editar uma questão, o app faz `uploadBytes` para esse caminho e grava a `getDownloadURL()` resultante no campo `imageUrl` do documento em `questions`.
-2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados manualmente** ao Storage (fora do fluxo de upload da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Essas URLs completas (`https://firebasestorage.googleapis.com/v0/b/.../o/imagens_questoes%2F...?alt=media`) precisam ser gravadas manualmente (ou por script) no campo `imageUrl` de cada `question` correspondente — não há hoje, no código deste repositório, um importador automático que faça esse casamento "arquivo do bucket ↔ questão".
+1. **`question-images/{questionId}/{timestamp}.{ext}`** — caminho **canônico**, gerado automaticamente pelo upload feito na UI administrativa (`firebaseService.uploadQuestionImage`, usado em `QuestionsPage`). O admin escolhe um arquivo de imagem ao criar/editar uma questão, o app faz `uploadBytes` para esse caminho e grava a `getDownloadURL()` resultante no campo `imageUrl` do documento em `questions`.
+2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados manualmente** ao Storage (fora do fluxo de upload da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Essas URLs completas (`https://firebasestorage.googleapis.com/v0/b/.../o/imagens_questoes%2F...?alt=media`) precisam ser gravadas manualmente (ou por script) no campo `imageUrl` de cada `question` correspondente.
+
+> **Recomendação daqui para frente**: prefira sempre o fluxo 1 (upload pela UI de `QuestionsPage`), que já grava a URL correta automaticamente e não exige nenhum passo manual de "casamento" entre arquivo do bucket e documento da questão. O caminho 2 deve ser tratado como legado/exceção — não existe hoje, neste repositório, um importador automático que normalize os dois formatos em um só (esse seria o próximo passo natural caso a divergência continue incomodando: um script único de importação que sempre grava em `question-images/{questionId}/...` independentemente da origem do arquivo).
 
 Independentemente da origem, todo campo `imageUrl` do domínio é tratado como uma **URL absoluta e pronta para uso** (`<img src={question.imageUrl}>`), consumida diretamente em:
 
 - `TakeExamPage` e `ExamResultPage` (tela do candidato) — `<img>` simples com clique para ampliar em modal.
-- `QuestionImage.tsx` (componente reutilizável usado no back-office: `QuestionPreviewModal` e `ExamViewPage` do admin) — inclui *fallback* visual (`onError`) com link "Abrir link da imagem" caso o carregamento falhe, e um `getFullImageUrl()` que só reescreve caminhos relativos iniciados por `/` (relevante apenas para o legado de imagens que chegaram a ficar em `public/imagens_questoes/...` do próprio build do Vite — ver histórico abaixo — já que qualquer `imageUrl` do Storage já vem como URL absoluta `https://firebasestorage.googleapis.com/...` e passa direto por essa função).
+- `QuestionImage.tsx` (componente reutilizável usado no back-office: `QuestionPreviewModal` e `ExamViewPage` do admin) — inclui *fallback* visual (`onError`) com link "Abrir link da imagem" caso o carregamento falhe.
 
-> **CORS do bucket**: como as imagens do Storage são carregadas via tag `<img>` comum (não via SDK do Storage), o navegador as busca como um recurso cross-origin normal — isso funciona out-of-the-box para leitura pública de imagens (o Storage responde com `Access-Control-Allow-Origin: *` por padrão para GET quando as Regras de Segurança permitem leitura pública). Se as Regras de Storage exigirem autenticação para leitura, é preciso confirmar que a leitura anônima (usada pelos candidatos) está contemplada.
+> **CORS do bucket**: como as imagens do Storage são carregadas via tag `<img>` comum (não via SDK do Storage), o navegador as busca como um recurso cross-origin normal. `storage.rules` (ver abaixo) libera leitura pública desses dois caminhos propositalmente, exatamente para que esse carregamento via `<img>` funcione sem autenticação.
+
+## Regras de Segurança (Firestore/Storage)
+
+Até recentemente, as Regras de Segurança do Firestore e do Storage **não estavam versionadas neste repositório** — existiam só no console do Firebase, fora de qualquer revisão de código ou histórico auditável. Isso agora está corrigido: `firestore.rules` e `storage.rules` foram adicionados na raiz do projeto e referenciados em `firebase.json` (chaves `firestore.rules` e `storage.rules`, com `firestore.database` apontando para o banco nomeado do projeto).
+
+**Importante**: esses arquivos foram escritos a partir do comportamento observado no código (quais telas leem/escrevem cada coleção, e se isso acontece antes ou depois de qualquer login) — **não foram extraídos das regras hoje publicadas** no console do Firebase, já que este ambiente de desenvolvimento não tem acesso às credenciais do projeto para fazer esse `diff`. Antes do primeiro `firebase deploy --only firestore:rules,storage:rules`, é preciso comparar manualmente estes arquivos com o que está publicado hoje — o deploy do Hosting (CI) continua rodando com `--only hosting` e **não** publica essas regras automaticamente, então adicioná-las aqui não muda nada em produção até alguém rodar esse deploy deliberadamente.
+
+A política adotada nos dois arquivos é a linha de base alcançável hoje, dada a arquitetura atual do app: **qualquer leitura/escrita exige uma sessão do Firebase Auth** (`request.auth != null` — anônima ou de admin), com duas exceções propositais para leitura pública:
+
+- Coleção `users` no Firestore — a tela inicial (`HomePage`) precisa listar candidatos ativos **antes** de qualquer login/Auth anônimo.
+- Caminhos `question-images/**` e `imagens_questoes/**` no Storage — as imagens são carregadas via `<img src>` comum, inclusive em telas que podem abrir sem sessão prévia.
+
+Duas limitações arquiteturais **não são resolvidas só por essas regras** (documentadas em detalhe nos comentários de `firestore.rules`):
+
+1. **O gabarito é lido do navegador.** `gradingService.ts` roda inteiramente no cliente — não há Cloud Function fazendo a correção. Isso significa que qualquer sessão autenticada (inclusive anônima) consegue, tecnicamente, ler `questionAnswers/{questionId}` de **qualquer** questão via SDK, não só da questão que está sendo respondida no momento. Resolver isso de verdade exigiria mover a correção para uma Cloud Function que seja a única com permissão de leitura sobre `questionAnswers`.
+2. **Não há isolamento real por dono do documento.** `examAssignments.userId`, `attempts.userId` etc. guardam o ID interno do app (`users/{id}`), não `request.auth.uid` — e sessões de candidato (Auth anônimo) nunca persistem o vínculo entre o `authUid` anônimo e o `AppUser.id`. Por isso não é possível, hoje, escrever uma regra do tipo "só o dono pode ler/escrever sua própria tentativa" — qualquer sessão autenticada tem acesso equivalente a qualquer outra. Corrigir isso exigiria persistir esse vínculo no login (gravar `authUid` no documento do usuário a cada `signInAnonymously`) e usar `get()` nas regras para conferi-lo.
 
 ## Firebase Hosting e deploy (CI/CD)
 
@@ -214,12 +234,20 @@ Independentemente da origem, todo campo `imageUrl` do domínio é tratado como u
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  },
+  "firestore": {
+    "database": "ai-studio-treinamentoteoti-380df538-23a0-4430-8321-7124c54a45e6",
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }
 ```
 
 - `public: "dist"` — a Hosting serve exatamente o que `vite build` gera em `dist/` (HTML + JS/CSS com hash + assets).
 - O `rewrite` `"**" → "/index.html"` é o padrão de SPA: qualquer caminho sem correspondência de arquivo estático real cai no `index.html`, e o React Router assume o roteamento no cliente. Arquivos estáticos existentes em `dist/` (JS, CSS, favicon etc.) têm prioridade sobre esse rewrite — comportamento padrão do Firebase Hosting.
+- As chaves `firestore`/`storage` apontam para os arquivos de regras (ver seção anterior) — elas só são usadas quando alguém roda `firebase deploy --only firestore:rules,storage:rules` manualmente; o workflow de CI não as toca.
 - `.firebaserc` fixa o projeto padrão (`gen-lang-client-0316191622`), então `firebase deploy` não precisa de `--project` quando rodado localmente com o CLI autenticado (o workflow de CI passa `--project` explicitamente por segurança/clareza).
 
 **Deploy automático** (`.github/workflows/deploy.yml`), disparado a cada `push` na branch **`main`**:
@@ -229,9 +257,9 @@ Independentemente da origem, todo campo `imageUrl` do domínio é tratado como u
 3. `bun install`.
 4. `bun run build` (→ `vite build`, gera `dist/`).
 5. Instala `firebase-tools` globalmente.
-6. `firebase deploy --only hosting --project gen-lang-client-0316191622`, autenticado via secret `FIREBASE_TOKEN` do repositório (`GEMINI_API_KEY` também é passada ao ambiente, embora não seja usada no build puramente estático).
+6. `firebase deploy --only hosting --project gen-lang-client-0316191622`, autenticado via secret `FIREBASE_TOKEN` do repositório.
 
-> O deploy é `--only hosting` propositalmente: o projeto **não tem uma pasta `functions/`** (nenhuma Cloud Function foi escrita), então `--only functions,hosting` falharia de imediato — o Firebase CLI recusa alvos que não existem no projeto.
+> O deploy é `--only hosting` propositalmente: o projeto **não tem uma pasta `functions/`** (nenhuma Cloud Function foi escrita), então `--only functions,hosting` falharia de imediato — o Firebase CLI recusa alvos que não existem no projeto. As regras de Firestore/Storage (`firestore.rules`/`storage.rules`) também não fazem parte deste deploy automático — ver ressalva na seção anterior.
 
 ## Rotas da aplicação
 
@@ -276,11 +304,9 @@ Definidas em `src/routes/AppRoutes.tsx`, todas client-side (React Router).
 Ver `.env.example`:
 
 ```bash
-# Usado apenas pelo servidor Express local (server.ts) para gerar questões via IA
-GEMINI_API_KEY=
-
-# Overrides opcionais da config do Firebase — hoje NÃO lidos por nenhum código
-# (a config efetiva vem de firebase-applet-config.json, versionado na raiz)
+# Overrides opcionais da config do Firebase (default: firebase-applet-config.json).
+# Defina estas variáveis só se quiser apontar o build para outro projeto
+# Firebase (ex.: um ambiente de staging separado).
 VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_API_KEY=...
@@ -294,7 +320,9 @@ FIRST_ADMIN_EMAIL=...
 FIRST_ADMIN_PASSWORD=...
 ```
 
-No CI (GitHub Actions), o único secret consumido é `FIREBASE_TOKEN` (autenticação do `firebase-tools`) e `GEMINI_API_KEY` (não estritamente necessária para o build/deploy da Hosting).
+`VITE_FIREBASE_*` já são lidas de verdade por `src/services/firebase.ts` (`import.meta.env.VITE_FIREBASE_*`), como overrides opcionais sobre o `firebase-applet-config.json` commitado — se não definidas, o app usa normalmente a config do projeto padrão.
+
+No CI (GitHub Actions), o único secret consumido é `FIREBASE_TOKEN` (autenticação do `firebase-tools` para o deploy do Hosting).
 
 ## Rodando localmente
 
@@ -304,7 +332,7 @@ Pré-requisitos: Node.js 20+ (o CI usa Node 24) e, preferencialmente, [Bun](http
 # Instalar dependências
 bun install        # ou: npm install
 
-# Ambiente de desenvolvimento (Express + Vite middleware em http://localhost:3000)
+# Ambiente de desenvolvimento (Vite dev server em http://localhost:5173)
 bun run dev         # ou: npm run dev
 
 # Type-check (sem emitir arquivos)
@@ -312,9 +340,12 @@ bun run lint         # ou: npm run lint
 
 # Build de produção (gera dist/)
 bun run build         # ou: npm run build
+
+# Servir o build de produção localmente, para conferência antes do deploy
+bun run preview         # ou: npm run preview
 ```
 
-O modo `dev` não exige nenhum arquivo `.env` para o Firebase funcionar (a config já está em `firebase-applet-config.json`), mas para usar a geração de questões por IA localmente é preciso definir `GEMINI_API_KEY` no ambiente antes de rodar `bun run dev`.
+Nenhum arquivo `.env` é necessário para o Firebase funcionar em desenvolvimento — a config já está em `firebase-applet-config.json`.
 
 ## Scripts npm/bun
 
@@ -322,25 +353,26 @@ Definidos em `package.json`:
 
 | Script | Comando | Descrição |
 |---|---|---|
-| `dev` | `tsx server.ts` | Sobe o Express (`server.ts`) com Vite em modo middleware — usado só em desenvolvimento |
+| `dev` | `vite` | Sobe o servidor de desenvolvimento do Vite (hot reload) |
 | `build` | `vite build` | Gera o bundle estático de produção em `dist/` (é o único passo executado no deploy real) |
-| `start` | `node dist/server.cjs` | ⚠️ Ver [Pontos de atenção](#pontos-de-atenção--dívidas-técnicas-conhecidas) — não há mais um passo de build que gere `dist/server.cjs` |
+| `preview` | `vite preview` | Serve `dist/` localmente, para conferir o build de produção antes do deploy |
 | `lint` | `tsc --noEmit` | Checagem de tipos TypeScript, sem produzir saída |
 
 ## Pontos de atenção / dívidas técnicas conhecidas
 
-Registradas aqui para quem for mexer no projeto em seguida:
+Os itens abaixo foram identificados numa revisão anterior e já foram endereçados; ficam registrados aqui como referência do que foi decidido e por quê.
 
-1. **`npm start` está quebrado.** O script `build` foi simplificado para `vite build` puro (commit *"fix: simplifica script de build removendo dependencia do server.ts"*), mas o script `start` ainda espera `dist/server.cjs` — que só existia quando `build` também rodava `esbuild server.ts --bundle ... --outfile=dist/server.cjs`. Hoje esse arquivo nunca é gerado, então `npm run start` falha. Isso não afeta o deploy real (que usa só `--only hosting` servindo `dist/` estático via Firebase Hosting, não via Express), mas quebra qualquer expectativa de "rodar em produção via Node/Express".
-2. **Dois arquivos de tipos do domínio divergentes**: `src/types.ts` e `src/types/index.ts` coexistem com definições parecidas, porém não idênticas, para as mesmas entidades (`Question`, `Exam`, `UserStats` etc.) — em alguns pontos com nulabilidade/obrigatoriedade diferentes (ex.: `imageUrl?: string` vs `imageUrl: string | null`). Módulos diferentes importam de um ou de outro; vale unificar em um único arquivo/pasta de tipos para evitar divergência silenciosa.
-3. **Regras de Segurança do Firestore/Storage não estão versionadas** neste repositório (não há `firestore.rules`/`storage.rules`/`firestore.indexes.json`). Elas existem apenas no console do Firebase, o que significa que mudanças nelas não passam por revisão de código nem ficam auditáveis via git.
-4. **Duas convenções de caminho de imagem no Storage** (`question-images/{questionId}/...` gerado pela UI vs. `imagens_questoes/{PROVA}/...` de uploads manuais em lote) — sem um importador único que normalize isso; hoje depender de ambos exige atenção manual ao popular `imageUrl` em `questions`.
-5. **`VITE_FIREBASE_*` em `.env.example`/`vite-env.d.ts` são vestigiais** — nenhum código lê `import.meta.env.VITE_FIREBASE_*` hoje; a config efetiva vem de `firebase-applet-config.json`. Se a intenção é permitir múltiplos ambientes (dev/staging/prod) via env vars, essa integração ainda precisa ser feita em `src/services/firebase.ts`.
-6. **`GEMINI_API_KEY`/geração de questões por IA só existe no `server.ts`** (Express), que não roda em produção (Hosting estático). Ou seja, o recurso de gerar questões via Gemini descrito em `server.ts` não está disponível no app publicado — só localmente via `bun run dev`.
-7. **`vite.config.ts` precisa manter o plugin `tailwindcss()` registrado.** Uma regressão recente (ver histórico abaixo) removeu esse plugin do array `plugins`, quebrando toda a geração de classes utilitárias do Tailwind no build de produção (o CSS gerado passava a conter a diretiva `@tailwind utilities;` **não processada**, resultando em uma tela sem nenhum estilo aplicado). Já corrigido, mas fica registrado como algo a não repetir.
+1. ~~`npm start` estava quebrado~~ — **resolvido**: o app nunca teve (nem precisa de) um servidor Node/Express em produção — o Firebase Hosting já serve o `dist/` estático diretamente. O `server.ts` (Express, usado só localmente para modo dev + endpoint de geração de questões por IA) foi removido por completo junto com a funcionalidade de IA (ver item 6). `dev` agora roda o Vite diretamente (`vite`) e existe um script `preview` (`vite preview`) para conferir o build de produção localmente — sem depender de Express/Node custom nem de um passo de bundling que não existia mais.
+2. ~~Dois arquivos de tipos do domínio divergentes~~ — **resolvido**: `src/types/index.ts` nunca era de fato importado por nenhum módulo (toda importação usava o caminho relativo `../types`, que a resolução de módulos do TypeScript/Node satisfaz primeiro com o arquivo `types.ts`, antes de considerar o diretório `types/`) — ou seja, era código morto. Ele foi removido, e `src/types.ts` passou a ser a única fonte de tipos do domínio. De quebra, os campos "legados" do tipo `Question` (`area`, `tema`, `enunciado`, `opcoes`, `respostaCorreta`, `explicacao`, `pontosChave`, `referencia`) e os tipos `AreaTema`, `QuizAttempt`, `SavedQuestion`, `Flashcard`, `QuestionAnswerLog` também saíram — existiam só para dar suporte ao protótipo de "quiz livre com IA" removido no item 6.
+3. ~~Regras de Segurança do Firestore/Storage não versionadas~~ — **resolvido**: ver [seção dedicada](#regras-de-segurança-firestorestorage) acima (`firestore.rules`/`storage.rules`). Continuam existindo duas limitações arquiteturais que as regras sozinhas não resolvem (gabarito lido do cliente; sem isolamento real por dono do documento) — documentadas na mesma seção.
+4. **Duas convenções de caminho de imagem no Storage** (`question-images/{questionId}/...` gerado pela UI vs. `imagens_questoes/{PROVA}/...` de uploads manuais em lote) — isso é uma característica dos **dados já existentes no bucket**, não algo que uma mudança de código neste repositório possa corrigir retroativamente (exigiria acesso ao bucket para mover/renomear arquivos e reescrever `imageUrl` nos documentos afetados, fora do escopo de uma alteração de código). Ficou documentado como recomendação em [Firebase Storage](#firebase-storage--imagens-das-questões): tratar o caminho da UI (`question-images/...`) como canônico daqui para frente.
+5. ~~`VITE_FIREBASE_*` vestigiais~~ — **resolvido**: `src/services/firebase.ts` agora lê `import.meta.env.VITE_FIREBASE_*` como overrides reais sobre `firebase-applet-config.json`, permitindo apontar um build para outro projeto Firebase (ex.: staging) só com variáveis de ambiente, sem editar código.
+6. ~~Geração de questões por IA (`GEMINI_API_KEY`/`server.ts`)~~ — **removida por completo**, a pedido: nunca esteve disponível no app publicado (só funcionava localmente via `server.ts`/Express, que não roda em produção), então mantinha código morto e uma dependência (`@google/genai`) sem uso real. Foram removidos: `server.ts`; `POST /api/generate-questions`; a dependência `@google/genai`, `express` e `@types/express`; a variável `GEMINI_API_KEY` (`.env.example`, `.github/workflows/deploy.yml`); `MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API` (`metadata.json`); e todo o cluster de UI que só existia para consumir esse endpoint e nunca esteve conectado a nenhuma rota real do app (`QuizEngine.tsx`, `QuizResultView.tsx`, `StatsView.tsx`, `FlashcardsView.tsx`, `SavedQuestionsView.tsx`, `ArvoreTemasView.tsx`, `Header.tsx` e `src/data/prebakedQuestions.ts` — nenhum desses componentes era importado por `AppRoutes.tsx` ou por qualquer página em uso). As dependências `canvas-confetti` e `tsx`, usadas apenas por esse mesmo cluster morto, também saíram do `package.json`.
+7. **`vite.config.ts` precisa manter o plugin `tailwindcss()` registrado.** Uma regressão anterior removeu esse plugin do array `plugins`, quebrando toda a geração de classes utilitárias do Tailwind no build de produção (o CSS gerado passava a conter a diretiva `@tailwind utilities;` **não processada**, resultando em uma tela sem nenhum estilo aplicado). Já corrigido, mas fica registrado como algo a não repetir.
 
 ## Histórico relevante recente
 
 - **Migração de imagens de questões de URLs externas (Imgur/Flickr) para Firebase Storage nativo.** Motivação: URLs externas são frágeis (podem expirar, sofrer *hotlinking block*, sumir) e não versionam CORS/permissões de forma previsível. Passou a existir upload direto para o bucket `gen-lang-client-0316191622.firebasestorage.app`, tanto via UI administrativa (`uploadQuestionImage`, path `question-images/{questionId}/...`) quanto via upload manual em lote (path `imagens_questoes/{PROVA}/...`, ex. o lote `TEOT_ANATOMIA_2024`). O componente `QuestionImage.tsx` foi refeito nesse processo para lidar com esses casos e com *fallback* visual em caso de falha de carregamento.
 - **Regressão e correção: tela em branco na URL de Hosting.** Durante essa mesma leva de mudanças, uma refatoração de `vite.config.ts` (*"Refactor Vite configuration for deployment"*) removeu por engano o plugin `@tailwindcss/vite`, enquanto `src/index.css` continuava dependendo dele (`@import "tailwindcss";`, sintaxe do Tailwind v4). O build passava sem erros, mas o CSS de produção saía sem nenhuma classe utilitária real — o app renderizava (React montava normalmente), porém completamente sem estilo/layout, dando a impressão de "tela branca". A correção reintroduziu o plugin em `vite.config.ts` e também endureceu o capturador global de erros em `index.html` (passou a registrar o listener de `error` em fase de *capture*, capaz de detectar falhas de carregamento de `<script>`, que não se propagam em fase de *bubbling*).
 - **Pasta local `public/imagens_questoes/...`** (imagens que chegaram a ser versionadas dentro do próprio projeto Vite, servidas como arquivos estáticos do build) foi removida do repositório após a migração para o Storage — deixou de fazer sentido manter imagens versionadas no bundle do frontend quando elas já vivem no Storage.
+- **Remoção da geração de questões por IA e do código morto associado**, e das demais dívidas técnicas então identificadas: unificação dos tipos do domínio em `src/types.ts`, versionamento inicial de `firestore.rules`/`storage.rules`, e ativação real dos overrides `VITE_FIREBASE_*`. Ver item a item na seção [Pontos de atenção](#pontos-de-atenção--dívidas-técnicas-conhecidas) acima.

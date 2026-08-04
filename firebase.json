@@ -12,5 +12,12 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "firestore": {
+    "database": "ai-studio-treinamentoteoti-380df538-23a0-4430-8321-7124c54a45e6",
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }
