@@ -1,7 +1,7 @@
 import {
-   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
+   collection, collectionGroup, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
    query, where, orderBy, limit, serverTimestamp, writeBatch, runTransaction, Timestamp, addDoc,
-   Query, DocumentData
+   documentId, Query, DocumentData
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
@@ -192,6 +192,54 @@ export async function getQuestionAnswer(questionId: string): Promise<QuestionAns
     return snap.data() as QuestionAnswer;
   }
   return null;
+}
+
+// Busca em lote o gabarito de várias questões de uma vez (usado nas listagens
+// do admin — Banco de Questões e seleção de questões na criação de provas —
+// para mostrar a alternativa correta sem disparar uma leitura por questão).
+// O operador `in` do Firestore aceita no máximo 30 valores por consulta, daí
+// o particionamento em blocos.
+export async function getQuestionAnswersByIds(questionIds: string[]): Promise<Record<string, QuestionAnswer>> {
+  const result: Record<string, QuestionAnswer> = {};
+  const uniqueIds = Array.from(new Set(questionIds));
+  if (uniqueIds.length === 0) return result;
+
+  const chunkSize = 30;
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize);
+    const q = query(collection(db, 'questionAnswers'), where(documentId(), 'in', chunk));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(docSnap => {
+      result[docSnap.id] = docSnap.data() as QuestionAnswer;
+    });
+  }
+
+  return result;
+}
+
+// Lista as provas (nome + id) em que uma questão original já foi utilizada,
+// pesquisando via collection group em todas as subcoleções
+// `exams/{examId}/questions`, filtrando por `originalQuestionId`. Usado pelo
+// QuestionPreviewModal para mostrar os chips "já usada em" no admin.
+//
+// ATENÇÃO: consultas collection group com `where` normalmente exigem um
+// índice composto dedicado (escopo "collection group"), que o Firestore não
+// cria automaticamente como faz com índices de coleção única. Se esta
+// consulta falhar em produção com um erro do tipo "The query requires an
+// index", o próprio erro traz um link para criar o índice necessário no
+// console do Firebase — não é possível criar esse índice a partir deste
+// ambiente (sem credenciais do projeto).
+export async function getExamsContainingQuestion(originalQuestionId: string): Promise<{ examId: string; examName: string }[]> {
+  const q = query(collectionGroup(db, 'questions'), where('originalQuestionId', '==', originalQuestionId));
+  const snapshot = await getDocs(q);
+
+  const examIds = Array.from(new Set(snapshot.docs.map(d => (d.data() as ExamQuestion).examId).filter(Boolean)));
+  if (examIds.length === 0) return [];
+
+  const exams = await Promise.all(examIds.map(examId => getExamById(examId)));
+  return exams
+    .filter((e): e is Exam => !!e)
+    .map(e => ({ examId: e.id, examName: e.name }));
 }
 
 export async function saveQuestion(

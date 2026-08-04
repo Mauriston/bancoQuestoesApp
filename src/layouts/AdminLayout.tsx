@@ -32,7 +32,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
 
       {/* Top Admin Bar */}
       <header className="sticky top-0 z-40 bg-[#050f41] border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
 
             <div className="flex items-center gap-3">
@@ -88,11 +88,13 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
       </header>
 
       {/* Main Shell with Sidebar */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
+      <div className="flex-1 max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
 
-        {/* Desktop Sidebar / Mobile Overlay */}
+        {/* Desktop Sidebar / Mobile Overlay — no desktop (lg+), fica só com
+            ícones por padrão e expande ao passar o mouse (group-hover),
+            revelando os rótulos. No mobile, continua a gaveta de sempre. */}
         <aside className={`
-          fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#050f41] rounded-none lg:rounded-2xl border border-white/10 p-4 transition-transform duration-200 flex flex-col shadow-xl lg:shadow-md lg:h-fit
+          group/sidebar fixed lg:static inset-y-0 left-0 z-30 w-64 lg:w-20 lg:hover:w-64 bg-[#050f41] rounded-none lg:rounded-2xl border border-white/10 p-4 transition-[width,transform] duration-200 flex flex-col shadow-xl lg:shadow-md lg:h-fit lg:overflow-hidden
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           <div className="lg:hidden flex items-center justify-between pb-4 mb-4 border-b border-white/10">
@@ -111,22 +113,23 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                   key={item.path}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  title={item.label}
+                  className={`flex items-center gap-3 lg:justify-center lg:group-hover/sidebar:justify-start px-3.5 lg:px-0 lg:group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                     isActive
                       ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
                       : 'text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
-                  <span>{item.label}</span>
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                  <span className="lg:hidden lg:group-hover/sidebar:inline">{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="mt-8 p-4 rounded-xl bg-white/10 border border-white/10 text-xs text-white/70 space-y-2">
-            <p className="font-semibold text-white flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#FAB932]" />
+          <div className="mt-8 p-4 rounded-xl bg-white/10 border border-white/10 text-xs text-white/70 space-y-2 lg:hidden lg:group-hover/sidebar:block">
+            <p className="font-semibold text-white flex items-center gap-1.5 whitespace-nowrap">
+              <Sparkles className="w-3.5 h-3.5 text-[#FAB932] shrink-0" />
               Banco Protegido TEOT
             </p>
             <p className="text-[11px] leading-relaxed">Gabaritos e relatórios são restritos. Operações registradas em log.</p>

@@ -171,14 +171,19 @@ export const TakeExamPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-6">
 
-      {/* Top: só o ícone do app + nome da prova em execução */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur flex items-center gap-2.5 py-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-teal-500/20 shrink-0">
-          <Trophy className="w-4 h-4" />
+      {/* Top: ícone do app + nome da prova + contador de questão (economiza espaço vertical) */}
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur flex items-center justify-between gap-2.5 py-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-teal-500/20 shrink-0">
+            <Trophy className="w-4 h-4" />
+          </div>
+          <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate">
+            {exam?.name || 'Simulado Ortopedia'}
+          </h2>
         </div>
-        <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate">
-          {exam?.name || 'Simulado Ortopedia'}
-        </h2>
+        <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
+          Questão {currentIndex + 1}/{questions.length}
+        </span>
       </div>
 
       {/* Progress Bar */}
@@ -191,12 +196,6 @@ export const TakeExamPage: React.FC = () => {
 
       {/* Question Content Box */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800/80">
-          <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
-            Questão #{currentIndex + 1}
-          </span>
-        </div>
 
         {/* Enunciado */}
         <p className="text-base sm:text-lg font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
@@ -253,18 +252,17 @@ export const TakeExamPage: React.FC = () => {
           })}
         </div>
 
-        {/* Avançar (sem opção de voltar; exige resposta selecionada) */}
-        <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
-          {currentAlt === null && (
-            <p className="text-xs text-amber-400 font-medium">Selecione uma alternativa para continuar.</p>
-          )}
+        {/* Avançar (sem opção de voltar; exige resposta selecionada) — botão
+            reduzido a ícone para economizar espaço vertical no mobile. */}
+        <div className="mt-8 pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
           <button
             onClick={handleAdvance}
             disabled={submitting || currentAlt === null}
-            className="ml-auto flex items-center gap-1.5 px-5 py-3 rounded-xl text-sm font-bold bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
+            title={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
+            aria-label={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
+            className="flex items-center justify-center w-12 h-12 rounded-xl bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-600/20"
           >
-            <span>{isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}</span>
-            {isLastQuestion ? <Send className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            {isLastQuestion ? <Send className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
           </button>
         </div>
       </div>

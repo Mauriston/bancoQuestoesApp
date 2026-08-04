@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle
+  ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getQuestions, getAreas, getThemes, getActiveUsers, createAndPublishExam } from '../../services/firebaseService';
-import { Question, Area, Theme, AppUser } from '../../types';
+import { getQuestions, getAreas, getThemes, getActiveUsers, createAndPublishExam, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { Question, Area, Theme, AppUser, QuestionAnswer } from '../../types';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 
 export const CreateExamPage: React.FC = () => {
@@ -32,6 +32,7 @@ export const CreateExamPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [viewingQuestion, setViewingQuestion] = useState<Question | null>(null);
+  const [answersById, setAnswersById] = useState<Record<string, QuestionAnswer>>({});
 
   // Step 3: User Assignment
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
@@ -56,6 +57,9 @@ export const CreateExamPage: React.FC = () => {
         setThemes(thList);
         // O admin não realiza provas, então não pode ser destinatário.
         setActiveUsers(uList.filter(u => u.role !== 'admin'));
+        getQuestionAnswersByIds(qList.map(q => q.id))
+          .then(setAnswersById)
+          .catch(err => console.error("Erro ao carregar gabaritos:", err));
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
       } finally {
@@ -289,14 +293,15 @@ export const CreateExamPage: React.FC = () => {
             </div>
           )}
 
-          <div className="max-h-96 overflow-y-auto space-y-2 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
+          <div className="max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
             {filteredQuestions.map(q => {
               const isSelected = selectedQuestions.some(sq => sq.id === q.id);
+              const answer = answersById[q.id];
               return (
                 <div
                   key={q.id}
                   onClick={() => handleToggleQuestionSelect(q)}
-                  className={`p-3 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
+                  className={`p-3 lg:p-4 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
                     isSelected
                       ? 'bg-cyan-500/15 border-cyan-500/50 text-[#050f41] shadow-sm'
                       : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
@@ -312,15 +317,22 @@ export const CreateExamPage: React.FC = () => {
                     <img
                       src={q.imageUrl}
                       alt="Miniatura da imagem da questão"
-                      className="w-12 h-12 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
                     />
                   )}
-                  <div className="flex-1">
-                    <p className="font-semibold text-xs leading-relaxed line-clamp-2">{q.statement}</p>
-                    <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5">
-                      <span>{q.areaName} • {q.themeName}</span>
-                      {q.imageUrl && <ImageIcon className="w-3 h-3 text-teal-400" />}
-                    </p>
+                  <div className="flex-1 space-y-1.5">
+                    <p className="font-semibold text-sm leading-relaxed line-clamp-2">{q.statement}</p>
+                    {answer ? (
+                      <p className="text-xs text-emerald-400 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>
+                          <strong className="font-bold">{answer.correctAlternative})</strong>{' '}
+                          <span className="line-clamp-1">{q.alternatives[answer.correctAlternative]}</span>
+                        </span>
+                      </p>
+                    ) : (
+                      q.imageUrl && <ImageIcon className="w-3.5 h-3.5 text-teal-400" />
+                    )}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); setViewingQuestion(q); }}

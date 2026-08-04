@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload
+  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer } from '../../services/firebaseService';
-import { Question, Area, Theme } from '../../types';
+import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { Question, Area, Theme, QuestionAnswer } from '../../types';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 
 export const QuestionsPage: React.FC = () => {
@@ -11,6 +11,9 @@ export const QuestionsPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
+  // Gabarito de cada questão listada, buscado em lote (ver getQuestionAnswersByIds)
+  // para mostrar a alternativa correta abaixo do enunciado sem 1 leitura por linha.
+  const [answersById, setAnswersById] = useState<Record<string, QuestionAnswer>>({});
 
   // Filters
   const [selectedAreaId, setSelectedAreaId] = useState('');
@@ -62,6 +65,9 @@ export const QuestionsPage: React.FC = () => {
       setQuestions(qList);
       setAreas(arList);
       setThemes(thList);
+      getQuestionAnswersByIds(qList.map(q => q.id))
+        .then(setAnswersById)
+        .catch(err => console.error("Erro ao carregar gabaritos:", err));
     } catch (err) {
       console.error("Erro ao carregar questões:", err);
     } finally {
@@ -252,40 +258,44 @@ export const QuestionsPage: React.FC = () => {
           <div className="p-8 text-center text-xs text-slate-500">Nenhuma questão encontrada para estes filtros.</div>
         ) : (
           <div className="divide-y divide-slate-800/80">
-            {questions.map((q) => (
+            {questions.map((q) => {
+              const answer = answersById[q.id];
+              return (
               <div
                 key={q.id}
                 onClick={() => setViewingQuestion(q)}
-                className="p-4 sm:p-5 hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer"
+                className="p-4 sm:p-5 lg:p-6 hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6 cursor-pointer"
                 title="Clique para visualizar a questão completa"
               >
-                <div className="flex items-start gap-3 max-w-3xl">
+                <div className="flex items-start gap-4 max-w-none lg:max-w-4xl">
                   {q.imageUrl && (
                     <img
                       src={q.imageUrl}
                       alt="Miniatura da imagem da questão"
-                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
                     />
                   )}
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase font-bold">
-                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                        {q.areaName || q.areaId}
+                  <div className="space-y-2">
+                    {q.imageUrl && (
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                        <ImageIcon className="w-3 h-3" />
+                        Com Imagem
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                        {q.themeName || q.themeId}
-                      </span>
-                      {q.imageUrl && (
-                        <span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1">
-                          <ImageIcon className="w-3 h-3" />
-                          Com Imagem
-                        </span>
-                      )}
-                    </div>
+                    )}
 
-                    <p className="text-xs sm:text-sm font-semibold text-[#050f41] line-clamp-2 leading-relaxed">
+                    <p className="text-sm sm:text-base font-semibold text-[#050f41] line-clamp-2 leading-relaxed">
                       {q.statement}
                     </p>
+
+                    {answer && (
+                      <p className="text-xs sm:text-sm text-emerald-400 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>
+                          <strong className="font-bold">{answer.correctAlternative})</strong>{' '}
+                          <span className="line-clamp-1">{q.alternatives[answer.correctAlternative]}</span>
+                        </span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -306,7 +316,8 @@ export const QuestionsPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
