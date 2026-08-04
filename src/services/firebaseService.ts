@@ -237,6 +237,35 @@ export async function uploadQuestionImage(questionId: string, file: File): Promi
   return await getDownloadURL(storageRef);
 }
 
+// Envia uma imagem para imagens_questoes/{prova}/{arquivo} e vincula a URL
+// pública resultante ao campo imageUrl de questions/{questionId} — usado
+// pela importação em lote de imagens (BulkImagesPage), onde o id da questão
+// já vem embutido no nome do arquivo (ex.: "<questionId>.jpeg"). Mesma
+// convenção de caminho usada por scripts/import-question-images.mjs, só que
+// pelo SDK cliente (sujeito às Regras de Segurança da sessão autenticada do
+// admin, não ao Admin SDK).
+export async function uploadBatchQuestionImage(
+  prova: string,
+  questionId: string,
+  file: File
+): Promise<string> {
+  const question = await getQuestionById(questionId);
+  if (!question) {
+    throw new Error(`Questão ${questionId} não encontrada no Firestore.`);
+  }
+
+  const storageRef = ref(storage, `imagens_questoes/${prova}/${file.name}`);
+  await uploadBytes(storageRef, file);
+  const imageUrl = await getDownloadURL(storageRef);
+
+  await updateDoc(doc(db, 'questions', questionId), {
+    imageUrl,
+    updatedAt: serverTimestamp()
+  });
+
+  return imageUrl;
+}
+
 // --- EXAMS ---
 
 export async function getExams(): Promise<Exam[]> {
