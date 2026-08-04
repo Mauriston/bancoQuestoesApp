@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2
+  ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2, ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getQuestions, getAreas, getThemes, getActiveUsers, createAndPublishExam, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, AppUser, QuestionAnswer } from '../../types';
+import { SOURCE_EXAM_OPTIONS } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 
 export const CreateExamPage: React.FC = () => {
@@ -30,6 +31,11 @@ export const CreateExamPage: React.FC = () => {
   const [areaFilter, setAreaFilter] = useState('');
   const [themeFilter, setThemeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  // Fonte da Questão: menu suspenso com caixas de seleção, mesma lista fixa
+  // usada em QuestionsPage (ver SOURCE_EXAM_OPTIONS).
+  const [selectedSourceExams, setSelectedSourceExams] = useState<string[]>([]);
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
+  const sourceDropdownRef = useRef<HTMLDivElement>(null);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [viewingQuestion, setViewingQuestion] = useState<Question | null>(null);
   const [answersById, setAnswersById] = useState<Record<string, QuestionAnswer>>({});
@@ -75,8 +81,25 @@ export const CreateExamPage: React.FC = () => {
     const matchesArea = !areaFilter || q.areaId === areaFilter;
     const matchesTheme = !themeFilter || q.themeId === themeFilter;
     const matchesSearch = !searchQuery || q.statement.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesArea && matchesTheme && matchesSearch;
+    const matchesSource = selectedSourceExams.length === 0 || selectedSourceExams.includes(q.sourceExam);
+    return matchesArea && matchesTheme && matchesSearch && matchesSource;
   });
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(e.target as Node)) {
+        setSourceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleSourceExam = (value: string) => {
+    setSelectedSourceExams(prev =>
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  };
 
   const handleToggleQuestionSelect = (q: Question) => {
     if (selectedQuestions.some(sq => sq.id === q.id)) {
@@ -247,7 +270,7 @@ export const CreateExamPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input
               type="text"
               placeholder="Filtrar enunciado..."
@@ -275,15 +298,59 @@ export const CreateExamPage: React.FC = () => {
               <option value="">{areaFilter ? 'Todos os Temas' : 'Selecione uma área'}</option>
               {themesForAreaFilter.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+
+            <div className="relative" ref={sourceDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setSourceDropdownOpen(prev => !prev)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 flex items-center justify-between gap-2"
+              >
+                <span className="truncate">
+                  {selectedSourceExams.length === 0
+                    ? 'Todas as Fontes'
+                    : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {sourceDropdownOpen && (
+                <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
+                  {selectedSourceExams.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSourceExams([])}
+                      className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
+                    >
+                      Limpar seleção
+                    </button>
+                  )}
+                  {SOURCE_EXAM_OPTIONS.map(opt => (
+                    <label
+                      key={opt}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSourceExams.includes(opt)}
+                        onChange={() => toggleSourceExam(opt)}
+                        className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                      />
+                      <span className="truncate">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {(searchQuery || areaFilter || themeFilter) && (
+          {(searchQuery || areaFilter || themeFilter || selectedSourceExams.length > 0) && (
             <div className="flex justify-end">
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setAreaFilter('');
                   setThemeFilter('');
+                  setSelectedSourceExams([]);
                 }}
                 className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#050f41] text-[11px] font-semibold"
               >
