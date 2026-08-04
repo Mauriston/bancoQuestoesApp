@@ -23,9 +23,13 @@
         }
       }
       
+      // Documentação: capture=true é necessário para capturar erros de
+      // carregamento de recursos (ex.: <script src> retornando 404), que
+      // não se propagam e não seriam vistos por um listener na fase normal.
       window.addEventListener('error', function(e) {
-        mostrarErro(e.message, e.filename || 'Desconhecido');
-      });
+        var mensagem = e.message || (e.target && e.target.src ? 'Falha ao carregar recurso: ' + e.target.src : 'Erro desconhecido');
+        mostrarErro(mensagem, e.filename || (e.target && e.target.src) || 'Desconhecido');
+      }, true);
 
       window.addEventListener('unhandledrejection', function(e) {
         mostrarErro(e.reason ? e.reason.message || e.reason : 'Erro Assíncrono Desconhecido', 'Falha em Promise/Firebase');
