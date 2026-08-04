@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2
+  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds, getDistinctSourceExams } from '../../services/firebaseService';
 import { Question, Area, Theme, QuestionAnswer } from '../../types';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 
@@ -18,9 +18,15 @@ export const QuestionsPage: React.FC = () => {
   // Filters
   const [selectedAreaId, setSelectedAreaId] = useState('');
   const [selectedThemeId, setSelectedThemeId] = useState('');
-  const [sourceExamFilter, setSourceExamFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [hasImageFilter, setHasImageFilter] = useState<boolean | undefined>(undefined);
+  // Fonte da Questão: menu suspenso com caixas de seleção. As opções vêm dos
+  // valores de `sourceExam` já cadastrados (campo de texto livre no
+  // formulário — ex.: "TEOT 2023", "TARO 2021", "BANCO PRÓPRIO"), buscados
+  // uma única vez e independentes dos demais filtros.
+  const [sourceExamOptions, setSourceExamOptions] = useState<string[]>([]);
+  const [selectedSourceExams, setSelectedSourceExams] = useState<string[]>([]);
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
+  const sourceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Full-question preview modal (exatamente como o candidato vê na prova)
   const [viewingQuestion, setViewingQuestion] = useState<Question | null>(null);
@@ -55,8 +61,7 @@ export const QuestionsPage: React.FC = () => {
         getQuestions({
           areaId: selectedAreaId || undefined,
           themeId: selectedThemeId || undefined,
-          sourceExam: sourceExamFilter || undefined,
-          hasImage: hasImageFilter,
+          sourceExamIn: selectedSourceExams.length > 0 ? selectedSourceExams : undefined,
           searchQuery: searchQuery || undefined
         }),
         getAreas(),
@@ -77,7 +82,29 @@ export const QuestionsPage: React.FC = () => {
 
   useEffect(() => {
     fetchQuestionsList();
-  }, [selectedAreaId, selectedThemeId, sourceExamFilter, hasImageFilter, searchQuery]);
+  }, [selectedAreaId, selectedThemeId, selectedSourceExams, searchQuery]);
+
+  useEffect(() => {
+    getDistinctSourceExams()
+      .then(setSourceExamOptions)
+      .catch(err => console.error("Erro ao carregar fontes de questões:", err));
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(e.target as Node)) {
+        setSourceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleSourceExam = (value: string) => {
+    setSelectedSourceExams(prev =>
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  };
 
   const handleOpenCreateModal = async () => {
     const defaultAreaId = areas[0]?.id || '';
@@ -236,18 +263,54 @@ export const QuestionsPage: React.FC = () => {
           {themes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
 
-        <select
-          value={hasImageFilter === undefined ? 'all' : hasImageFilter ? 'yes' : 'no'}
-          onChange={(e) => {
-            const v = e.target.value;
-            setHasImageFilter(v === 'all' ? undefined : v === 'yes');
-          }}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-        >
-          <option value="all">Todas as Questões</option>
-          <option value="yes">Apenas Com Imagem</option>
-          <option value="no">Sem Imagem</option>
-        </select>
+        <div className="relative" ref={sourceDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setSourceDropdownOpen(prev => !prev)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 flex items-center justify-between gap-2"
+          >
+            <span className="truncate">
+              {selectedSourceExams.length === 0
+                ? 'Todas as Fontes'
+                : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {sourceDropdownOpen && (
+            <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
+              {sourceExamOptions.length === 0 ? (
+                <p className="text-[11px] text-slate-500 px-2 py-1.5">Nenhuma fonte cadastrada ainda.</p>
+              ) : (
+                <>
+                  {selectedSourceExams.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSourceExams([])}
+                      className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
+                    >
+                      Limpar seleção
+                    </button>
+                  )}
+                  {sourceExamOptions.map(opt => (
+                    <label
+                      key={opt}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSourceExams.includes(opt)}
+                        onChange={() => toggleSourceExam(opt)}
+                        className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                      />
+                      <span className="truncate">{opt}</span>
+                    </label>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Questions List */}
@@ -275,7 +338,7 @@ export const QuestionsPage: React.FC = () => {
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
                     />
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     {q.imageUrl && (
                       <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
                         <ImageIcon className="w-3 h-3" />
@@ -288,11 +351,11 @@ export const QuestionsPage: React.FC = () => {
                     </p>
 
                     {answer && (
-                      <p className="text-xs sm:text-sm text-emerald-400 flex items-start gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>
-                          <strong className="font-bold">{answer.correctAlternative})</strong>{' '}
-                          <span className="line-clamp-1">{q.alternatives[answer.correctAlternative]}</span>
+                      <p className="text-xs sm:text-sm text-emerald-400 flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span className="flex items-baseline gap-1 min-w-0">
+                          <strong className="font-bold shrink-0">{answer.correctAlternative})</strong>
+                          <span className="truncate">{q.alternatives[answer.correctAlternative]}</span>
                         </span>
                       </p>
                     )}

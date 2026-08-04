@@ -130,11 +130,14 @@ export async function getThemes(areaId?: string): Promise<Theme[]> {
 export async function getQuestions(filters?: {
   areaId?: string;
   themeId?: string;
-  sourceExam?: string;
-  hasImage?: boolean;
+  // Lista de valores de `sourceExam` aceitos (filtro multi-seleção "Fonte da
+  // Questão"). Aplicado localmente, não no servidor, porque o valor vem de
+  // um conjunto dinâmico (getDistinctSourceExams()) e pode ter mais de 1
+  // item selecionado ao mesmo tempo.
+  sourceExamIn?: string[];
   searchQuery?: string;
 }): Promise<Question[]> {
-  
+
   // Typed as Query<DocumentData> (not `any`) so doc.data() below keeps its
   // proper object type instead of widening to `unknown`, which previously
   // broke `tsc --noEmit` (the project's `npm run lint`) with "Spread types
@@ -149,24 +152,22 @@ export async function getQuestions(filters?: {
   if (filters?.themeId) {
     q = query(q, where('themeId', '==', filters.themeId));
   }
-  if (filters?.sourceExam) {
-    q = query(q, where('sourceExam', '==', filters.sourceExam));
-  }
 
   const snapshot = await getDocs(q);
   let questions: Question[] = [];
-  
+
   snapshot.forEach(doc => {
     questions.push({ id: doc.id, ...doc.data() } as Question);
   });
 
-  // Filtros complexos (texto/imagem) feitos localmente na lista reduzida
-  if (filters?.hasImage !== undefined) {
-    questions = questions.filter(q => filters.hasImage ? !!q.imageUrl : !q.imageUrl);
+  // Filtros complexos (texto/fonte) feitos localmente na lista reduzida
+  if (filters?.sourceExamIn && filters.sourceExamIn.length > 0) {
+    const allowed = new Set(filters.sourceExamIn);
+    questions = questions.filter(q => allowed.has(q.sourceExam));
   }
   if (filters?.searchQuery) {
     const qNorm = normalizeText(filters.searchQuery);
-    questions = questions.filter(q => 
+    questions = questions.filter(q =>
       normalizeText(q.statement).includes(qNorm) ||
       normalizeText(q.sourceExam || '').includes(qNorm) ||
       normalizeText(q.id).includes(qNorm)
@@ -174,6 +175,20 @@ export async function getQuestions(filters?: {
   }
 
   return questions;
+}
+
+// Valores distintos de `sourceExam` já cadastrados no banco de questões —
+// alimenta o filtro "Fonte da Questão" (menu suspenso com caixas de seleção)
+// em QuestionsPage, já que a fonte é um campo de texto livre (ex.: "TEOT
+// 2023", "TARO 2021", "BANCO PRÓPRIO") sem uma lista fixa de valores.
+export async function getDistinctSourceExams(): Promise<string[]> {
+  const snapshot = await getDocs(collection(db, 'questions'));
+  const values = new Set<string>();
+  snapshot.forEach(doc => {
+    const sourceExam = (doc.data() as Question).sourceExam;
+    if (sourceExam) values.add(sourceExam);
+  });
+  return Array.from(values).sort();
 }
 
 export async function getQuestionById(questionId: string): Promise<Question | null> {

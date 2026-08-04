@@ -320,14 +320,14 @@ export const CreateExamPage: React.FC = () => {
                       className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
                     />
                   )}
-                  <div className="flex-1 space-y-1.5">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <p className="font-semibold text-sm leading-relaxed line-clamp-2">{q.statement}</p>
                     {answer ? (
-                      <p className="text-xs text-emerald-400 flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>
-                          <strong className="font-bold">{answer.correctAlternative})</strong>{' '}
-                          <span className="line-clamp-1">{q.alternatives[answer.correctAlternative]}</span>
+                      <p className="text-xs text-emerald-400 flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="flex items-baseline gap-1 min-w-0">
+                          <strong className="font-bold shrink-0">{answer.correctAlternative})</strong>
+                          <span className="truncate">{q.alternatives[answer.correctAlternative]}</span>
                         </span>
                       </p>
                     ) : (
