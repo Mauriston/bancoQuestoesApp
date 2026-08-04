@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive } from '../../services/firebaseService';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
+import { getSourceExamChipClass } from '../../constants';
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
+  // `sourceExam` não faz parte da cópia congelada em exams/{id}/questions —
+  // buscado à parte só para colorir o chip de origem ao lado de "Questão X".
+  const [sourceExamById, setSourceExamById] = useState<Record<string, string>>({});
   const [stats, setStats] = useState<Record<string, { totalAnswered: number; totalCorrect: number }>>({});
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
@@ -34,6 +38,11 @@ export const ExamViewPage: React.FC = () => {
           if (key) keysMap[q.originalQuestionId] = key;
         }));
         setAnswerKeys(keysMap);
+
+        const originalQuestions = await getQuestionsByIds(examQs.map(q => q.originalQuestionId));
+        const sourceMap: Record<string, string> = {};
+        Object.values(originalQuestions).forEach(oq => { sourceMap[oq.id] = oq.sourceExam; });
+        setSourceExamById(sourceMap);
       } catch (err) {
         console.error("Erro ao carregar prova:", err);
       } finally {
@@ -126,10 +135,17 @@ export const ExamViewPage: React.FC = () => {
           return (
             <div key={q.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
               <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
-                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-                  Questão {idx + 1}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                    Questão {idx + 1}
+                  </span>
+                  {sourceExamById[q.originalQuestionId] && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSourceExamChipClass(sourceExamById[q.originalQuestionId])}`}>
+                      {sourceExamById[q.originalQuestionId]}
+                    </span>
+                  )}
+                </div>
 
                 {accuracyPercent !== null ? (
                   <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${

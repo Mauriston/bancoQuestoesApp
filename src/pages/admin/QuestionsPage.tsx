@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, QuestionAnswer } from '../../types';
-import { SOURCE_EXAM_OPTIONS } from '../../constants';
+import { SOURCE_EXAM_OPTIONS, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 
 export const QuestionsPage: React.FC = () => {
@@ -325,12 +325,17 @@ export const QuestionsPage: React.FC = () => {
                     />
                   )}
                   <div className="space-y-2 min-w-0">
-                    {q.imageUrl && (
-                      <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                        <ImageIcon className="w-3 h-3" />
-                        Com Imagem
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSourceExamChipClass(q.sourceExam)}`}>
+                        {q.sourceExam}
                       </span>
-                    )}
+                      {q.imageUrl && (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                          <ImageIcon className="w-3 h-3" />
+                          Com Imagem
+                        </span>
+                      )}
+                    </div>
 
                     <p className="text-sm sm:text-base font-semibold text-[#050f41] line-clamp-2 leading-relaxed">
                       {q.statement}
