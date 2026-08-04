@@ -124,13 +124,13 @@ export const CreateExamPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       
-      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Lista de Provas</span>
       </Link>
 
       <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <FileCheck className="w-5 h-5 text-cyan-400" />
           Assistente de Criação de Prova
         </h1>
@@ -158,7 +158,7 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 1: Basic Info */}
       {step === 1 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          <h2 className="text-sm font-bold text-white mb-2">Etapa 1: Dados e Configurações da Prova</h2>
+          <h2 className="text-sm font-bold text-[#050f41] mb-2">Etapa 1: Dados e Configurações da Prova</h2>
           
           <div>
             <label className="block text-slate-300 font-medium mb-1">Nome / Título da Prova *</label>
@@ -168,7 +168,7 @@ export const CreateExamPage: React.FC = () => {
               placeholder="Ex: Simulado TEOT 2026 - Módulo Ortopedia Infantil"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
             />
           </div>
           
@@ -179,7 +179,7 @@ export const CreateExamPage: React.FC = () => {
               placeholder="Descreva o conteúdo cobrado ou orientações gerais..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
             />
           </div>
 
@@ -232,7 +232,7 @@ export const CreateExamPage: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
-              <h2 className="text-sm font-bold text-white">Etapa 2: Selecionar Questões do Banco</h2>
+              <h2 className="text-sm font-bold text-[#050f41]">Etapa 2: Selecionar Questões do Banco</h2>
               <p className="text-slate-400">Questões selecionadas: <strong className="text-cyan-400">{selectedQuestions.length}</strong></p>
             </div>
             <button
@@ -249,7 +249,7 @@ export const CreateExamPage: React.FC = () => {
               placeholder="Filtrar enunciado..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
             />
             <select
               value={areaFilter}
@@ -281,7 +281,7 @@ export const CreateExamPage: React.FC = () => {
                   setAreaFilter('');
                   setThemeFilter('');
                 }}
-                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white text-[11px] font-semibold"
+                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#050f41] text-[11px] font-semibold"
               >
                 <XCircle className="w-3.5 h-3.5" />
                 <span>Limpar Filtros</span>
@@ -298,7 +298,7 @@ export const CreateExamPage: React.FC = () => {
                   onClick={() => handleToggleQuestionSelect(q)}
                   className={`p-3 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
                     isSelected
-                      ? 'bg-cyan-500/15 border-cyan-500/50 text-white shadow-sm'
+                      ? 'bg-cyan-500/15 border-cyan-500/50 text-[#050f41] shadow-sm'
                       : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
                   }`}
                 >
@@ -325,7 +325,7 @@ export const CreateExamPage: React.FC = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); setViewingQuestion(q); }}
                     title="Visualizar questão completa"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 shrink-0"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-[#050f41] hover:bg-slate-700 shrink-0"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -353,7 +353,7 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 3: User Assignment */}
       {step === 3 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          <h2 className="text-sm font-bold text-white mb-2">Etapa 3: Atribuir a Prova aos Candidatos</h2>
+          <h2 className="text-sm font-bold text-[#050f41] mb-2">Etapa 3: Atribuir a Prova aos Candidatos</h2>
           
           <div className="space-y-3">
             <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-slate-800 bg-slate-950">
@@ -365,7 +365,7 @@ export const CreateExamPage: React.FC = () => {
                 className="text-cyan-500"
               />
               <div>
-                <strong className="text-white block">Atribuir a TODOS os usuários ativos ({activeUsers.length})</strong>
+                <strong className="text-[#050f41] block">Atribuir a TODOS os usuários ativos ({activeUsers.length})</strong>
                 <span className="text-[10px] text-slate-400">Todos os residentes ativos receberão o simulado em seu painel.</span>
               </div>
             </label>
@@ -379,7 +379,7 @@ export const CreateExamPage: React.FC = () => {
                 className="text-cyan-500"
               />
               <div>
-                <strong className="text-white block">Selecionar Usuários Específicos</strong>
+                <strong className="text-[#050f41] block">Selecionar Usuários Específicos</strong>
                 <span className="text-[10px] text-slate-400">Escolha quais residentes participarão.</span>
               </div>
             </label>
@@ -424,12 +424,12 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 4: Review & Publish */}
       {step === 4 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          <h2 className="text-sm font-bold text-white border-b border-slate-800 pb-3">
+          <h2 className="text-sm font-bold text-[#050f41] border-b border-slate-800 pb-3">
             Etapa 4: Resumo e Confirmação de Publicação
           </h2>
           
           <div className="space-y-2 text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800">
-            <p>• Nome da Prova: <strong className="text-white">{name}</strong></p>
+            <p>• Nome da Prova: <strong className="text-[#050f41]">{name}</strong></p>
             <p>• Total de Questões: <strong className="text-teal-400">{selectedQuestions.length}</strong></p>
             <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'all' ? `Todos os ${activeUsers.length} usuários ativos` : `${selectedUserIds.length} usuários`}</strong></p>
           </div>

@@ -178,7 +178,7 @@ export const QuestionsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-cyan-400" />
             Banco de Questões
           </h1>
@@ -205,7 +205,7 @@ export const QuestionsPage: React.FC = () => {
             placeholder="Pesquisar enunciado..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] placeholder-slate-500 focus:outline-none focus:border-cyan-500"
           />
         </div>
 
@@ -283,7 +283,7 @@ export const QuestionsPage: React.FC = () => {
                       )}
                     </div>
 
-                    <p className="text-xs sm:text-sm font-semibold text-white line-clamp-2 leading-relaxed">
+                    <p className="text-xs sm:text-sm font-semibold text-[#050f41] line-clamp-2 leading-relaxed">
                       {q.statement}
                     </p>
                   </div>
@@ -292,7 +292,7 @@ export const QuestionsPage: React.FC = () => {
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                   <button
                     onClick={(e) => { e.stopPropagation(); handleOpenEditModal(q); }}
-                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-[#050f41] transition-colors"
                     title="Editar Questão"
                   >
                     <Edit className="w-4 h-4" />
@@ -313,14 +313,14 @@ export const QuestionsPage: React.FC = () => {
 
       {/* Modal Create/Edit */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative space-y-4">
             
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 sticky top-0 bg-slate-900 z-10">
-              <h3 className="text-sm font-bold text-white">
+              <h3 className="text-sm font-bold text-[#050f41]">
                 {editingQId ? 'Editar Questão' : 'Cadastrar Nova Questão'}
               </h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-[#050f41]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -369,7 +369,7 @@ export const QuestionsPage: React.FC = () => {
                   placeholder="Informe o enunciado completo da questão..."
                   value={statement}
                   onChange={(e) => setStatement(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                 />
               </div>
 
@@ -389,7 +389,7 @@ export const QuestionsPage: React.FC = () => {
                         value={val}
                         onChange={(e) => setVal(e.target.value)}
                         placeholder={`Texto da alternativa ${altKey}`}
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white"
+                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-[#050f41]"
                       />
                     </div>
                   );
@@ -417,7 +417,7 @@ export const QuestionsPage: React.FC = () => {
                     type="text"
                     value={sourceExam}
                     onChange={(e) => setSourceExam(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                   />
                 </div>
               </div>
@@ -438,7 +438,7 @@ export const QuestionsPage: React.FC = () => {
                   rows={2}
                   value={solutionText}
                   onChange={(e) => setSolutionText(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                 />
               </div>
 
@@ -448,7 +448,7 @@ export const QuestionsPage: React.FC = () => {
                   rows={2}
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                 />
               </div>
 

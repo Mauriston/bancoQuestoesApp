@@ -176,7 +176,7 @@ export const TakeExamPage: React.FC = () => {
         <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-teal-500/20 shrink-0">
           <Trophy className="w-4 h-4" />
         </div>
-        <h2 className="text-sm font-bold text-white leading-tight truncate">
+        <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate">
           {exam?.name || 'Simulado Ortopedia'}
         </h2>
       </div>
@@ -215,7 +215,7 @@ export const TakeExamPage: React.FC = () => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
-              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+              <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
                 <ZoomIn className="w-4 h-4" />
                 <span>Clique para ampliar</span>
               </div>
@@ -236,8 +236,8 @@ export const TakeExamPage: React.FC = () => {
                 onClick={() => handleSelectOption(letter)}
                 className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 transition-all ${
                   isSelected
-                    ? 'bg-teal-500/15 border-teal-500/60 text-white shadow-md shadow-teal-500/10'
-                    : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    ? 'bg-teal-500/15 border-teal-500/60 text-[#050f41] shadow-md shadow-teal-500/10'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-[#050f41]'
                 }`}
               >
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
@@ -271,11 +271,11 @@ export const TakeExamPage: React.FC = () => {
 
       {/* Modal de Imagem */}
       {previewImageUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewImageUrl(null)}>
+        <div className="fixed inset-0 z-50 bg-[#050f41]/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewImageUrl(null)}>
           <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setPreviewImageUrl(null)}
-              className="absolute -top-10 right-0 text-slate-400 hover:text-white p-2"
+              className="absolute -top-10 right-0 text-slate-400 hover:text-[#050f41] p-2"
             >
               <X className="w-6 h-6" />
             </button>
@@ -286,14 +286,14 @@ export const TakeExamPage: React.FC = () => {
 
       {/* Confirmação de Término */}
       {finishModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Finalizar Prova?</h3>
+                <h3 className="text-base font-bold text-[#050f41]">Finalizar Prova?</h3>
                 <p className="text-xs text-slate-400">Essa foi a última questão. Confirme o envio definitivo das suas respostas.</p>
               </div>
             </div>

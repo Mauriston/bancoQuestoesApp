@@ -18,18 +18,19 @@ Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authen
 1. [Stack tecnológica](#stack-tecnológica)
 2. [Arquitetura em alto nível](#arquitetura-em-alto-nível)
 3. [Estrutura de pastas](#estrutura-de-pastas)
-4. [Firebase — visão geral do projeto](#firebase--visão-geral-do-projeto)
-5. [Firebase Authentication](#firebase-authentication)
-6. [Firestore — modelo de dados](#firestore--modelo-de-dados)
-7. [Firebase Storage — imagens das questões](#firebase-storage--imagens-das-questões)
-8. [Regras de Segurança (Firestore/Storage)](#regras-de-segurança-firestorestorage)
-9. [Firebase Hosting e deploy (CI/CD)](#firebase-hosting-e-deploy-cicd)
-10. [Rotas da aplicação](#rotas-da-aplicação)
-11. [Variáveis de ambiente e configuração](#variáveis-de-ambiente-e-configuração)
-12. [Rodando localmente](#rodando-localmente)
-13. [Scripts npm/bun](#scripts-npmbun)
-14. [Pontos de atenção / dívidas técnicas conhecidas](#pontos-de-atenção--dívidas-técnicas-conhecidas)
-15. [Histórico relevante recente](#histórico-relevante-recente)
+4. [Design system (paleta e tipografia)](#design-system-paleta-e-tipografia)
+5. [Firebase — visão geral do projeto](#firebase--visão-geral-do-projeto)
+6. [Firebase Authentication](#firebase-authentication)
+7. [Firestore — modelo de dados](#firestore--modelo-de-dados)
+8. [Firebase Storage — imagens das questões](#firebase-storage--imagens-das-questões)
+9. [Regras de Segurança (Firestore/Storage)](#regras-de-segurança-firestorestorage)
+10. [Firebase Hosting e deploy (CI/CD)](#firebase-hosting-e-deploy-cicd)
+11. [Rotas da aplicação](#rotas-da-aplicação)
+12. [Variáveis de ambiente e configuração](#variáveis-de-ambiente-e-configuração)
+13. [Rodando localmente](#rodando-localmente)
+14. [Scripts npm/bun](#scripts-npmbun)
+15. [Pontos de atenção / dívidas técnicas conhecidas](#pontos-de-atenção--dívidas-técnicas-conhecidas)
+16. [Histórico relevante recente](#histórico-relevante-recente)
 
 ---
 
@@ -103,6 +104,22 @@ bancoQuestoesApp/
     ├── types.ts                   # Definições de tipos TypeScript do domínio (fonte única — ver histórico)
     └── utils/helpers.ts           # normalizeText, generateId, shuffleArray, formatDate, exportToCSV...
 ```
+
+## Design system (paleta e tipografia)
+
+A interface segue um sistema de design institucional próprio, com fundo predominantemente branco/claro, tipografia condensada em destaques e três cores-base:
+
+| Papel | Cor | Uso |
+|---|---|---|
+| Dominante | `#050F41` (azul institucional) | Texto primário, navegação, cabeçalhos, botões de ação principal |
+| Acento de alta visibilidade | `#FAB932` (âmbar/dourado) | Destaques pontuais, estado ativo em navegação sobre fundo escuro, badges — nunca como texto sobre fundo branco |
+| Acento positivo | `#079551` (verde) | Confirmações, respostas corretas, indicadores de progresso |
+
+Implementação: em vez de recolorir cada componente individualmente, `src/index.css` redefine os *tokens* de cor do Tailwind v4 via `@theme` (`--color-slate-*`, `--color-teal-*`, `--color-amber-*`, `--color-emerald-*`, `--color-cyan-*`, `--color-red-*`), de forma que toda a aplicação passe a usar essa paleta automaticamente a partir das mesmas classes utilitárias já existentes no código (`bg-slate-900`, `text-teal-400` etc.). A escala `slate` é deliberadamente invertida em relação ao Tailwind padrão (950 = claro/fundo, 100 = escuro/texto) porque o app já usava esses tokens como "texto claro sobre fundo escuro"; aqui a mesma relação passa a produzir "texto escuro sobre fundo claro".
+
+Alguns elementos de *chrome* (cabeçalho e barra lateral de `UserLayout`/`AdminLayout`, telas de entrada como `HomePage`/`AdminLoginPage`, *backdrops* de modal e do visualizador de imagem em tela cheia) usam a cor institucional explicitamente (`bg-[#050f41]`) em vez do token remapeado, porque essas áreas devem permanecer escuras propositalmente (marca/navegação e *scrims* de modal), diferentemente do restante do conteúdo, que é claro.
+
+Tipografia: **Montserrat** (via Google Fonts) é a fonte principal para corpo de texto, formulários, tabelas e a maioria dos títulos; **Bebas Neue** (condensada) é usada apenas em `<h1>` — títulos curtos e de destaque — com Montserrat como *fallback* automático caso a fonte não carregue. Ver `index.html` (`<link>` do Google Fonts) e `src/index.css` (`--font-sans`, `--font-display`).
 
 ## Firebase — visão geral do projeto
 

@@ -57,7 +57,7 @@ export const ExamsListPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
             <FileCheck className="w-5 h-5 text-cyan-400" />
             Gerenciamento de Provas & Simulados
           </h1>
@@ -104,7 +104,7 @@ export const ExamsListPage: React.FC = () => {
                     <span className="text-[11px] text-slate-500">{formatDate(ex.createdAt)}</span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-white line-clamp-2">
+                  <h3 className="text-sm font-bold text-[#050f41] line-clamp-2">
                     {ex.name}
                   </h3>
 
