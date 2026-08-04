@@ -216,11 +216,22 @@ Bucket: **`gen-lang-client-0316191622.firebasestorage.app`**.
 Existem hoje **duas origens/convenções de caminho** para imagens no bucket, refletindo a migração de "URLs externas" para "Storage nativo":
 
 1. **`question-images/{questionId}/{timestamp}.{ext}`** — caminho **canônico**, gerado automaticamente pelo upload feito na UI administrativa (`firebaseService.uploadQuestionImage`, usado em `QuestionsPage`). O admin escolhe um arquivo de imagem ao criar/editar uma questão, o app faz `uploadBytes` para esse caminho e grava a `getDownloadURL()` resultante no campo `imageUrl` do documento em `questions`.
-2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados em conjunto** ao Storage (fora do fluxo de upload individual da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Esse caminho é alimentado por `scripts/import-question-images.mjs` (ver abaixo), que já cuida de gravar a URL pública correspondente no campo `imageUrl` de cada `question` — não é mais necessário fazer esse casamento manualmente.
+2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados em conjunto** ao Storage (fora do fluxo de upload individual da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Esse caminho é alimentado tanto pela tela admin **Imagens em Lote** quanto por `scripts/import-question-images.mjs` (ver abaixo) — ambos já cuidam de gravar a URL pública correspondente no campo `imageUrl` de cada `question`, não é mais necessário fazer esse casamento manualmente.
 
-> **Recomendação de uso**: para adicionar/editar a imagem de **uma** questão, use o fluxo 1 (upload pela UI de `QuestionsPage`). Para importar um **lote** de imagens já rotuladas por número de questão de uma prova inteira (ex.: um PDF de prova escaneado e recortado em uma imagem por questão), use `scripts/import-question-images.mjs`.
+> **Recomendação de uso**: para adicionar/editar a imagem de **uma** questão, use o fluxo 1 (upload pela UI de `QuestionsPage`). Para importar um **lote** de imagens já rotuladas por questão (ex.: uma prova inteira escaneada e recortada em uma imagem por questão), use a tela admin **Imagens em Lote** (`/admin/images`) — ou, para lotes muito grandes/automação fora do navegador, `scripts/import-question-images.mjs`.
 
-### Importação em lote de imagens (`scripts/import-question-images.mjs`)
+### Importação em lote de imagens — UI admin (`/admin/images`, `BulkImagesPage`)
+
+Tela do painel administrativo (item **"Imagens em Lote"** na barra lateral) para importar várias imagens de uma vez sem precisar de terminal nem credenciais além do próprio login de admin:
+
+1. Informa a **fonte** (nome da prova/origem — ex. "TEOT 2024", "TARO 2022", "BANCO PRÓPRIO"; aceita qualquer valor, as sugestões são só atalhos), usada como subpasta em `imagens_questoes/{fonte}/...`.
+2. Seleciona uma **pasta inteira** do computador (`<input type="file" webkitdirectory>`) contendo as imagens.
+3. Cada arquivo precisa se chamar exatamente `<idDaQuestão>.jpeg`/`.jpg`/`.png` — o próprio nome do arquivo (sem extensão) é usado como o ID do documento em `questions` a atualizar; arquivos com outra extensão são ignorados. Não há passo de mapeamento separado como no script — a relação é 100% pelo nome do arquivo.
+4. Ao confirmar, cada imagem é enviada via `firebaseService.uploadBatchQuestionImage` (SDK cliente, sujeito às mesmas Regras de Segurança da sessão do admin — não ao Admin SDK) e o resultado (vinculada / questão não encontrada / erro) é listado arquivo a arquivo, com um resumo final. Um registro é gravado em `adminLogs` ao final da execução.
+
+Diferença para o script Node: a tela roda inteiramente no navegador com a sessão do admin logado (mais simples para quem não usa terminal, mas sujeita ao mesmo timeout/estabilidade de uma aba de navegador aberta durante todo o lote); o script usa o Admin SDK localmente (mais robusto para lotes muito grandes, mas exige gerar e manusear uma Service Account Key).
+
+### Importação em lote de imagens — script Node (`scripts/import-question-images.mjs`)
 
 Script Node (`firebase-admin`) que envia um conjunto de arquivos de imagem para `imagens_questoes/{PROVA}/{arquivo}` e atualiza o campo `imageUrl` de cada `questions/{id}` correspondente, a partir de um arquivo de mapeamento `{ "<questionId>": "<nomeDoArquivo>" }`.
 
@@ -328,6 +339,7 @@ Definidas em `src/routes/AppRoutes.tsx`, todas client-side (React Router).
 | `/admin/dashboard` | `DashboardPage` |
 | `/admin/users`, `/admin/users/:userId` | Gestão de usuários |
 | `/admin/questions` | `QuestionsPage` — CRUD de questões + upload de imagem |
+| `/admin/images` | `BulkImagesPage` — importação em lote de imagens de questões (ver [Firebase Storage](#firebase-storage--imagens-das-questões)) |
 | `/admin/import` | `ImportPage` — importação em massa via JSON |
 | `/admin/exams`, `/admin/exams/new`, `/admin/exams/:examId` | Listagem, criação e visualização de provas |
 | `/admin/attempts` | `AttemptsPage` — tentativas de todos os candidatos |

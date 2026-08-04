@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, ShieldAlert, Menu, X, Sparkles
+  LogOut, ShieldAlert, Menu, X, Sparkles, Images
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,6 +21,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Gerenciar Usuários', path: '/admin/users', icon: Users },
     { label: 'Banco de Questões', path: '/admin/questions', icon: BookOpen },
+    { label: 'Imagens em Lote', path: '/admin/images', icon: Images },
     { label: 'Provas e Simulados', path: '/admin/exams', icon: FileCheck },
     { label: 'Tentativas & Respostas', path: '/admin/attempts', icon: History },
     { label: 'Importar Banco JSON', path: '/admin/import', icon: UploadCloud }
