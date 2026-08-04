@@ -8,7 +8,7 @@
     ],
     "rewrites": [
       {
-        "source": "^/(?!imagens_questoes/).*",
+        "source": "**",
         "destination": "/index.html"
       }
     ]
