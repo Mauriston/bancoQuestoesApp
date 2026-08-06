@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, BarChart3
+  CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, BarChart3, ChevronDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds } from '../../services/firebaseService';
@@ -22,6 +22,7 @@ export const ExamResultPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function loadResult() {
@@ -322,20 +323,34 @@ export const ExamResultPage: React.FC = () => {
                   </div>
 
                   {key && (key.comments || key.solutionText || key.commentMediaUrl) && (
-                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 space-y-2">
-                      {key.solutionText && (
-                        <div>
-                          <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
-                          <p className="text-slate-300 leading-relaxed">{key.solutionText}</p>
+                    <div className="rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setOpenComments(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
+                        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-xs font-semibold text-teal-400"
+                      >
+                        <span>Ver comentário do gabarito</span>
+                        <ChevronDown
+                          className={`w-4 h-4 shrink-0 transition-transform duration-200 ${openComments[q.id] ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                      {openComments[q.id] && (
+                        <div className="px-4 pb-4 text-xs text-slate-300 space-y-2">
+                          {key.solutionText && (
+                            <div>
+                              <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
+                              <p className="text-slate-300 leading-relaxed">{key.solutionText}</p>
+                            </div>
+                          )}
+                          {key.comments && (
+                            <div>
+                              <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
+                              <p className="text-slate-300 leading-relaxed">{key.comments}</p>
+                            </div>
+                          )}
+                          {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                         </div>
                       )}
-                      {key.comments && (
-                        <div>
-                          <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
-                          <p className="text-slate-300 leading-relaxed">{key.comments}</p>
-                        </div>
-                      )}
-                      {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                     </div>
                   )}
                 </div>

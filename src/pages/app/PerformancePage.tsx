@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import {
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip,
-  AreaChart, Area as RechartsArea, XAxis, YAxis, ReferenceLine, LineChart, Line
+  AreaChart, Area as RechartsArea, XAxis, YAxis, ReferenceLine, LineChart, Line, LabelList
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserStats, getAllUserStats, getAreas, getThemes, getUserAttempts } from '../../services/firebaseService';
@@ -115,6 +115,19 @@ export const PerformancePage: React.FC = () => {
     name: a.examName || `Prova ${idx + 1}`,
     score: a.scorePercentage || 0
   }));
+
+  // Índices do maior e do menor score na série — usados para rotular só
+  // esses dois pontos no gráfico de evolução (demais só via tooltip).
+  const evolutionMaxIdx = evolutionData.length > 0
+    ? evolutionData.reduce((best, cur, i) => (cur.score > evolutionData[best].score ? i : best), 0)
+    : -1;
+  const evolutionMinIdx = evolutionData.length > 0
+    ? evolutionData.reduce((worst, cur, i) => (cur.score < evolutionData[worst].score ? i : worst), 0)
+    : -1;
+  // Offset de gradiente (0-1, de cima para baixo) onde a linha de
+  // referência de 50% cruza o eixo Y, considerando o domínio [0,100].
+  const evoYMax = 100, evoYMin = 0;
+  const evoSplitOffset = Math.min(1, Math.max(0, (evoYMax - 50) / (evoYMax - evoYMin)));
 
   // Tendência: compara o desempenho médio da segunda metade das provas com
   // a primeira metade (ou última vs. primeira, se houver poucas provas).
@@ -239,8 +252,10 @@ export const PerformancePage: React.FC = () => {
               <AreaChart data={evolutionData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="evoFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#050f41" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#050f41" stopOpacity={0.02} />
+                    <stop offset={0} stopColor="#34d399" stopOpacity={0.25} />
+                    <stop offset={evoSplitOffset} stopColor="#34d399" stopOpacity={0.15} />
+                    <stop offset={evoSplitOffset} stopColor="#f87171" stopOpacity={0.15} />
+                    <stop offset={1} stopColor="#f87171" stopOpacity={0.25} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="idx" hide />
@@ -259,7 +274,28 @@ export const PerformancePage: React.FC = () => {
                   fill="url(#evoFill)"
                   dot={{ r: 4, fill: '#050f41', strokeWidth: 0 }}
                   activeDot={{ r: 6 }}
-                />
+                >
+                  <LabelList
+                    dataKey="score"
+                    content={(props: any) => {
+                      const { x, y, index, value } = props;
+                      if (index !== evolutionMaxIdx && index !== evolutionMinIdx) return null;
+                      const isMax = index === evolutionMaxIdx;
+                      return (
+                        <text
+                          x={x}
+                          y={y - 10}
+                          textAnchor="middle"
+                          fontSize={11}
+                          fontWeight={700}
+                          fill={isMax ? '#079551' : '#c7362f'}
+                        >
+                          {value}%
+                        </text>
+                      );
+                    }}
+                  />
+                </RechartsArea>
               </AreaChart>
             </ResponsiveContainer>
           </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowRight, CheckCircle2, X, ZoomIn, Send, Trophy, AlertCircle, ArrowLeft
+  ArrowRight, X, ZoomIn, Send, Trophy, AlertCircle, ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -34,6 +34,19 @@ export const TakeExamPage: React.FC = () => {
   const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null | undefined>(null);
+  const [loadingTipIndex, setLoadingTipIndex] = useState(0);
+
+  const loadingTips = [
+    'Não é possível retornar a uma questão já respondida',
+    'Clique nas imagens das questões para ampliá-las',
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLoadingTipIndex(prev => (prev + 1) % loadingTips.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function initExam() {
@@ -182,6 +195,18 @@ export const TakeExamPage: React.FC = () => {
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-xs">Iniciando ambiente seguro da prova...</p>
+        <p
+          key={loadingTipIndex}
+          className="text-[11px] text-slate-500 mt-4 max-w-xs text-center transition-opacity duration-700 opacity-0 animate-[fadeInTip_0.7s_ease-in-out_forwards]"
+        >
+          {loadingTips[loadingTipIndex]}
+        </p>
+        <style>{`
+          @keyframes fadeInTip {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -191,27 +216,39 @@ export const TakeExamPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-6 pb-24">
 
-      {/* Top: ícone do app + nome da prova + contador de questão (economiza espaço vertical) */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur flex items-center justify-between gap-2.5 py-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-teal-500/20 shrink-0">
-            <Trophy className="w-4 h-4" />
-          </div>
-          <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate">
-            {exam?.name || 'Simulado Ortopedia'}
-          </h2>
+      {/* Top: nome da prova centralizado + indicador de progresso circular */}
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-2">
+        <div />
+        <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate text-center">
+          {exam?.name || 'Simulado Ortopedia'}
+        </h2>
+        <div className="flex items-center justify-end shrink-0">
+          <svg width="36" height="36" viewBox="0 0 36 36" className="-rotate-90">
+            <circle
+              cx="18" cy="18" r="15.5"
+              fill="none"
+              stroke="currentColor"
+              className="text-slate-800"
+              strokeWidth="3"
+            />
+            <circle
+              cx="18" cy="18" r="15.5"
+              fill="none"
+              stroke="url(#examProgressGradient)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 15.5}
+              strokeDashoffset={2 * Math.PI * 15.5 * (1 - progressPercent / 100)}
+              className="transition-all duration-300"
+            />
+            <defs>
+              <linearGradient id="examProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#14b8a6" />
+                <stop offset="100%" stopColor="#06b6d4" />
+              </linearGradient>
+            </defs>
+          </svg>
         </div>
-        <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
-          Questão {currentIndex + 1}/{questions.length}
-        </span>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800/80">
-        <div
-          className="bg-gradient-to-r from-teal-500 to-cyan-500 h-full transition-all duration-300"
-          style={{ width: `${progressPercent}%` }}
-        />
       </div>
 
       {/* Question Content Box */}
@@ -219,7 +256,7 @@ export const TakeExamPage: React.FC = () => {
 
         {/* Enunciado */}
         <p className="text-base sm:text-lg font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
-          {currentQ.statement}
+          {`${currentIndex + 1}. ${currentQ.statement}`}
         </p>
 
         {/* Image Preview se houver — centralizada na página; clique amplia em modal */}
@@ -294,11 +331,11 @@ export const TakeExamPage: React.FC = () => {
 
       {/* Modal de Imagem */}
       {previewImageUrl && (
-        <div className="fixed inset-0 z-50 bg-[#050f41]/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewImageUrl(null)}>
+        <div className="fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewImageUrl(null)}>
           <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setPreviewImageUrl(null)}
-              className="tap-target absolute -top-10 right-0 flex items-center justify-center text-white/70 hover:text-white"
+              className="tap-target absolute -top-10 right-0 flex items-center justify-center text-white bg-[#050f41]/60 rounded-full p-1.5 hover:bg-[#050f41]/80"
             >
               <X className="w-6 h-6" />
             </button>
@@ -310,28 +347,16 @@ export const TakeExamPage: React.FC = () => {
       {/* Confirmação de Término */}
       {finishModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[#050f41]">Finalizar Prova?</h3>
-                <p className="text-sm text-slate-400">Essa foi a última questão. Confirme o envio definitivo das suas respostas.</p>
-              </div>
-            </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5 text-center">
+            <h3 className="text-base font-bold text-[#050f41]">Finalizar Prova?</h3>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-300 space-y-1">
-              <p>✔ Todas as <strong className="text-teal-400">{questions.length}</strong> questões foram respondidas.</p>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-center">
               <button
                 onClick={handleFinishExam}
                 disabled={submitting}
-                className="px-5 py-2.5 min-h-11 rounded-xl text-sm font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20"
+                className="px-8 py-2.5 min-h-11 rounded-xl text-sm font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 disabled:opacity-60"
               >
-                {submitting ? 'Enviando...' : 'Confirmar e Enviar'}
+                {submitting ? <span className="w-4 h-4 border-2 border-slate-950/40 border-t-slate-950 rounded-full animate-spin inline-block" /> : 'Sim'}
               </button>
             </div>
           </div>
