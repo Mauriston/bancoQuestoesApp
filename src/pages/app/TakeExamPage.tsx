@@ -32,6 +32,7 @@ export const TakeExamPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null | undefined>(null);
 
   useEffect(() => {
@@ -131,6 +132,7 @@ export const TakeExamPage: React.FC = () => {
     if (submitting || !attemptId) return;
     setSubmitting(true);
     setFinishModalOpen(false);
+    setFinishing(true);
 
     try {
       await finishAndGradeAttempt(attemptId);
@@ -139,6 +141,7 @@ export const TakeExamPage: React.FC = () => {
       console.error("Erro ao finalizar prova:", err);
       alert("Ocorreu um erro ao enviar sua prova. Tente novamente.");
       setSubmitting(false);
+      setFinishing(false);
     }
   };
 
@@ -153,6 +156,22 @@ export const TakeExamPage: React.FC = () => {
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Voltar para Minhas Provas</span>
         </Link>
+      </div>
+    );
+  }
+
+  if (finishing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-4">
+        <div className="relative w-16 h-16 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-4 border-teal-500/20" />
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-teal-500 animate-spin" />
+          <Trophy className="w-6 h-6 text-teal-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-slate-200">Enviando suas respostas...</p>
+          <p className="text-xs text-slate-500 mt-1">Aguarde enquanto calculamos seu resultado.</p>
+        </div>
       </div>
     );
   }
@@ -306,13 +325,6 @@ export const TakeExamPage: React.FC = () => {
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setFinishModalOpen(false)}
-                disabled={submitting}
-                className="px-4 py-2.5 min-h-11 rounded-xl text-sm text-slate-400 hover:bg-slate-800"
-              >
-                Ajustar Última Resposta
-              </button>
               <button
                 onClick={handleFinishExam}
                 disabled={submitting}

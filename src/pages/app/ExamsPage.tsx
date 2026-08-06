@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  FileText, CheckCircle2, Play, ChevronRight, Sparkles
+  CheckCircle2, Play
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAssignments, isExamActive } from '../../services/firebaseService';
 import { ExamAssignment, Exam } from '../../types';
-import { formatDate } from '../../utils/helpers';
 
 export const ExamsPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -41,26 +40,12 @@ export const ExamsPage: React.FC = () => {
   const availableExams = assignments.filter(a =>
     a.status === 'started' || (a.status === 'available' && isExamActive(a.exam))
   );
-  const completedExams = assignments.filter(a => a.status === 'completed');
 
   return (
     <div className="space-y-8">
-      
-      {/* Page Title Header */}
-      <div>
-        <h1 className="text-lg sm:text-xl font-bold text-[#050f41] flex items-center gap-2">
-          <FileText className="w-5 h-5 text-teal-400" />
-          Provas & Simulados
-        </h1>
-      </div>
 
       {/* Active / In-Progress Section */}
       <section className="space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
-          <Sparkles className="w-4 h-4" />
-          Pendentes ou em Andamento ({availableExams.length})
-        </h2>
-
         {availableExams.length === 0 ? (
           <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-slate-400">
             <CheckCircle2 className="w-8 h-8 text-teal-500/40 mx-auto mb-2" />
@@ -79,15 +64,13 @@ export const ExamsPage: React.FC = () => {
                   className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg hover:border-slate-700 transition-all flex flex-col justify-between group"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                        isStarted
-                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                          : 'bg-teal-500/20 text-teal-300 border-teal-500/30'
-                      }`}>
-                        {isStarted ? 'Em Andamento' : 'Disponível'}
-                      </span>
-                    </div>
+                    {isStarted && (
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border bg-amber-500/20 text-amber-400 border-amber-500/30">
+                          Em Andamento
+                        </span>
+                      </div>
+                    )}
 
                     <h3 className="text-base font-bold text-[#050f41] group-hover:text-teal-300 transition-colors line-clamp-2">
                       {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
@@ -122,53 +105,6 @@ export const ExamsPage: React.FC = () => {
                 </div>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      {/* Completed Section */}
-      <section className="space-y-4 pt-4 border-t border-slate-900">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          Provas Concluídas ({completedExams.length})
-        </h2>
-
-        {completedExams.length === 0 ? (
-          <p className="text-sm text-slate-500 italic">Você ainda não concluiu nenhuma prova.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {completedExams.map((asgn) => (
-              <div
-                key={asgn.id}
-                className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Concluída
-                    </span>
-                    <span className="text-xs text-slate-500">{formatDate(asgn.completedAt)}</span>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-slate-200">
-                    {asgn.exam?.name || 'Simulado Ortopedia'}
-                  </h3>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Ver Correção & Comentários</span>
-                  {asgn.attemptId && (
-                    <Link
-                      to={`/app/attempts/${asgn.attemptId}/result`}
-                      className="text-sm font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1"
-                    >
-                      <span>Resultado</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </section>

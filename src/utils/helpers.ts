@@ -55,6 +55,31 @@ export function formatDate(dateInput: any): string {
   }
 }
 
+// Format date only (no time) in Portuguese
+export function formatDateOnly(dateInput: any): string {
+  if (!dateInput) return '-';
+  try {
+    let date: Date;
+    if (typeof dateInput === 'string') {
+      date = new Date(dateInput);
+    } else if (dateInput && typeof dateInput.toDate === 'function') {
+      date = dateInput.toDate();
+    } else if (dateInput instanceof Date) {
+      date = dateInput;
+    } else {
+      return '-';
+    }
+
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return '-';
+  }
+}
+
 // Format duration in minutes and seconds
 export function formatTimeSeconds(seconds: number): string {
   const mins = Math.floor(seconds / 60);
