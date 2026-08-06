@@ -82,7 +82,7 @@ export const ExamsPage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
                         isStarted
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                           : 'bg-teal-500/20 text-teal-300 border-teal-500/30'
                       }`}>
                         {isStarted ? 'Em Andamento' : 'Disponível'}

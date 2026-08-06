@@ -31,7 +31,7 @@ export const SOURCE_EXAM_OPTIONS: string[] = [
 export function getSourceExamChipClass(sourceExam: string): string {
   const normalized = (sourceExam || '').trim().toUpperCase();
   if (normalized.startsWith('TEOT')) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-  if (normalized.startsWith('TARO')) return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+  if (normalized.startsWith('TARO')) return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
   if (normalized.startsWith('BANCO PRÓPRIO') || normalized.startsWith('BANCO PROPRIO')) {
     return 'bg-red-500/20 text-red-300 border-red-500/30';
   }
