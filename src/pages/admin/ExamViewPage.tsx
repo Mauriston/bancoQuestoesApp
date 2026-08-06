@@ -22,10 +22,18 @@ export const ExamViewPage: React.FC = () => {
   const [stats, setStats] = useState<Record<string, { totalAnswered: number; totalCorrect: number }>>({});
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  // Se a prova tem alguma tentativa registrada — não muda depois do
+  // carregamento inicial (uma vez que existe uma tentativa, ela nunca some).
+  const [hasAttempts, setHasAttempts] = useState(false);
+  const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
   // mexer nas questões de uma prova inativa e sem tentativas registradas.
-  const [canEdit, setCanEdit] = useState(false);
-  const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
+  // Derivado a cada render (em vez de um estado próprio) para não ficar
+  // desatualizado quando o admin ativa/desativa a prova nesta mesma tela
+  // (handleToggleActive) — antes disso, o botão de excluir podia continuar
+  // visível mesmo depois de a prova ser ativada, causando o erro "Só é
+  // possível editar provas inativas." ao clicar.
+  const canEdit = !!exam && !isExamActive(exam) && !hasAttempts;
 
   useEffect(() => {
     async function loadExam() {
@@ -41,7 +49,7 @@ export const ExamViewPage: React.FC = () => {
         setExam(examData);
         setQuestions(examQs);
         setStats(questionStats);
-        setCanEdit(!!examData && !isExamActive(examData) && attempts.length === 0);
+        setHasAttempts(attempts.length > 0);
 
         const keysMap: Record<string, QuestionAnswer> = {};
         await Promise.all(examQs.map(async (q) => {
@@ -83,7 +91,7 @@ export const ExamViewPage: React.FC = () => {
   // e salvando pelo mesmo caminho de escrita usado pelo assistente de edição
   // (updateExamContent), que já reconstrói a subcoleção do zero.
   const handleDeleteQuestion = async (examQuestion: ExamQuestion) => {
-    if (!exam) return;
+    if (!exam || !canEdit) return;
     if (!window.confirm('Remover esta questão da prova? Essa ação não pode ser desfeita.')) return;
 
     setRemovingQuestionId(examQuestion.id);
