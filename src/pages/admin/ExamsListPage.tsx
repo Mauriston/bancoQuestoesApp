@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Eye, Power, PowerOff, Pencil, Users
+  FileCheck, Plus, Trash2, Power, PowerOff, Pencil, Users
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts } from '../../services/firebaseService';
 import { Exam } from '../../types';
@@ -136,7 +136,7 @@ export const ExamsListPage: React.FC = () => {
                 title="Clique para visualizar a prova completa"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h3 className="text-sm font-bold text-[#050f41] line-clamp-2 text-left">
                       {ex.name}
                     </h3>
@@ -155,14 +155,11 @@ export const ExamsListPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-400 mt-1">{ex.questionCount} questões</p>
+                  <p className="text-xs text-slate-400 mt-1.5">{ex.questionCount} questões</p>
 
                   {avgScoreByExamId[ex.id] !== undefined && (
-                    <p className="mt-3">
-                      <span className={`text-2xl font-black tracking-tight ${scoreColor(avgScoreByExamId[ex.id])}`}>
-                        {avgScoreByExamId[ex.id]}%
-                      </span>
-                      <span className="text-[11px] text-slate-500 ml-1.5">desempenho médio</span>
+                    <p className={`mt-4 text-2xl font-black tracking-tight ${scoreColor(avgScoreByExamId[ex.id])}`}>
+                      {avgScoreByExamId[ex.id]}%
                     </p>
                   )}
 
@@ -174,15 +171,6 @@ export const ExamsListPage: React.FC = () => {
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-end gap-1">
-                  <Link
-                    to={`/admin/exams/${ex.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                    title="Ver Prova"
-                    className="p-2 rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </Link>
-
                   {isEditable(ex) && (
                     <Link
                       to={`/admin/exams/${ex.id}/edit`}
@@ -190,7 +178,7 @@ export const ExamsListPage: React.FC = () => {
                       title="Editar dados e questões desta prova"
                       className="p-2 rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Pencil className="w-4 h-4" />
                     </Link>
                   )}
                   <button
@@ -201,14 +189,14 @@ export const ExamsListPage: React.FC = () => {
                       isExamActive(ex) ? 'text-amber-400 hover:bg-amber-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'
                     }`}
                   >
-                    {isExamActive(ex) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+                    {isExamActive(ex) ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
                     title="Excluir"
                     className="p-2 rounded-lg text-red-400 hover:bg-red-500/10"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
