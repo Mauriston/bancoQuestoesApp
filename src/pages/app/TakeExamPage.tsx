@@ -278,7 +278,7 @@ export const TakeExamPage: React.FC = () => {
           <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setPreviewImageUrl(null)}
-              className="absolute -top-10 right-0 text-slate-400 hover:text-[#050f41] p-2"
+              className="tap-target absolute -top-10 right-0 flex items-center justify-center text-white/70 hover:text-white"
             >
               <X className="w-6 h-6" />
             </button>
@@ -309,14 +309,14 @@ export const TakeExamPage: React.FC = () => {
               <button
                 onClick={() => setFinishModalOpen(false)}
                 disabled={submitting}
-                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:bg-slate-800"
+                className="px-4 py-2.5 min-h-11 rounded-xl text-sm text-slate-400 hover:bg-slate-800"
               >
                 Ajustar Última Resposta
               </button>
               <button
                 onClick={handleFinishExam}
                 disabled={submitting}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20"
+                className="px-5 py-2.5 min-h-11 rounded-xl text-sm font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20"
               >
                 {submitting ? 'Enviando...' : 'Confirmar e Enviar'}
               </button>

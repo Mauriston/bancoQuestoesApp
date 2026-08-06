@@ -48,7 +48,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <div className="flex items-center gap-1 sm:gap-3 min-w-0">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 -ml-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 shrink-0"
+                className="tap-target md:hidden -ml-2 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 shrink-0"
                 aria-label="Abrir menu"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -106,7 +106,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               <button
                 onClick={handleLogout}
                 title="Sair da Conta"
-                className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
+                className="tap-target flex items-center justify-center gap-1.5 sm:min-w-0 sm:min-h-0 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
               >
                 <LogOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 <span className="hidden sm:inline">Sair</span>
@@ -128,7 +128,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                   key={item.path}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
                       : 'text-white/80 hover:bg-white/10 hover:text-white'

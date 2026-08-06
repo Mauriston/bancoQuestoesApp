@@ -96,52 +96,52 @@ export const DashboardPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-cyan-500 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-slate-700 transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/15 text-cyan-500 border border-cyan-500/30 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Usuários Ativos</p>
-              <p className="text-xl font-black text-[#050f41] mt-0.5">{activeUsers.length}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Usuários Ativos</p>
+              <p className="text-2xl font-black text-[#050f41] mt-0.5 leading-none">{activeUsers.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-teal-500 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-slate-700 transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-teal-500/15 text-teal-500 border border-teal-500/30 flex items-center justify-center shrink-0">
               <FileCheck className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Provas Publicadas</p>
-              <p className="text-xl font-black text-[#050f41] mt-0.5">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Provas Publicadas</p>
+              <p className="text-2xl font-black text-[#050f41] mt-0.5 leading-none">
                 {exams.filter(e => e.status === 'published').length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-emerald-500 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-slate-700 transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center shrink-0">
               <Award className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Média Geral de Acerto</p>
-              <p className="text-xl font-black text-cyan-400 mt-0.5">{overallAvgScore}%</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Média Geral de Acerto</p>
+              <p className="text-2xl font-black text-cyan-600 mt-0.5 leading-none">{overallAvgScore}%</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-purple-500 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-slate-700 transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-500 border border-purple-500/30 flex items-center justify-center shrink-0">
               <ClipboardCheck className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Tentativas Concluídas</p>
-              <p className="text-xl font-black text-[#050f41] mt-0.5">{completedAttempts.length}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Tentativas Concluídas</p>
+              <p className="text-2xl font-black text-[#050f41] mt-0.5 leading-none">{completedAttempts.length}</p>
             </div>
           </div>
         </div>
@@ -156,25 +156,27 @@ export const DashboardPage: React.FC = () => {
         {completedAttempts.length === 0 ? (
           <p className="text-xs text-slate-500 italic py-4">Nenhuma tentativa concluída até o momento.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+          <div className="overflow-x-auto -mx-6 px-6">
+            <table className="w-full text-left text-xs text-slate-600 border-separate border-spacing-0">
+              <thead className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">
                 <tr>
-                  <th className="p-3">Prova</th>
-                  <th className="p-3">Usuário</th>
-                  <th className="p-3">Acertos</th>
-                  <th className="p-3">Aproveitamento</th>
+                  <th className="p-3 border-b-2 border-slate-800">Prova</th>
+                  <th className="p-3 border-b-2 border-slate-800">Usuário</th>
+                  <th className="p-3 border-b-2 border-slate-800">Acertos</th>
+                  <th className="p-3 border-b-2 border-slate-800">Aproveitamento</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {completedAttempts.slice(0, 10).map((att) => (
-                  <tr key={att.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-semibold text-[#050f41]">{att.examName || 'Simulado'}</td>
-                    <td className="p-3 text-slate-300">{att.userName || userNameById[att.userId] || 'Usuário removido'}</td>
-                    <td className="p-3 font-bold text-teal-400">{att.correctAnswers} / {att.totalQuestions}</td>
-                    <td className="p-3">
-                      <span className={`font-bold ${
-                        (att.scorePercentage || 0) >= 60 ? 'text-teal-400' : 'text-amber-400'
+              <tbody>
+                {completedAttempts.slice(0, 10).map((att, i) => (
+                  <tr key={att.id} className={`hover:bg-cyan-500/5 transition-colors ${i % 2 === 1 ? 'bg-slate-950/60' : ''}`}>
+                    <td className="p-3 font-semibold text-[#050f41] border-b border-slate-800/70">{att.examName || 'Simulado'}</td>
+                    <td className="p-3 text-slate-500 border-b border-slate-800/70">{att.userName || userNameById[att.userId] || 'Usuário removido'}</td>
+                    <td className="p-3 font-bold text-teal-500 border-b border-slate-800/70">{att.correctAnswers} / {att.totalQuestions}</td>
+                    <td className="p-3 border-b border-slate-800/70">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                        (att.scorePercentage || 0) >= 60
+                          ? 'bg-teal-500/10 text-teal-500'
+                          : 'bg-amber-500/10 text-amber-400'
                       }`}>
                         {att.scorePercentage}%
                       </span>

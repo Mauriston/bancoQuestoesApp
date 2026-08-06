@@ -112,7 +112,7 @@ export const HistoryPage: React.FC = () => {
                     {att.status === 'completed' ? (
                       <Link
                         to={`/app/attempts/${att.id}/result`}
-                        className="flex items-center gap-1 text-sm font-bold text-teal-400 hover:text-teal-300 bg-teal-500/10 border border-teal-500/20 px-3 py-2 rounded-xl"
+                        className="flex items-center gap-1 text-sm font-bold text-teal-400 hover:text-teal-300 bg-teal-500/10 border border-teal-500/20 px-3.5 py-2.5 min-h-11 rounded-xl"
                       >
                         <span>Ver Relatório</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -120,7 +120,7 @@ export const HistoryPage: React.FC = () => {
                     ) : (
                       <Link
                         to={`/app/exams/${att.assignmentId}`}
-                        className="flex items-center gap-1 text-sm font-bold text-amber-400 hover:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl"
+                        className="flex items-center gap-1 text-sm font-bold text-amber-400 hover:text-[#734900] bg-amber-500/10 border border-amber-500/20 px-3.5 py-2.5 min-h-11 rounded-xl"
                       >
                         <span>Continuar</span>
                         <ChevronRight className="w-3.5 h-3.5" />
