@@ -18,9 +18,10 @@ export const ExamsListPage: React.FC = () => {
   // Nº de tentativas por prova — usado só para decidir se a prova pode ser
   // editada (inativa + zero tentativas registradas). Ver isEditable().
   const [attemptCountByExamId, setAttemptCountByExamId] = useState<Record<string, number>>({});
-  // Nº de usuários distintos que já responderam (concluíram) cada prova, e a
-  // média de desempenho deles — usados no card da lista.
+  // Nº de usuários distintos que já responderam (concluíram) cada prova, seus
+  // nomes (para o tooltip) e a média de desempenho deles — usados no card.
   const [respondentCountByExamId, setRespondentCountByExamId] = useState<Record<string, number>>({});
+  const [respondentNamesByExamId, setRespondentNamesByExamId] = useState<Record<string, string[]>>({});
   const [avgScoreByExamId, setAvgScoreByExamId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -35,20 +36,25 @@ export const ExamsListPage: React.FC = () => {
       setAttemptCountByExamId(counts);
 
       const completed = attempts.filter(a => a.status === 'completed');
-      const respondentsByExam: Record<string, Set<string>> = {};
+      const respondentsByExam: Record<string, Map<string, string>> = {};
       const scoreSumByExam: Record<string, number> = {};
       const scoreCountByExam: Record<string, number> = {};
       completed.forEach(a => {
-        if (!respondentsByExam[a.examId]) respondentsByExam[a.examId] = new Set();
-        respondentsByExam[a.examId].add(a.userId);
+        if (!respondentsByExam[a.examId]) respondentsByExam[a.examId] = new Map();
+        respondentsByExam[a.examId].set(a.userId, a.userName || 'Usuário');
         if (typeof a.scorePercentage === 'number') {
           scoreSumByExam[a.examId] = (scoreSumByExam[a.examId] || 0) + a.scorePercentage;
           scoreCountByExam[a.examId] = (scoreCountByExam[a.examId] || 0) + 1;
         }
       });
       const respondentCounts: Record<string, number> = {};
-      Object.entries(respondentsByExam).forEach(([examId, set]) => { respondentCounts[examId] = set.size; });
+      const respondentNames: Record<string, string[]> = {};
+      Object.entries(respondentsByExam).forEach(([examId, map]) => {
+        respondentCounts[examId] = map.size;
+        respondentNames[examId] = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+      });
       setRespondentCountByExamId(respondentCounts);
+      setRespondentNamesByExamId(respondentNames);
 
       const avgScores: Record<string, number> = {};
       Object.keys(scoreSumByExam).forEach(examId => {
@@ -127,8 +133,13 @@ export const ExamsListPage: React.FC = () => {
             Nenhuma prova cadastrada ainda. Clique no botão acima para criar o primeiro simulado!
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exams.map((ex) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {exams.map((ex) => {
+              const names = respondentNamesByExamId[ex.id] || [];
+              const respondentsTooltip = names.length > 0
+                ? `Responderam: ${names.join(', ')}`
+                : 'Ninguém respondeu ainda';
+              return (
               <div
                 key={ex.id}
                 onClick={() => navigate(`/admin/exams/${ex.id}`)}
@@ -136,11 +147,11 @@ export const ExamsListPage: React.FC = () => {
                 title="Clique para visualizar a prova completa"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-start justify-between gap-2">
                     <h3 className="text-sm font-bold text-[#050f41] line-clamp-2 text-left">
                       {ex.name}
                     </h3>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
                         isExamActive(ex)
                           ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -148,7 +159,10 @@ export const ExamsListPage: React.FC = () => {
                       }`}>
                         {isExamActive(ex) ? 'Ativa' : 'Inativa'}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                      <span
+                        className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 cursor-default"
+                        title={respondentsTooltip}
+                      >
                         <Users className="w-3.5 h-3.5" />
                         {respondentCountByExamId[ex.id] || 0}
                       </span>
@@ -200,7 +214,8 @@ export const ExamsListPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
