@@ -216,38 +216,19 @@ export const TakeExamPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-6 pb-24">
 
-      {/* Top: nome da prova centralizado + indicador de progresso circular */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-2">
+      {/* Top: nome da prova centralizado + indicador de progresso em pizza */}
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-0.5">
         <div />
         <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate text-center">
           {exam?.name || 'Simulado Ortopedia'}
         </h2>
         <div className="flex items-center justify-end shrink-0">
-          <svg width="36" height="36" viewBox="0 0 36 36" className="-rotate-90">
-            <circle
-              cx="18" cy="18" r="15.5"
-              fill="none"
-              stroke="currentColor"
-              className="text-slate-800"
-              strokeWidth="3"
-            />
-            <circle
-              cx="18" cy="18" r="15.5"
-              fill="none"
-              stroke="url(#examProgressGradient)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={2 * Math.PI * 15.5}
-              strokeDashoffset={2 * Math.PI * 15.5 * (1 - progressPercent / 100)}
-              className="transition-all duration-300"
-            />
-            <defs>
-              <linearGradient id="examProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#14b8a6" />
-                <stop offset="100%" stopColor="#06b6d4" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <div
+            className="w-9 h-9 rounded-full transition-[background] duration-300"
+            style={{
+              background: `conic-gradient(#14b8a6 0deg ${progressPercent * 3.6}deg, #1e293b ${progressPercent * 3.6}deg 360deg)`
+            }}
+          />
         </div>
       </div>
 
