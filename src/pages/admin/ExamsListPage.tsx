@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Eye, Power, PowerOff, Pencil
+  FileCheck, Plus, Trash2, Eye, Power, PowerOff, Pencil, Users
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts } from '../../services/firebaseService';
 import { Exam } from '../../types';
-import { formatDate } from '../../utils/helpers';
+
+function scoreColor(score: number): string {
+  if (score >= 60) return 'text-emerald-400';
+  if (score >= 50) return 'text-amber-400';
+  return 'text-red-400';
+}
 
 export const ExamsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,6 +18,10 @@ export const ExamsListPage: React.FC = () => {
   // Nº de tentativas por prova — usado só para decidir se a prova pode ser
   // editada (inativa + zero tentativas registradas). Ver isEditable().
   const [attemptCountByExamId, setAttemptCountByExamId] = useState<Record<string, number>>({});
+  // Nº de usuários distintos que já responderam (concluíram) cada prova, e a
+  // média de desempenho deles — usados no card da lista.
+  const [respondentCountByExamId, setRespondentCountByExamId] = useState<Record<string, number>>({});
+  const [avgScoreByExamId, setAvgScoreByExamId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -24,6 +33,28 @@ export const ExamsListPage: React.FC = () => {
       const counts: Record<string, number> = {};
       attempts.forEach(a => { counts[a.examId] = (counts[a.examId] || 0) + 1; });
       setAttemptCountByExamId(counts);
+
+      const completed = attempts.filter(a => a.status === 'completed');
+      const respondentsByExam: Record<string, Set<string>> = {};
+      const scoreSumByExam: Record<string, number> = {};
+      const scoreCountByExam: Record<string, number> = {};
+      completed.forEach(a => {
+        if (!respondentsByExam[a.examId]) respondentsByExam[a.examId] = new Set();
+        respondentsByExam[a.examId].add(a.userId);
+        if (typeof a.scorePercentage === 'number') {
+          scoreSumByExam[a.examId] = (scoreSumByExam[a.examId] || 0) + a.scorePercentage;
+          scoreCountByExam[a.examId] = (scoreCountByExam[a.examId] || 0) + 1;
+        }
+      });
+      const respondentCounts: Record<string, number> = {};
+      Object.entries(respondentsByExam).forEach(([examId, set]) => { respondentCounts[examId] = set.size; });
+      setRespondentCountByExamId(respondentCounts);
+
+      const avgScores: Record<string, number> = {};
+      Object.keys(scoreSumByExam).forEach(examId => {
+        avgScores[examId] = Math.round(scoreSumByExam[examId] / scoreCountByExam[examId]);
+      });
+      setAvgScoreByExamId(avgScores);
     } catch (err) {
       console.error("Erro ao carregar provas:", err);
     } finally {
@@ -105,72 +136,80 @@ export const ExamsListPage: React.FC = () => {
                 title="Clique para visualizar a prova completa"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                      isExamActive(ex)
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400 border-slate-700'
-                    }`}>
-                      {isExamActive(ex) ? 'Ativa' : 'Inativa'}
-                    </span>
-                    <span className="text-[11px] text-slate-500">{formatDate(ex.createdAt)}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-bold text-[#050f41] line-clamp-2 text-left">
+                      {ex.name}
+                    </h3>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                        isExamActive(ex)
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}>
+                        {isExamActive(ex) ? 'Ativa' : 'Inativa'}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                        <Users className="w-3.5 h-3.5" />
+                        {respondentCountByExamId[ex.id] || 0}
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="text-sm font-bold text-[#050f41] line-clamp-2">
-                    {ex.name}
-                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">{ex.questionCount} questões</p>
 
-                  {ex.description && (
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-                      {ex.description}
+                  {avgScoreByExamId[ex.id] !== undefined && (
+                    <p className="mt-3">
+                      <span className={`text-2xl font-black tracking-tight ${scoreColor(avgScoreByExamId[ex.id])}`}>
+                        {avgScoreByExamId[ex.id]}%
+                      </span>
+                      <span className="text-[11px] text-slate-500 ml-1.5">desempenho médio</span>
                     </p>
                   )}
 
-                  <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-1">
-                    <p>• Questões: <strong className="text-slate-200">{ex.questionCount}</strong></p>
-                  </div>
+                  {ex.description && (
+                    <p className="text-xs text-slate-400 mt-2 line-clamp-2">
+                      {ex.description}
+                    </p>
+                  )}
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-end gap-1">
                   <Link
                     to={`/admin/exams/${ex.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                    title="Ver Prova"
+                    className="p-2 rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>Ver Prova</span>
                   </Link>
 
-                  <div className="flex items-center gap-3">
-                    {isEditable(ex) && (
-                      <Link
-                        to={`/admin/exams/${ex.id}/edit`}
-                        onClick={(e) => e.stopPropagation()}
-                        title="Editar dados e questões desta prova"
-                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Editar</span>
-                      </Link>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleToggleActive(ex); }}
-                      disabled={togglingId === ex.id}
-                      className={`text-xs font-semibold flex items-center gap-1 disabled:opacity-40 ${
-                        isExamActive(ex) ? 'text-amber-400 hover:text-[#734900]' : 'text-emerald-400 hover:text-emerald-300'
-                      }`}
+                  {isEditable(ex) && (
+                    <Link
+                      to={`/admin/exams/${ex.id}/edit`}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Editar dados e questões desta prova"
+                      className="p-2 rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
                     >
-                      {isExamActive(ex) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
-                      <span>{isExamActive(ex) ? 'Desativar' : 'Ativar'}</span>
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
-                      className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Excluir</span>
-                    </button>
-                  </div>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleToggleActive(ex); }}
+                    disabled={togglingId === ex.id}
+                    title={isExamActive(ex) ? 'Desativar' : 'Ativar'}
+                    className={`p-2 rounded-lg disabled:opacity-40 ${
+                      isExamActive(ex) ? 'text-amber-400 hover:bg-amber-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'
+                    }`}
+                  >
+                    {isExamActive(ex) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
+                    title="Excluir"
+                    className="p-2 rounded-lg text-red-400 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))}
