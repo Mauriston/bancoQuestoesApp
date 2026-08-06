@@ -193,14 +193,14 @@ export const PerformancePage: React.FC = () => {
 
       {/* Weak Areas Warning */}
       {weakAreas.length > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm space-y-2">
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm space-y-2">
           <div className="flex items-center gap-2 font-bold text-amber-400">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>Áreas Recomendadas para Revisão (abaixo de {MIN_TARGET}%)</span>
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {weakAreas.map(a => (
-              <span key={a.id} className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-xs font-medium text-amber-200">
+              <span key={a.id} className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-xs font-medium text-amber-400">
                 {a.name} ({a.accuracy}%)
               </span>
             ))}

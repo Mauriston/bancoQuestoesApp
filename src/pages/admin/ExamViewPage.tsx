@@ -152,7 +152,7 @@ export const ExamViewPage: React.FC = () => {
                   <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
                     accuracyPercent >= 60
                       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                   }`}>
                     <BarChart3 className="w-3 h-3" />
                     {accuracyPercent}% de acerto

@@ -624,7 +624,7 @@ export const CreateExamPage: React.FC = () => {
             )}
           </div>
 
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
             {isEditMode
               ? 'A prova continua inativa após salvar. Ative-a novamente em "Provas e Simulados" quando estiver pronta.'
               : 'A prova é criada inativa. Os destinatários só vão vê-la e poder iniciá-la depois que você ativá-la em "Provas e Simulados".'}

@@ -193,7 +193,7 @@ export const UserDetailPage: React.FC = () => {
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
                         att.status === 'completed'
                           ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                       }`}>
                         {att.status === 'completed' ? 'Concluída' : 'Em Andamento'}
                       </span>

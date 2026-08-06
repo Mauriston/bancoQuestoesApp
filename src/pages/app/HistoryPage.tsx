@@ -80,7 +80,7 @@ export const HistoryPage: React.FC = () => {
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
                         att.status === 'completed'
                           ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                       }`}>
                         {att.status === 'completed' ? 'Concluída' : 'Em Andamento'}
                       </span>
@@ -120,7 +120,7 @@ export const HistoryPage: React.FC = () => {
                     ) : (
                       <Link
                         to={`/app/exams/${att.assignmentId}`}
-                        className="flex items-center gap-1 text-sm font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl"
+                        className="flex items-center gap-1 text-sm font-bold text-amber-400 hover:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl"
                       >
                         <span>Continuar</span>
                         <ChevronRight className="w-3.5 h-3.5" />

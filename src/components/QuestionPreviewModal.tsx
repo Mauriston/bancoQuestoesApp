@@ -80,7 +80,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
             {examsUsedIn.map(e => (
               <span
                 key={e.examId}
-                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30"
               >
                 <FileCheck className="w-3 h-3" />
                 {e.examName}

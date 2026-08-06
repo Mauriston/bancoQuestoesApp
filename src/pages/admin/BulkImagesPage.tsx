@@ -243,7 +243,7 @@ export const BulkImagesPage: React.FC = () => {
                 {summary.success} vinculada(s)
               </span>
               {summary.notFound > 0 && (
-                <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 font-semibold">
+                <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-semibold">
                   {summary.notFound} sem questão correspondente
                 </span>
               )}
