@@ -47,7 +47,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
 
             {/* Hamburger (mobile only) + Logo Brand */}
-            <div className="flex items-center gap-1 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-1 sm:gap-3 min-w-0 flex-1 md:flex-initial">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="tap-target md:hidden -ml-2 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 shrink-0"
@@ -56,13 +56,13 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
 
-              <Link to="/app/exams" className="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
-                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Link to="/app/exams" className="hidden md:flex items-center gap-2.5 group min-w-0 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
+                  <Trophy className="w-5 h-5" />
                 </div>
               </Link>
 
-              <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight truncate">
+              <h1 className="flex-1 md:flex-initial text-center md:text-left text-2xl sm:text-xl font-extrabold text-white tracking-tight leading-tight truncate px-1">
                 {currentTitle}
               </h1>
             </div>
