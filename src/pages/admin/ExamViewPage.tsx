@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds } from '../../services/firebaseService';
-import { Exam, ExamQuestion, QuestionAnswer } from '../../types';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2 } from 'lucide-react';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, updateExamContent } from '../../services/firebaseService';
+import { Exam, ExamQuestion, QuestionAnswer, Question } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { getSourceExamChipClass } from '../../constants';
@@ -15,23 +15,33 @@ export const ExamViewPage: React.FC = () => {
   // `sourceExam` não faz parte da cópia congelada em exams/{id}/questions —
   // buscado à parte só para colorir o chip de origem ao lado de "Questão X".
   const [sourceExamById, setSourceExamById] = useState<Record<string, string>>({});
+  // Mapa id-da-questão-original → Question completa, usado só para poder
+  // reconstruir `questions: Question[]` ao chamar updateExamContent() na
+  // remoção de uma questão (ver handleDeleteQuestion).
+  const [originalQuestionsById, setOriginalQuestionsById] = useState<Record<string, Question>>({});
   const [stats, setStats] = useState<Record<string, { totalAnswered: number; totalCorrect: number }>>({});
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
+  // mexer nas questões de uma prova inativa e sem tentativas registradas.
+  const [canEdit, setCanEdit] = useState(false);
+  const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadExam() {
       if (!examId) return;
       try {
         setLoading(true);
-        const [examData, examQs, questionStats] = await Promise.all([
+        const [examData, examQs, questionStats, attempts] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
-          getExamQuestionStats(examId)
+          getExamQuestionStats(examId),
+          getAttemptsForExam(examId)
         ]);
         setExam(examData);
         setQuestions(examQs);
         setStats(questionStats);
+        setCanEdit(!!examData && !isExamActive(examData) && attempts.length === 0);
 
         const keysMap: Record<string, QuestionAnswer> = {};
         await Promise.all(examQs.map(async (q) => {
@@ -44,6 +54,7 @@ export const ExamViewPage: React.FC = () => {
         const sourceMap: Record<string, string> = {};
         Object.values(originalQuestions).forEach(oq => { sourceMap[oq.id] = oq.sourceExam; });
         setSourceExamById(sourceMap);
+        setOriginalQuestionsById(originalQuestions);
       } catch (err) {
         console.error("Erro ao carregar prova:", err);
       } finally {
@@ -64,6 +75,47 @@ export const ExamViewPage: React.FC = () => {
       alert("Erro ao alterar status da prova: " + (err?.message || "erro desconhecido."));
     } finally {
       setToggling(false);
+    }
+  };
+
+  // Remove uma questão desta prova (não do banco global — apenas desanexa da
+  // cópia congelada em exams/{id}/questions), reconstruindo a lista restante
+  // e salvando pelo mesmo caminho de escrita usado pelo assistente de edição
+  // (updateExamContent), que já reconstrói a subcoleção do zero.
+  const handleDeleteQuestion = async (examQuestion: ExamQuestion) => {
+    if (!exam) return;
+    if (!window.confirm('Remover esta questão da prova? Essa ação não pode ser desfeita.')) return;
+
+    setRemovingQuestionId(examQuestion.id);
+    try {
+      const remaining = questions.filter(q => q.id !== examQuestion.id);
+      const remainingFullQuestions = remaining
+        .map(q => originalQuestionsById[q.originalQuestionId])
+        .filter((q): q is Question => !!q);
+
+      if (remainingFullQuestions.length !== remaining.length) {
+        throw new Error("Uma ou mais questões restantes não foram encontradas no banco de questões.");
+      }
+
+      await updateExamContent({
+        examId: exam.id,
+        examData: {
+          name: exam.name,
+          description: exam.description,
+          shuffleQuestions: exam.shuffleQuestions,
+          shuffleAlternatives: exam.shuffleAlternatives,
+          showResultAfterFinish: exam.showResultAfterFinish,
+          showCommentsAfterFinish: exam.showCommentsAfterFinish,
+          allowReviewAfterFinish: exam.allowReviewAfterFinish
+        },
+        questions: remainingFullQuestions
+      });
+
+      setQuestions(remaining);
+    } catch (err: any) {
+      alert("Erro ao remover questão da prova: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setRemovingQuestionId(null);
     }
   };
 
@@ -95,20 +147,17 @@ export const ExamViewPage: React.FC = () => {
         <span>Voltar para Lista de Provas</span>
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <h1 className="text-xl font-bold text-[#050f41]">{exam.name}</h1>
-            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-              isExamActive(exam)
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
-            }`}>
-              {isExamActive(exam) ? 'Ativa' : 'Inativa'}
-            </span>
-          </div>
-          {exam.description && <p className="text-xs text-slate-400 mt-1">{exam.description}</p>}
-          <p className="text-[11px] text-slate-500 mt-1">{questions.length} questões — visualização administrativa com gabarito e taxa de acerto</p>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col items-center gap-1.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41] tracking-tight">{exam.name}</h1>
+          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+            isExamActive(exam)
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              : 'bg-slate-800 text-slate-400 border-slate-700'
+          }`}>
+            {isExamActive(exam) ? 'Ativa' : 'Inativa'}
+          </span>
+          {exam.description && <p className="text-xs text-slate-400 mt-1 max-w-xl">{exam.description}</p>}
         </div>
 
         <button
@@ -148,23 +197,32 @@ export const ExamViewPage: React.FC = () => {
                   )}
                 </div>
 
-                {accuracyPercent !== null ? (
-                  <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
-                    accuracyPercent >= 60
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                  }`}>
-                    <BarChart3 className="w-3 h-3" />
-                    {accuracyPercent}% de acerto
-                    <span className="flex items-center gap-0.5 font-normal normal-case text-[10px] opacity-80">
-                      <Users className="w-3 h-3" />({qStats!.totalAnswered})
+                <div className="flex items-center gap-2">
+                  {accuracyPercent !== null && (
+                    <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                      accuracyPercent >= 60
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    }`}>
+                      <BarChart3 className="w-3 h-3" />
+                      {accuracyPercent}% de acerto
+                      <span className="flex items-center gap-0.5 font-normal normal-case text-[10px] opacity-80">
+                        <Users className="w-3 h-3" />({qStats!.totalAnswered})
+                      </span>
                     </span>
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                    Sem tentativas ainda
-                  </span>
-                )}
+                  )}
+
+                  {canEdit && (
+                    <button
+                      onClick={() => handleDeleteQuestion(q)}
+                      disabled={removingQuestionId === q.id}
+                      title="Remover questão desta prova"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <p className="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed whitespace-pre-line mb-4">
