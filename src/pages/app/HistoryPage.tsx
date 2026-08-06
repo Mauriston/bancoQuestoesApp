@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ChevronRight, Calendar } from 'lucide-react';
+import { MoreVertical, ChevronRight, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAttempts } from '../../services/firebaseService';
 import { Attempt } from '../../types';
@@ -54,9 +54,17 @@ export const HistoryPage: React.FC = () => {
           <div className="divide-y divide-slate-800/80">
             {attempts.map((att) => {
               const score = att.scorePercentage || 0;
-              return (
-                <div key={att.id} className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-slate-800/40 transition-colors">
+              const isCompleted = att.status === 'completed';
+              const dest = isCompleted
+                ? `/app/attempts/${att.id}/result`
+                : `/app/exams/${att.assignmentId}`;
 
+              return (
+                <Link
+                  key={att.id}
+                  to={dest}
+                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-slate-800/40 transition-colors relative"
+                >
                   <div className="space-y-1 min-w-0 flex-1">
                     <span className="text-xs text-slate-500 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
@@ -68,33 +76,20 @@ export const HistoryPage: React.FC = () => {
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-4 shrink-0">
-                    {att.status === 'completed' ? (
-                      <>
-                        <span className={`text-3xl sm:text-4xl font-black leading-none ${scoreColor(score)}`}>
-                          {score}%
-                        </span>
-                        <Link
-                          to={`/app/attempts/${att.id}/result`}
-                          aria-label="Ver relatório da prova"
-                          title="Ver relatório"
-                          className="tap-target flex items-center justify-center rounded-xl text-teal-400 hover:text-teal-300 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                      </>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {isCompleted ? (
+                      <span className={`text-3xl sm:text-4xl font-black leading-none ${scoreColor(score)}`}>
+                        {score}%
+                      </span>
                     ) : (
-                      <Link
-                        to={`/app/exams/${att.assignmentId}`}
-                        className="flex items-center gap-1 text-sm font-bold text-amber-400 hover:text-[#734900] bg-amber-500/10 border border-amber-500/20 px-3.5 py-2.5 min-h-11 rounded-xl"
-                      >
+                      <span className="flex items-center gap-1 text-sm font-bold text-amber-400">
                         <span>Continuar</span>
                         <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
+                      </span>
                     )}
+                    <MoreVertical className="w-4 h-4 text-slate-600 shrink-0" />
                   </div>
-
-                </div>
+                </Link>
               );
             })}
           </div>
