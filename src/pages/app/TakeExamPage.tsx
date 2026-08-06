@@ -119,6 +119,7 @@ export const TakeExamPage: React.FC = () => {
         const nextIndex = currentIndex + 1;
         setCurrentIndex(nextIndex);
         setCurrentAlt(savedAlt[questions[nextIndex]?.id] ?? null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (e) {
       console.error("Erro ao salvar resposta no banco:", e);

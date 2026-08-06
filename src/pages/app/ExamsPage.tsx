@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, Play
+  CheckCircle2, MoreVertical
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAssignments, isExamActive } from '../../services/firebaseService';
@@ -59,50 +59,34 @@ export const ExamsPage: React.FC = () => {
             {availableExams.map((asgn) => {
               const isStarted = asgn.status === 'started';
               return (
-                <div
+                <button
                   key={asgn.id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg hover:border-slate-700 transition-all flex flex-col justify-between group"
+                  onClick={() => navigate(`/app/exams/${asgn.id}`)}
+                  className="w-full h-full text-left bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg hover:border-slate-700 transition-all flex flex-col gap-1 group relative"
                 >
-                  <div>
-                    {isStarted && (
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border bg-amber-500/20 text-amber-400 border-amber-500/30">
-                          Em Andamento
-                        </span>
-                      </div>
-                    )}
+                  {isStarted && (
+                    <span className="self-start text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border bg-amber-500/20 text-amber-400 border-amber-500/30 mb-1">
+                      Em Andamento
+                    </span>
+                  )}
 
-                    <h3 className="text-base font-bold text-[#050f41] group-hover:text-teal-300 transition-colors line-clamp-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-base font-bold text-[#050f41] group-hover:text-teal-300 transition-colors line-clamp-2 pr-6">
                       {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
                     </h3>
-
-                    {asgn.exam?.description && (
-                      <p className="text-sm text-slate-400 mt-1.5 line-clamp-2">
-                        {asgn.exam.description}
-                      </p>
-                    )}
-
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                      <span>Total de Questões:</span>
-                      <span className="font-semibold text-slate-200">{asgn.exam?.questionCount || 0}</span>
-                    </div>
+                    <MoreVertical className="w-4 h-4 text-slate-600 shrink-0 absolute top-5 right-5" />
                   </div>
 
-                  <div className="mt-5">
-                    <button
-                      onClick={() => navigate(`/app/exams/${asgn.id}`)}
-                      className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-xl shadow-lg transition-all text-sm ${
-                        isStarted
-                          ? 'bg-amber-500 hover:bg-[#e5a52c] text-[#050f41] shadow-amber-500/20'
-                          : 'bg-teal-500 hover:bg-teal-400 text-white shadow-teal-500/20'
-                      }`}
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>{isStarted ? 'Continuar Prova' : 'Iniciar Prova Agora'}</span>
-                    </button>
-                  </div>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {asgn.exam?.questionCount || 0} questões
+                  </span>
 
-                </div>
+                  {asgn.exam?.description && (
+                    <p className="text-sm text-slate-400 mt-1 line-clamp-2">
+                      {asgn.exam.description}
+                    </p>
+                  )}
+                </button>
               );
             })}
           </div>

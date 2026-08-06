@@ -142,10 +142,7 @@ export const ExamResultPage: React.FC = () => {
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-              Resultado Oficial
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41] mt-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41]">
               {attempt.examName || 'Simulado Ortopedia TEOT'}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
