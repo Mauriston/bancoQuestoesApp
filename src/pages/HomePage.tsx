@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Trophy, User, Search, Lock, AlertCircle, ArrowRight, CheckCircle2
+  Trophy, User, Lock, AlertCircle, ArrowRight, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getActiveUsers } from '../services/firebaseService';
@@ -13,7 +13,6 @@ export const HomePage: React.FC = () => {
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -36,12 +35,6 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     fetchUsersList();
   }, []);
-
-  // Filtered users dropdown list
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleAccess = async () => {
     setAuthError('');
@@ -94,7 +87,6 @@ export const HomePage: React.FC = () => {
             <User className="w-4 h-4 text-[#079551]" />
             Identificação do Usuário
           </h2>
-          <p className="text-xs text-slate-400 mb-4">Selecione o seu nome cadastrado na plataforma para iniciar.</p>
 
           {authError && (
             <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2.5">
@@ -103,28 +95,16 @@ export const HomePage: React.FC = () => {
             </div>
           )}
 
-          {/* Search Filter for Dropdown */}
-          <div className="relative mb-3">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Buscar pelo seu nome..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-3 text-sm text-[#050f41] placeholder-slate-400 focus:outline-none focus:border-[#079551] transition-colors"
-            />
-          </div>
-
           {/* User Select Box */}
           <div className="space-y-2 mb-6 max-h-60 overflow-y-auto pr-1">
             {loadingUsers ? (
               <div className="text-center py-6 text-xs text-slate-400">Carregando usuários cadastrados...</div>
-            ) : filteredUsers.length === 0 ? (
+            ) : users.length === 0 ? (
               <div className="text-center py-6 text-xs text-slate-400">
                 Nenhum usuário ativo encontrado. Procure o administrador para ser cadastrado.
               </div>
             ) : (
-              filteredUsers.map((user) => {
+              users.map((user) => {
                 const isSelected = selectedUserId === user.id;
                 return (
                   <button
@@ -143,10 +123,7 @@ export const HomePage: React.FC = () => {
                       <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-[#079551]/15 text-[#079551] border border-[#079551]/30">
                         {user.name.charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="text-xs font-semibold leading-none">{user.name}</p>
-                        <p className="text-[10px] text-slate-400 leading-none mt-1">{user.email}</p>
-                      </div>
+                      <p className="text-base font-bold leading-none">{user.name}</p>
                     </div>
 
                     <div className="flex items-center gap-2">

@@ -17,10 +17,12 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   };
 
   const navItems = [
-    { label: 'Provas & Simulados', path: '/app/exams', icon: FileText },
-    { label: 'Meu Histórico', path: '/app/history', icon: History },
-    { label: 'Meu Desempenho', path: '/app/performance', icon: BarChart3 }
+    { label: 'Provas Disponíveis', path: '/app/exams', icon: FileText },
+    { label: 'Histórico', path: '/app/history', icon: History },
+    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 }
   ];
+
+  const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Treinamento TEOT';
 
   // Execução de prova roda em tela cheia: sem topbar, sem navegação para
   // outras páginas e sem rodapé — só o conteúdo da prova (TakeExamPage já
@@ -29,7 +31,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
   if (isTakingExam) {
     return (
-      <div className="min-h-screen bg-slate-950 font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
+      <div className="min-h-dvh bg-slate-950 font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
         <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
           {children || <Outlet />}
         </main>
@@ -38,7 +40,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
+    <div className="min-h-dvh bg-slate-950 flex flex-col font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
       {/* Top Bar Navigation */}
       <header className="sticky top-0 z-40 bg-[#050f41] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -54,20 +56,15 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
 
-              <Link to="/app/exams" className="flex items-center gap-2 sm:gap-2.5 group min-w-0">
+              <Link to="/app/exams" className="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink-0">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
                   <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div className="min-w-0">
-                  <h1 className="text-sm sm:text-base font-bold text-white tracking-tight leading-tight flex items-center gap-1.5 truncate">
-                    <span className="truncate">Treinamento TEOT</span>
-                    <span className="hidden sm:inline text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-white/10 text-[#FAB932] border border-white/10 shrink-0">
-                      Candidato
-                    </span>
-                  </h1>
-                  <p className="hidden sm:block text-[11px] text-white/60">O ano da vitória 🏆</p>
-                </div>
               </Link>
+
+              <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight truncate">
+                {currentTitle}
+              </h1>
             </div>
 
             {/* Desktop Navigation Links */}
