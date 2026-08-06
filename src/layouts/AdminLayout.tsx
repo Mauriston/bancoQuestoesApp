@@ -148,10 +148,6 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
 
       </div>
 
-      <footer className="border-t border-white/10 bg-[#050f41] py-4 text-center text-xs text-white/50">
-        <p>Sistema Administrativo TEOT • SBOT</p>
-      </footer>
-
     </div>
   );
 };
