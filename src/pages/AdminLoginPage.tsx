@@ -88,7 +88,7 @@ export const AdminLoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-cyan-500/20 text-xs transition-all disabled:opacity-50"
+              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 min-h-11 rounded-xl shadow-lg shadow-cyan-500/20 text-sm transition-all disabled:opacity-50"
             >
               {submitting ? 'Autenticando...' : 'Entrar no Painel Admin'}
             </button>

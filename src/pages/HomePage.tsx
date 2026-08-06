@@ -111,7 +111,7 @@ export const HomePage: React.FC = () => {
               placeholder="Buscar pelo seu nome..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] placeholder-slate-400 focus:outline-none focus:border-[#079551] transition-colors"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-3 text-sm text-[#050f41] placeholder-slate-400 focus:outline-none focus:border-[#079551] transition-colors"
             />
           </div>
 
@@ -133,7 +133,7 @@ export const HomePage: React.FC = () => {
                       setSelectedUserId(user.id);
                       setAuthError('');
                     }}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                    className={`w-full flex items-center justify-between p-3 min-h-[52px] rounded-xl border text-left transition-all ${
                       isSelected
                         ? 'bg-[#079551]/10 border-[#079551]/40 text-[#050f41] shadow-sm'
                         : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-900 hover:text-[#050f41]'
@@ -161,7 +161,7 @@ export const HomePage: React.FC = () => {
           <button
             onClick={handleAccess}
             disabled={!selectedUserId || submitting}
-            className="w-full flex items-center justify-center gap-2 bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#050f41]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs"
+            className="w-full flex items-center justify-center gap-2 bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#050f41]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
           >
             <span>{submitting ? 'Acessando...' : 'Acessar Sistema'}</span>
             <ArrowRight className="w-4 h-4" />
@@ -170,7 +170,7 @@ export const HomePage: React.FC = () => {
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-center">
             <a
               href="/admin/login"
-              className="text-xs text-slate-400 hover:text-[#050f41] inline-flex items-center gap-1.5 transition-colors"
+              className="text-xs text-slate-400 hover:text-[#050f41] inline-flex items-center gap-1.5 py-2.5 transition-colors"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>Login Admin</span>

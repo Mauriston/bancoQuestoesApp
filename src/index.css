@@ -102,3 +102,11 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #7680ac;
 }
+
+/* Touch target helper — garante área mínima de toque de 44x44px (WCAG 2.5.5 /
+   Material) em botões/links de ícone que, por padrão, ficariam menores em
+   telas pequenas (ex.: hamburguer, fechar, ações de tabela em mobile). */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+}

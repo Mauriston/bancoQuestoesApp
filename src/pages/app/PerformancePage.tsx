@@ -19,10 +19,10 @@ function getTier(accuracy: number): Tier {
   return 'bad';
 }
 
-const TIER_STYLES: Record<Tier, { text: string; ring: string }> = {
-  good: { text: 'text-emerald-400', ring: 'border-emerald-500/30' },
-  warn: { text: 'text-amber-400', ring: 'border-amber-500/30' },
-  bad: { text: 'text-red-400', ring: 'border-red-500/30' }
+const TIER_STYLES: Record<Tier, { text: string; ring: string; bar: string }> = {
+  good: { text: 'text-emerald-400', ring: 'border-emerald-500/30', bar: 'bg-emerald-500' },
+  warn: { text: 'text-amber-400', ring: 'border-amber-500/30', bar: 'bg-amber-500' },
+  bad: { text: 'text-red-400', ring: 'border-red-500/30', bar: 'bg-red-500' }
 };
 
 export const PerformancePage: React.FC = () => {
@@ -230,6 +230,20 @@ export const PerformancePage: React.FC = () => {
                     <span className="text-xs text-slate-500">{item.correct}/{item.solved}</span>
                   </div>
 
+                  {/* Barra de progresso — reforça visualmente o percentual e a
+                      posição em relação à meta mínima. */}
+                  <div className="mt-3 relative w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${style.bar} transition-all`}
+                      style={{ width: `${Math.min(100, item.accuracy)}%` }}
+                    />
+                    <div
+                      className="absolute top-0 h-full w-px bg-slate-500/70"
+                      style={{ left: `${MIN_TARGET}%` }}
+                      title={`Meta mínima: ${MIN_TARGET}%`}
+                    />
+                  </div>
+
                   <div className="mt-3 pt-3 border-t border-slate-800 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-400 flex items-center gap-1"><Target className="w-3 h-3" /> Meta mínima</span>
@@ -265,9 +279,14 @@ export const PerformancePage: React.FC = () => {
               const tier = getTier(t.accuracy);
               const style = TIER_STYLES[tier];
               return (
-                <div key={t.id} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
-                  <span className="text-slate-300 truncate">{t.name}</span>
-                  <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}% <span className="text-xs text-slate-500 font-normal">({t.correct}/{t.solved})</span></span>
+                <div key={t.id} className="py-2 border-b border-slate-800/60 last:border-0">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-slate-300 truncate">{t.name}</span>
+                    <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}% <span className="text-xs text-slate-500 font-normal">({t.correct}/{t.solved})</span></span>
+                  </div>
+                  <div className="mt-1.5 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                    <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, t.accuracy)}%` }} />
+                  </div>
                 </div>
               );
             })}

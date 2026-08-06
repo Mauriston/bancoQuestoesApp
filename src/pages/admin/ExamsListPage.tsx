@@ -157,7 +157,7 @@ export const ExamsListPage: React.FC = () => {
                       onClick={(e) => { e.stopPropagation(); handleToggleActive(ex); }}
                       disabled={togglingId === ex.id}
                       className={`text-xs font-semibold flex items-center gap-1 disabled:opacity-40 ${
-                        isExamActive(ex) ? 'text-amber-400 hover:text-amber-400' : 'text-emerald-400 hover:text-emerald-300'
+                        isExamActive(ex) ? 'text-amber-400 hover:text-[#734900]' : 'text-emerald-400 hover:text-emerald-300'
                       }`}
                     >
                       {isExamActive(ex) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
