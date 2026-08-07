@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { History, Search, ChevronRight, User, Trash2 } from 'lucide-react';
 import { getAllAttempts, getUsers, deleteAttempt } from '../../services/firebaseService';
 import { Attempt } from '../../types';
-import { formatDate } from '../../utils/helpers';
+import { formatDate, scoreColorClass } from '../../utils/helpers';
 
 export const AttemptsPage: React.FC = () => {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -84,7 +84,6 @@ export const AttemptsPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((att) => {
-            const isPassed = (att.scorePercentage || 0) >= 60;
             return (
               <div key={att.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl hover:border-slate-700 transition-all flex flex-col justify-between">
 
@@ -119,7 +118,7 @@ export const AttemptsPage: React.FC = () => {
                   {att.status === 'completed' ? (
                     <>
                       <div>
-                        <span className={`text-lg font-black ${isPassed ? 'text-teal-400' : 'text-amber-400'}`}>
+                        <span className={`text-lg font-black ${scoreColorClass(att.scorePercentage || 0)}`}>
                           {att.scorePercentage}%
                         </span>
                         <p className="text-[10px] text-slate-500">Aproveitamento</p>

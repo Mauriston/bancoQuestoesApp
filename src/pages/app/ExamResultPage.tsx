@@ -8,6 +8,7 @@ import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer,
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme } from '../../types';
 import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
+import { scoreColorClass, scoreColorHex } from '../../utils/helpers';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -126,11 +127,11 @@ export const ExamResultPage: React.FC = () => {
     );
   }
 
-  const isPassed = (attempt.scorePercentage || 0) >= 60;
+  const score = attempt.scorePercentage || 0;
 
   return (
     <div className="space-y-8 pb-12">
-      
+
       <button
         type="button"
         onClick={() => navigate('/app/history')}
@@ -144,9 +145,9 @@ export const ExamResultPage: React.FC = () => {
       {/* Main KPI Banner Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
         <div className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
-          isPassed ? 'bg-teal-500/10' : 'bg-amber-500/10'
+          score >= 60 ? 'bg-[#079551]/10' : score >= 50 ? 'bg-[#FAB932]/10' : 'bg-[#E20018]/10'
         }`} />
-        
+
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41]">
@@ -154,9 +155,7 @@ export const ExamResultPage: React.FC = () => {
             </h1>
           </div>
           <div className="text-center md:text-right shrink-0">
-            <div className={`text-6xl sm:text-7xl font-black tracking-tight ${
-              isPassed ? 'text-teal-400' : 'text-amber-400'
-            }`}>
+            <div className={`text-6xl sm:text-7xl font-black tracking-tight ${scoreColorClass(score)}`}>
               {attempt.scorePercentage}%
             </div>
           </div>
@@ -184,7 +183,7 @@ export const ExamResultPage: React.FC = () => {
                     />
                     <Bar dataKey="accuracy" radius={[0, 6, 6, 0]}>
                       {areaBreakdown.map(a => (
-                        <Cell key={a.areaId} fill={a.accuracy >= 60 ? '#079551' : a.accuracy >= 40 ? '#fab932' : '#dc2626'} />
+                        <Cell key={a.areaId} fill={scoreColorHex(a.accuracy)} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -197,7 +196,7 @@ export const ExamResultPage: React.FC = () => {
                 <h3 className="text-sm font-bold text-[#050f41] mb-3">Temas desta Prova (do mais fraco ao mais forte)</h3>
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                   {themeBreakdown.map(t => {
-                    const tone = t.accuracy >= 60 ? 'text-emerald-400' : t.accuracy >= 40 ? 'text-amber-400' : 'text-red-400';
+                    const tone = scoreColorClass(t.accuracy);
                     return (
                       <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
                         <span className="text-slate-300 truncate">{t.name}</span>

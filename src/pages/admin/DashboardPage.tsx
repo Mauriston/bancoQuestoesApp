@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { getActiveUsers, getUsers, getExams, getAllAttempts, getAreas } from '../../services/firebaseService';
 import { AppUser, Exam, Attempt, Area } from '../../types';
-import { exportToCSV } from '../../utils/helpers';
+import { exportToCSV, scoreColorClass } from '../../utils/helpers';
 
 export const DashboardPage: React.FC = () => {
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
@@ -170,11 +170,7 @@ export const DashboardPage: React.FC = () => {
                     <td className="p-3 text-slate-500 border-b border-slate-800/70">{att.userName || userNameById[att.userId] || 'Usuário removido'}</td>
                     <td className="p-3 font-bold text-teal-500 border-b border-slate-800/70">{att.correctAnswers} / {att.totalQuestions}</td>
                     <td className="p-3 border-b border-slate-800/70">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[11px] ${
-                        (att.scorePercentage || 0) >= 60
-                          ? 'bg-teal-500/10 text-teal-500'
-                          : 'bg-amber-500/10 text-amber-400'
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[11px] bg-current/10 ${scoreColorClass(att.scorePercentage || 0)}`}>
                         {att.scorePercentage}%
                       </span>
                     </td>

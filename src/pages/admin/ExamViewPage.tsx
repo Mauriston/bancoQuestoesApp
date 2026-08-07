@@ -6,6 +6,7 @@ import { Exam, ExamQuestion, QuestionAnswer, Question } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { getSourceExamChipClass } from '../../constants';
+import { scoreColorClass } from '../../utils/helpers';
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -206,11 +207,7 @@ export const ExamViewPage: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   {accuracyPercent !== null && (
-                    <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
-                      accuracyPercent >= 60
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                    }`}>
+                    <span className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border border-current/30 bg-current/10 flex items-center gap-1 ${scoreColorClass(accuracyPercent)}`}>
                       <BarChart3 className="w-3 h-3" />
                       {accuracyPercent}% de acerto
                       <span className="flex items-center gap-0.5 font-normal normal-case text-[10px] opacity-80">
