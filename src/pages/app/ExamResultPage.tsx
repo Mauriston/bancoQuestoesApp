@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, ChevronLeft
@@ -26,6 +26,21 @@ export const ExamResultPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [selectedArea, setSelectedArea] = useState<{ areaId: string; name: string } | null>(null);
+  const areaChartRef = useRef<HTMLDivElement>(null);
+
+  // Clique em qualquer lugar fora do gráfico de área limpa o drill-down por
+  // subárea, para não deixar o filtro "preso" depois que o usuário já olhou
+  // o que queria e seguiu para outra parte da página.
+  useEffect(() => {
+    if (!selectedArea) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (areaChartRef.current && !areaChartRef.current.contains(e.target as Node)) {
+        setSelectedArea(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedArea]);
 
   useEffect(() => {
     async function loadResult() {
@@ -207,7 +222,7 @@ export const ExamResultPage: React.FC = () => {
             identificar pontos fracos e alimentar sugestões futuras de estudo. */}
         {areaBreakdown.length > 0 && (
           <div className="mt-8 pt-6 border-t border-slate-800 space-y-6">
-            <div>
+            <div ref={areaChartRef}>
               <h3 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
                 {selectedArea ? (
                   <button
