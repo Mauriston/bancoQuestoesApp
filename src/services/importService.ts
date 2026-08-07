@@ -2,6 +2,7 @@ import { doc, writeBatch, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Area, Theme, Question, QuestionAnswer, QuestionBankJsonRaw } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
+import { getThemes } from './firebaseService';
 
 export interface ImportProgress {
   currentStep: string;
@@ -238,4 +239,102 @@ export async function importQuestionBankJson(
   }).commit();
 
   return { created: createdCount, updated: updatedCount, errors };
+}
+
+export interface SubAreaMigrationProgress {
+  processedCount: number;
+  totalCount: number;
+}
+
+export interface SubAreaMigrationResult {
+  matched: number;
+  unmatched: string[]; // "Área > Tema" que não bateu com nenhum tema existente
+  skippedAreas: string[]; // áreas sem agrupamento por subárea (ex.: Anatomia)
+}
+
+// Grava o campo `subArea` nos documentos de `themes` já existentes, a partir
+// de uma árvore Área → Subárea → Temas (ver reference/arvore_temas_subareas.json).
+// Os IDs de tema são determinísticos (`theme_<nome-normalizado>`, gerados em
+// importQuestionBankJson) — por isso dá para localizar o documento certo só
+// pelo nome do tema, sem precisar cruzar com o ID da área. Só atualiza temas
+// que já existem (nunca cria um tema novo); qualquer nome sem correspondência
+// exata volta na lista `unmatched` para reconciliação manual.
+export async function applyThemeSubAreas(
+  treeJson: any[],
+  onProgress?: (progress: SubAreaMigrationProgress) => void
+): Promise<SubAreaMigrationResult> {
+  if (!Array.isArray(treeJson)) {
+    throw new Error("Estrutura JSON inválida: esperado um array de áreas.");
+  }
+
+  const existingThemes = await getThemes();
+  const existingIds = new Set(existingThemes.map(t => t.id));
+
+  const unmatched: string[] = [];
+  const skippedAreas: string[] = [];
+  let matched = 0;
+  let processedCount = 0;
+
+  const totalCount = treeJson.reduce((sum: number, areaItem: any) => {
+    const subAreas = areaItem['subáreas'] || areaItem.subareas || areaItem.subAreas;
+    if (!Array.isArray(subAreas)) return sum;
+    return sum + subAreas.reduce((s: number, sub: any) => s + (Array.isArray(sub.temas) ? sub.temas.length : 0), 0);
+  }, 0);
+
+  let batch = writeBatch(db);
+  let opCount = 0;
+
+  const commitIfNeeded = async () => {
+    if (opCount >= 180) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  };
+
+  for (const areaItem of treeJson) {
+    const areaName = (areaItem['Área'] || areaItem.Area || areaItem.area || '').trim();
+    const subAreas = areaItem['subáreas'] || areaItem.subareas || areaItem.subAreas;
+
+    if (!Array.isArray(subAreas)) {
+      // Áreas sem agrupamento por subárea (Anatomia, Ciência Básica) — não
+      // há nada para gravar, mas registramos para deixar claro que foram
+      // vistas e puladas de propósito, não esquecidas.
+      if (areaName) skippedAreas.push(areaName);
+      continue;
+    }
+
+    for (const sub of subAreas) {
+      const subAreaName = (sub['subárea'] || sub.subarea || sub.subArea || '').trim();
+      const temas: string[] = Array.isArray(sub.temas) ? sub.temas : [];
+
+      for (const temaNameRaw of temas) {
+        const temaName = (temaNameRaw || '').trim();
+        processedCount++;
+
+        const temaNorm = normalizeText(temaName);
+        const themeId = `theme_${temaNorm.replace(/[^a-z0-9]/g, '_')}`;
+
+        if (existingIds.has(themeId)) {
+          batch.set(doc(db, 'themes', themeId), {
+            subArea: subAreaName,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          opCount++;
+          matched++;
+          await commitIfNeeded();
+        } else {
+          unmatched.push(`${areaName} > ${temaName}`);
+        }
+
+        onProgress?.({ processedCount, totalCount });
+      }
+    }
+  }
+
+  if (opCount > 0) {
+    await batch.commit();
+  }
+
+  return { matched, unmatched, skippedAreas };
 }
