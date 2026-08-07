@@ -313,7 +313,7 @@ export const QuestionsPage: React.FC = () => {
                 className="p-4 sm:p-5 lg:p-6 hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6 cursor-pointer"
                 title="Clique para visualizar a questão completa"
               >
-                <div className="flex items-start gap-4 max-w-none lg:max-w-4xl">
+                <div className="flex items-start gap-4 min-w-0 flex-1 lg:max-w-4xl">
                   {q.imageUrl && (
                     <img
                       src={q.imageUrl}

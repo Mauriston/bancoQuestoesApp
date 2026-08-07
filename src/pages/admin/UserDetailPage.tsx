@@ -101,11 +101,11 @@ export const UserDetailPage: React.FC = () => {
         <div className="w-12 h-12 rounded-full bg-cyan-600/30 text-cyan-300 flex items-center justify-center font-bold text-lg shrink-0">
           {user.name.charAt(0).toUpperCase()}
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-[#050f41]">{user.name}</h1>
-          <p className="text-xs text-slate-400">{user.email}</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold text-[#050f41] truncate">{user.name}</h1>
+          <p className="text-xs text-slate-400 truncate">{user.email}</p>
         </div>
-        <span className={`ml-auto text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+        <span className={`ml-auto shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
           user.active ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'
         }`}>
           {user.active ? 'Ativo' : 'Inativo'}
