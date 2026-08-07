@@ -168,11 +168,36 @@ export const PerformancePage: React.FC = () => {
   const themePerformanceList = themes.map(theme => {
     const themeData = stats?.themes?.[theme.id] || { solved: 0, correct: 0 };
     const acc = themeData.solved > 0 ? Math.round((themeData.correct / themeData.solved) * 100) : 0;
-    return { id: theme.id, name: theme.name, areaId: theme.areaId, solved: themeData.solved, correct: themeData.correct, accuracy: acc };
+    return { id: theme.id, name: theme.name, areaId: theme.areaId, subArea: theme.subArea, solved: themeData.solved, correct: themeData.correct, accuracy: acc };
   }).filter(t => t.solved > 0);
 
   // Desempenho crítico: 5 piores temas, de quaisquer áreas.
   const criticalThemes = [...themePerformanceList].sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
+
+  // Desempenho por Subárea — agrega os temas já respondidos (themePerformanceList)
+  // por área + subárea. Áreas sem subagrupamento (Anatomia, Ciência Básica) e
+  // temas ainda sem subArea migrado simplesmente não entram aqui.
+  const subAreaPerformanceList = (() => {
+    const groups: Record<string, { areaId: string; areaName: string; subArea: string; solved: number; correct: number }> = {};
+    themePerformanceList.forEach(t => {
+      if (!t.subArea) return;
+      const key = `${t.areaId}::${t.subArea}`;
+      if (!groups[key]) {
+        groups[key] = {
+          areaId: t.areaId,
+          areaName: areas.find(a => a.id === t.areaId)?.name || t.areaId,
+          subArea: t.subArea,
+          solved: 0,
+          correct: 0
+        };
+      }
+      groups[key].solved += t.solved;
+      groups[key].correct += t.correct;
+    });
+    return Object.values(groups)
+      .map(g => ({ ...g, accuracy: g.solved > 0 ? Math.round((g.correct / g.solved) * 100) : 0 }))
+      .sort((a, b) => a.areaName.localeCompare(b.areaName) || a.subArea.localeCompare(b.subArea));
+  })();
 
   const radarData = areaPerformanceList.map(a => ({
     area: a.name.length > 14 ? a.name.slice(0, 14) + '…' : a.name,
@@ -184,6 +209,20 @@ export const PerformancePage: React.FC = () => {
   const modalThemes = modalArea
     ? themePerformanceList.filter(t => t.areaId === modalArea.id).sort((a, b) => b.accuracy - a.accuracy)
     : [];
+
+  // Agrupa os temas do modal por subárea (quando a área tem esse
+  // agrupamento) — "Sem Subárea" reúne temas sem subArea definido, o que só
+  // deve acontecer para dados legados ainda não migrados.
+  const themeIdToSubArea = new Map(themes.map(t => [t.id, t.subArea]));
+  const modalHasSubAreas = modalThemes.some(t => themeIdToSubArea.get(t.id));
+  const modalThemesBySubArea = modalHasSubAreas
+    ? modalThemes.reduce((acc, t) => {
+        const key = themeIdToSubArea.get(t.id) || 'Sem Subárea';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(t);
+        return acc;
+      }, {} as Record<string, typeof modalThemes>)
+    : null;
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
@@ -371,6 +410,29 @@ export const PerformancePage: React.FC = () => {
         )}
       </div>
 
+      {/* Desempenho por Subárea — só aparece se houver dados migrados */}
+      {subAreaPerformanceList.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-[#050f41]">Desempenho por Subárea</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {subAreaPerformanceList.map(item => {
+              const tier = getTier(item.accuracy);
+              const style = TIER_STYLES[tier];
+              return (
+                <div key={`${item.areaId}::${item.subArea}`} className={`bg-slate-900 border ${style.ring} rounded-2xl p-3.5 sm:p-5 shadow-xl`}>
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">{item.areaName}</p>
+                  <p className="text-[11px] sm:text-xs font-semibold text-slate-300 truncate mb-1">{item.subArea}</p>
+                  <span className={`text-2xl sm:text-3xl font-black ${style.text}`}>{item.accuracy}%</span>
+                  <div className="mt-3 w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, item.accuracy)}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Desempenho Crítico — 5 piores temas, de quaisquer áreas */}
       {criticalThemes.length > 0 && (
         <div className="bg-slate-900 border border-red-500/20 rounded-2xl p-4 sm:p-6 shadow-xl">
@@ -386,7 +448,10 @@ export const PerformancePage: React.FC = () => {
               return (
                 <div key={t.id} className="py-2 border-b border-slate-800/60 last:border-0">
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-slate-300 truncate">{t.name}</span>
+                    <span className="text-slate-300 truncate">
+                      {t.name}
+                      {t.subArea && <span className="text-slate-500 font-normal"> · {t.subArea}</span>}
+                    </span>
                     <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}%</span>
                   </div>
                   <div className="mt-1.5 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -422,6 +487,40 @@ export const PerformancePage: React.FC = () => {
 
             {modalThemes.length === 0 ? (
               <p className="text-sm text-slate-500 italic">Nenhum tema respondido nesta área ainda.</p>
+            ) : modalThemesBySubArea ? (
+              <div className="space-y-5">
+                {Object.entries(modalThemesBySubArea).map(([subAreaName, subThemes]) => {
+                  const subTotal = subThemes.reduce((s, t) => s + t.solved, 0);
+                  const subCorrect = subThemes.reduce((s, t) => s + t.correct, 0);
+                  const subAcc = subTotal > 0 ? Math.round((subCorrect / subTotal) * 100) : 0;
+                  const subStyle = TIER_STYLES[getTier(subAcc)];
+                  return (
+                    <div key={subAreaName}>
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{subAreaName}</h4>
+                        <span className={`text-xs font-bold ${subStyle.text}`}>{subAcc}%</span>
+                      </div>
+                      <div className="space-y-3">
+                        {subThemes.map(t => {
+                          const tier = getTier(t.accuracy);
+                          const style = TIER_STYLES[tier];
+                          return (
+                            <div key={t.id}>
+                              <div className="flex items-center justify-between gap-3 text-sm mb-1">
+                                <span className="text-slate-300 truncate">{t.name}</span>
+                                <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}%</span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                                <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, t.accuracy)}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="space-y-3">
                 {modalThemes.map(t => {

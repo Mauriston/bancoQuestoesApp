@@ -23,6 +23,11 @@ export interface Theme {
   areaName?: string;
   name: string;
   questionCount?: number;
+  // Agrupamento intermediário opcional entre área e tema (ex.: "Ortopedia" /
+  // "Traumatologia", ou nomes específicos como em Oncologia Ortopédica).
+  // Ausente para áreas sem subagrupamento (Anatomia, Ciência Básica) — ver
+  // reference/arvore_temas_subareas.json e scripts/migrate-theme-subareas.mjs.
+  subArea?: string;
 }
 
 export interface QuestionAlternatives {

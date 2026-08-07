@@ -110,13 +110,33 @@ export const ExamResultPage: React.FC = () => {
       if (ans.isCorrect) map[q.themeId].correct += 1;
     });
     return Object.values(map)
-      .map(t => ({
-        ...t,
-        name: themes.find(th => th.id === t.themeId)?.name || t.themeId,
-        accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0
-      }))
+      .map(t => {
+        const theme = themes.find(th => th.id === t.themeId);
+        return {
+          ...t,
+          name: theme?.name || t.themeId,
+          subArea: theme?.subArea,
+          accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0
+        };
+      })
       .sort((a, b) => a.accuracy - b.accuracy);
   }, [questions, answers, themes]);
+
+  // Desempenho por subárea nesta prova — só entram temas com subArea
+  // migrado; áreas sem esse agrupamento (Anatomia, Ciência Básica) ficam
+  // naturalmente de fora.
+  const subAreaBreakdown = useMemo(() => {
+    const map: Record<string, { subArea: string; total: number; correct: number }> = {};
+    themeBreakdown.forEach(t => {
+      if (!t.subArea) return;
+      if (!map[t.subArea]) map[t.subArea] = { subArea: t.subArea, total: 0, correct: 0 };
+      map[t.subArea].total += t.total;
+      map[t.subArea].correct += t.correct;
+    });
+    return Object.values(map)
+      .map(s => ({ ...s, accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0 }))
+      .sort((a, b) => a.accuracy - b.accuracy);
+  }, [themeBreakdown]);
 
   if (loading || !attempt) {
     return (
@@ -191,6 +211,25 @@ export const ExamResultPage: React.FC = () => {
               </div>
             </div>
 
+            {subAreaBreakdown.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-[#050f41] mb-3">Desempenho por Subárea nesta Prova</h3>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {subAreaBreakdown.map(s => {
+                    const tone = scoreColorClass(s.accuracy);
+                    return (
+                      <div key={s.subArea} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
+                        <span className="text-slate-300 truncate">{s.subArea}</span>
+                        <span className={`font-bold shrink-0 ${tone}`}>
+                          {s.accuracy}% <span className="text-xs text-slate-500 font-normal">({s.correct}/{s.total})</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {themeBreakdown.length > 0 && (
               <div>
                 <h3 className="text-sm font-bold text-[#050f41] mb-3">Temas desta Prova (do mais fraco ao mais forte)</h3>
@@ -199,7 +238,10 @@ export const ExamResultPage: React.FC = () => {
                     const tone = scoreColorClass(t.accuracy);
                     return (
                       <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
-                        <span className="text-slate-300 truncate">{t.name}</span>
+                        <span className="text-slate-300 truncate">
+                          {t.name}
+                          {t.subArea && <span className="text-slate-500 font-normal"> · {t.subArea}</span>}
+                        </span>
                         <span className={`font-bold shrink-0 ${tone}`}>
                           {t.accuracy}% <span className="text-xs text-slate-500 font-normal">({t.correct}/{t.total})</span>
                         </span>
