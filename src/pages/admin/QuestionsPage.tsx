@@ -46,7 +46,6 @@ export const QuestionsPage: React.FC = () => {
   const [altC, setAltC] = useState('');
   const [altD, setAltD] = useState('');
   const [correctAlt, setCorrectAlt] = useState<"A"|"B"|"C"|"D">('A');
-  const [solutionText, setSolutionText] = useState('');
   const [comments, setComments] = useState('');
   const [commentMediaUrl, setCommentMediaUrl] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -111,7 +110,6 @@ export const QuestionsPage: React.FC = () => {
     setAltC('');
     setAltD('');
     setCorrectAlt('A');
-    setSolutionText('');
     setComments('');
     setCommentMediaUrl('');
     setImageUrl(null);
@@ -138,7 +136,6 @@ export const QuestionsPage: React.FC = () => {
     const ansKey = await getQuestionAnswer(q.id);
     if (ansKey) {
       setCorrectAlt(ansKey.correctAlternative);
-      setSolutionText(ansKey.solutionText || '');
       setComments(ansKey.comments || '');
       setCommentMediaUrl(ansKey.commentMediaUrl || '');
     }
@@ -186,7 +183,6 @@ export const QuestionsPage: React.FC = () => {
         },
         {
           correctAlternative: correctAlt,
-          solutionText,
           comments,
           commentMediaUrl: commentMediaUrl || undefined
         }
@@ -211,9 +207,6 @@ export const QuestionsPage: React.FC = () => {
             <BookOpen className="w-5 h-5 text-cyan-400" />
             Banco de Questões
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Cadastre, edite e organize o acervo de questões por Área e Tema TEOT.
-          </p>
         </div>
 
         <button
@@ -498,16 +491,6 @@ export const QuestionsPage: React.FC = () => {
                   accept="image/*"
                   onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Texto da Solução Explicativa</label>
-                <textarea
-                  rows={2}
-                  value={solutionText}
-                  onChange={(e) => setSolutionText(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                 />
               </div>
 

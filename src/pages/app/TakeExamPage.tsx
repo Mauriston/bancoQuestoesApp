@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowRight, X, ZoomIn, Send, Trophy, AlertCircle, ArrowLeft
+  ArrowRight, X, ZoomIn, Trophy, AlertCircle, ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -31,7 +31,6 @@ export const TakeExamPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null | undefined>(null);
   const [loadingTipIndex, setLoadingTipIndex] = useState(0);
@@ -127,7 +126,7 @@ export const TakeExamPage: React.FC = () => {
       setSavedAlt(prev => ({ ...prev, [currentQ.id]: currentAlt }));
 
       if (isLastQuestion) {
-        setFinishModalOpen(true);
+        await handleFinishExam();
       } else {
         const nextIndex = currentIndex + 1;
         setCurrentIndex(nextIndex);
@@ -143,9 +142,8 @@ export const TakeExamPage: React.FC = () => {
   };
 
   const handleFinishExam = async () => {
-    if (submitting || !attemptId) return;
+    if (!attemptId) return;
     setSubmitting(true);
-    setFinishModalOpen(false);
     setFinishing(true);
 
     try {
@@ -217,14 +215,14 @@ export const TakeExamPage: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-6 py-6 pb-24">
 
       {/* Top: nome da prova centralizado + indicador de progresso em pizza */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-0.5">
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-px">
         <div />
-        <h2 className="text-sm font-bold text-[#050f41] leading-tight truncate text-center">
+        <h2 className="text-base font-bold text-[#050f41] leading-tight truncate text-center">
           {exam?.name || 'Simulado Ortopedia'}
         </h2>
         <div className="flex items-center justify-end shrink-0">
           <div
-            className="w-9 h-9 rounded-full transition-[background] duration-300"
+            className="w-8 h-8 rounded-full transition-[background] duration-300"
             style={{
               background: `conic-gradient(#14b8a6 0deg ${progressPercent * 3.6}deg, #1e293b ${progressPercent * 3.6}deg 360deg)`
             }}
@@ -299,15 +297,25 @@ export const TakeExamPage: React.FC = () => {
           inferior direito para ficar sempre alcançável, sem ocupar espaço
           fixo no fluxo da página. */}
       {currentAlt !== null && (
-        <button
-          onClick={handleAdvance}
-          disabled={submitting}
-          title={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
-          aria-label={isLastQuestion ? 'Revisar e Finalizar' : 'Próxima Questão'}
-          className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/30"
-        >
-          {isLastQuestion ? <Send className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
-        </button>
+        isLastQuestion ? (
+          <button
+            onClick={handleAdvance}
+            disabled={submitting}
+            className="fixed bottom-6 left-6 right-6 z-40 flex items-center justify-center gap-2 h-14 rounded-2xl bg-red-500 text-white font-bold text-base hover:bg-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-red-500/30"
+          >
+            Finalizar
+          </button>
+        ) : (
+          <button
+            onClick={handleAdvance}
+            disabled={submitting}
+            title="Próxima Questão"
+            aria-label="Próxima Questão"
+            className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/30"
+          >
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        )
       )}
 
       {/* Modal de Imagem */}
@@ -321,25 +329,6 @@ export const TakeExamPage: React.FC = () => {
               <X className="w-6 h-6" />
             </button>
             <img src={previewImageUrl} alt="Imagem Ampliada" className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain" />
-          </div>
-        </div>
-      )}
-
-      {/* Confirmação de Término */}
-      {finishModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5 text-center">
-            <h3 className="text-base font-bold text-[#050f41]">Finalizar Prova?</h3>
-
-            <div className="flex justify-center">
-              <button
-                onClick={handleFinishExam}
-                disabled={submitting}
-                className="px-8 py-2.5 min-h-11 rounded-xl text-sm font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 disabled:opacity-60"
-              >
-                {submitting ? <span className="w-4 h-4 border-2 border-slate-950/40 border-t-slate-950 rounded-full animate-spin inline-block" /> : 'Sim'}
-              </button>
-            </div>
           </div>
         </div>
       )}

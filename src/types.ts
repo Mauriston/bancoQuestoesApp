@@ -64,7 +64,6 @@ export interface QuestionAnswer {
 export interface Exam {
   id: string;
   name: string;
-  description?: string;
   status: 'draft' | 'published' | 'archived';
   // Controla se a prova fica visível/disponível para os candidatos
   // iniciarem. Toda prova nasce inativa (false) — o admin precisa ativá-la

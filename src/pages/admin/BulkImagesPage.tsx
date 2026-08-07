@@ -21,7 +21,7 @@ interface ResultEntry {
   message?: string;
 }
 
-export const BulkImagesPage: React.FC = () => {
+export const BulkImagesSection: React.FC = () => {
   const { currentUser } = useAuth();
 
   const [prova, setProva] = useState('');
@@ -123,13 +123,13 @@ export const BulkImagesPage: React.FC = () => {
   const progressPercent = entries.length > 0 ? Math.round((processedCount / entries.length) * 100) : 0;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6">
 
       <div>
-        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
+        <h2 className="text-lg font-bold text-[#050f41] flex items-center gap-2">
           <Images className="w-5 h-5 text-cyan-400" />
           Atualizar Imagens de Questões em Lote
-        </h1>
+        </h2>
         <p className="text-xs text-slate-400 mt-1">
           Envie uma pasta com várias imagens de uma vez — cada arquivo deve se chamar exatamente
           <code className="mx-1 px-1.5 py-0.5 rounded bg-slate-800 text-[11px] text-slate-300">&lt;idDaQuestão&gt;.jpeg</code>

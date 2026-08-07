@@ -25,7 +25,6 @@ export const CreateExamPage: React.FC = () => {
 
   // Step 1: Basic info
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleAlternatives, setShuffleAlternatives] = useState(false);
   const [showResultAfterFinish, setShowResultAfterFinish] = useState(true);
@@ -96,7 +95,6 @@ export const CreateExamPage: React.FC = () => {
             setGateError("Esta prova já tem tentativas registradas e não pode mais ser editada.");
           } else {
             setName(exam.name);
-            setDescription(exam.description || '');
             setShuffleQuestions(!!exam.shuffleQuestions);
             setShuffleAlternatives(!!exam.shuffleAlternatives);
             setShowResultAfterFinish(exam.showResultAfterFinish !== false);
@@ -173,7 +171,6 @@ export const CreateExamPage: React.FC = () => {
       await createAndPublishExam({
         examData: {
           name,
-          description,
           status: 'published',
           questionCount: selectedQuestions.length,
           shuffleQuestions,
@@ -207,7 +204,6 @@ export const CreateExamPage: React.FC = () => {
         examId,
         examData: {
           name,
-          description,
           shuffleQuestions,
           shuffleAlternatives,
           showResultAfterFinish,
@@ -260,11 +256,6 @@ export const CreateExamPage: React.FC = () => {
           <FileCheck className="w-5 h-5 text-cyan-400" />
           {isEditMode ? 'Editar Prova' : 'Assistente de Criação de Prova'}
         </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          {isEditMode
-            ? 'Ajuste os dados e as questões desta prova, ainda inativa e sem tentativas registradas.'
-            : 'Siga as 4 etapas para publicar um novo simulado.'}
-        </p>
       </div>
 
       {/* Step Indicator Header — sem a etapa de atribuição de usuários no
@@ -308,17 +299,6 @@ export const CreateExamPage: React.FC = () => {
             />
           </div>
           
-          <div>
-            <label className="block text-slate-300 font-medium mb-1">Descrição / Instruções aos Candidatos</label>
-            <textarea
-              rows={3}
-              placeholder="Descreva o conteúdo cobrado ou orientações gerais..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
-            />
-          </div>
-
           <div className="space-y-2 pt-2 border-t border-slate-800">
             <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
               <input

@@ -5,6 +5,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { importQuestionBankJson, ImportProgress } from '../../services/importService';
 import arvoreLocalJson from '../../../arvore_temas.json';
+import { BulkImagesSection } from './BulkImagesPage';
 
 export const ImportPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -68,11 +69,14 @@ export const ImportPage: React.FC = () => {
       <div>
         <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
           <UploadCloud className="w-5 h-5 text-cyan-400" />
-          Importação do Banco de Questões (JSON)
+          Importar
         </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Carregue arquivos JSON de questões TEOT para alimentar o Firestore em lote com segurança.
-        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-bold text-[#050f41] flex items-center gap-2 mb-1">
+          Importação do Banco de Questões (JSON)
+        </h2>
       </div>
 
       {/* Action Choice Box */}
@@ -162,6 +166,10 @@ export const ImportPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="pt-4 border-t border-slate-800">
+        <BulkImagesSection />
+      </div>
 
     </div>
   );

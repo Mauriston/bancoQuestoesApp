@@ -80,9 +80,6 @@ export const DashboardPage: React.FC = () => {
             <TrendingUp className="w-5 h-5 text-cyan-400" />
             Dashboard Geral de Desempenho
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Métricas de engajamento, provas ativas e taxas globais de acerto.
-          </p>
         </div>
 
         <button
