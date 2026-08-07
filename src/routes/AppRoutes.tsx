@@ -11,6 +11,7 @@ import { TakeExamPage } from '../pages/app/TakeExamPage';
 import { ExamResultPage } from '../pages/app/ExamResultPage';
 import { HistoryPage } from '../pages/app/HistoryPage';
 import { PerformancePage } from '../pages/app/PerformancePage';
+import { ExamStatsPage } from '../pages/app/ExamStatsPage';
 
 import { AdminLayout } from '../layouts/AdminLayout';
 import { DashboardPage } from '../pages/admin/DashboardPage';
@@ -90,6 +91,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="attempts/:attemptId/result" element={<ExamResultPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="performance" element={<PerformancePage />} />
+        <Route path="exam-stats" element={<ExamStatsPage />} />
       </Route>
 
       {/* Admin Application Routes */}
