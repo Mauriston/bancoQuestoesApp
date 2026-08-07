@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, Calendar
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Settings
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -129,7 +129,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       {/* Gaveta do menu mobile — desliza da esquerda para a direita, limitada
           a 60% da largura da tela quando totalmente expandida. */}
       <nav
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-[60%] max-w-xs bg-[#050f41] border-r border-white/10 shadow-2xl px-3 py-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-[60%] max-w-xs bg-[#050f41] border-r border-white/10 shadow-2xl px-3 py-4 flex flex-col gap-1 overflow-y-auto transition-transform duration-300 ease-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -153,14 +153,33 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           );
         })}
 
-        {/* "Agenda" — item ainda sem destino definido; sem ação de clique
-            por enquanto (a página será definida em um próximo passo). */}
+        {/* Itens ainda sem destino definido — sem ação de clique por
+            enquanto (as páginas/ações serão definidas em próximos passos). */}
+        {[
+          { label: 'Temas', icon: ListChecks },
+          { label: 'Cronograma', icon: CalendarDays },
+          { label: 'Sabatinas', icon: MessageSquare }
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.label}
+              className="flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium text-white/40 cursor-default"
+              title="Em breve"
+            >
+              <Icon className="w-4 h-4 text-white/30" />
+              {item.label}
+            </div>
+          );
+        })}
+
+        {/* "Ajustes" fica fixo no rodapé do menu lateral. */}
         <div
-          className="flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium text-white/40 cursor-default"
+          className="mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium text-white/40 cursor-default"
           title="Em breve"
         >
-          <Calendar className="w-4 h-4 text-white/30" />
-          Agenda
+          <Settings className="w-4 h-4 text-white/30" />
+          Ajustes
         </div>
       </nav>
 
