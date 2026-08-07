@@ -110,9 +110,6 @@ export const ExamsListPage: React.FC = () => {
             <FileCheck className="w-5 h-5 text-cyan-400" />
             Gerenciamento de Provas & Simulados
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Crie novos simulados, atribua a residentes e gerencie avaliações publicadas.
-          </p>
         </div>
 
         <Link
@@ -174,12 +171,6 @@ export const ExamsListPage: React.FC = () => {
                   {avgScoreByExamId[ex.id] !== undefined && (
                     <p className={`mt-4 text-2xl font-black tracking-tight ${scoreColor(avgScoreByExamId[ex.id])}`}>
                       {avgScoreByExamId[ex.id]}%
-                    </p>
-                  )}
-
-                  {ex.description && (
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-2">
-                      {ex.description}
                     </p>
                   )}
                 </div>

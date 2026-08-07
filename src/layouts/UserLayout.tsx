@@ -17,7 +17,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   };
 
   const navItems = [
-    { label: 'Provas Disponíveis', path: '/app/exams', icon: FileText },
+    { label: 'Provas', path: '/app/exams', icon: FileText },
     { label: 'Histórico', path: '/app/history', icon: History },
     { label: 'Desempenho', path: '/app/performance', icon: BarChart3 }
   ];
@@ -67,8 +67,9 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               </h1>
             </div>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-1">
+            {/* Desktop Navigation Links (md até antes de lg — a partir de lg
+                a navegação passa a viver na sidebar fixa abaixo) */}
+            <nav className="hidden md:flex lg:hidden items-center space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname.startsWith(item.path);
@@ -103,9 +104,9 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               <button
                 onClick={handleLogout}
                 title="Sair da Conta"
-                className="tap-target flex items-center justify-center gap-1.5 sm:min-w-0 sm:min-h-0 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
+                className="tap-target flex items-center justify-center gap-1.5 sm:min-w-0 sm:min-h-0 sm:px-3.5 sm:py-2 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
               >
-                <LogOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <LogOut className="w-5 h-5" strokeWidth={2.5} />
                 <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
@@ -140,8 +141,36 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         )}
       </header>
 
+      {/* Desktop Sidebar — mesmo padrão da AdminLayout: fixa, colada na
+          borda esquerda, recolhida (só ícones) por padrão, expande em
+          overlay ao passar o mouse. Só aparece a partir de lg; abaixo disso
+          a navegação continua na gaveta/topbar mobile de sempre. */}
+      <aside className="group/sidebar hidden lg:flex fixed inset-y-0 top-16 bottom-0 left-0 z-30 w-16 hover:w-64 bg-[#0c1c5c] border-r border-white/10 py-4 px-3 transition-[width] duration-200 flex-col shadow-2xl overflow-hidden">
+        <nav className="space-y-1.5 flex-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                title={item.label}
+                className={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                <span className="hidden group-hover/sidebar:inline">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
       {/* Main Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 lg:pl-[calc(1rem+4rem)] py-4 sm:py-6">
         {children || <Outlet />}
       </main>
 

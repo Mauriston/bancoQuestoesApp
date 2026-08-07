@@ -101,9 +101,6 @@ export const UsersPage: React.FC = () => {
             <Users className="w-5 h-5 text-cyan-400" />
             Gerenciamento de Usuários
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Cadastre residentes, professores e administradores com controle fino de acesso.
-          </p>
         </div>
 
         <button

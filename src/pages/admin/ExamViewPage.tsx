@@ -109,7 +109,6 @@ export const ExamViewPage: React.FC = () => {
         examId: exam.id,
         examData: {
           name: exam.name,
-          description: exam.description,
           shuffleQuestions: exam.shuffleQuestions,
           shuffleAlternatives: exam.shuffleAlternatives,
           showResultAfterFinish: exam.showResultAfterFinish,
@@ -165,7 +164,6 @@ export const ExamViewPage: React.FC = () => {
           }`}>
             {isExamActive(exam) ? 'Ativa' : 'Inativa'}
           </span>
-          {exam.description && <p className="text-xs text-slate-400 mt-1 max-w-xl">{exam.description}</p>}
         </div>
 
         <button

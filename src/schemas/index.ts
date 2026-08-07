@@ -13,7 +13,6 @@ export const userCreateSchema = z.object({
 
 export const examCreateSchema = z.object({
   name: z.string().min(3, "Nome da prova deve ter no mínimo 3 caracteres"),
-  description: z.string().optional(),
   durationMinutes: z.number().min(0).optional(),
   shuffleQuestions: z.boolean().default(false),
   shuffleAlternatives: z.boolean().default(false),

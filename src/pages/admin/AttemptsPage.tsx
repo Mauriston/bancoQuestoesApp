@@ -61,9 +61,6 @@ export const AttemptsPage: React.FC = () => {
           <History className="w-5 h-5 text-cyan-400" />
           Monitoramento de Tentativas e Resultados
         </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Acompanhe o desempenho de todos os alunos e residentes em tempo real.
-        </p>
       </div>
 
       {/* Filter */}

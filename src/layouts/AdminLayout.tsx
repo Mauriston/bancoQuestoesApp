@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, ShieldAlert, Menu, X, Images
+  LogOut, ShieldAlert, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,12 +19,11 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
 
   const navItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Gerenciar Usuários', path: '/admin/users', icon: Users },
-    { label: 'Banco de Questões', path: '/admin/questions', icon: BookOpen },
-    { label: 'Imagens em Lote', path: '/admin/images', icon: Images },
-    { label: 'Provas e Simulados', path: '/admin/exams', icon: FileCheck },
-    { label: 'Tentativas & Respostas', path: '/admin/attempts', icon: History },
-    { label: 'Importar Banco JSON', path: '/admin/import', icon: UploadCloud }
+    { label: 'Questões', path: '/admin/questions', icon: BookOpen },
+    { label: 'Provas', path: '/admin/exams', icon: FileCheck },
+    { label: 'Resultados', path: '/admin/attempts', icon: History },
+    { label: 'Usuários', path: '/admin/users', icon: Users },
+    { label: 'Importar', path: '/admin/import', icon: UploadCloud }
   ];
 
   return (
@@ -76,9 +75,9 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
               <button
                 onClick={handleLogout}
                 title="Sair do Painel"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-5 h-5" strokeWidth={2.5} />
                 <span className="hidden sm:inline">Sair</span>
               </button>
             </div>

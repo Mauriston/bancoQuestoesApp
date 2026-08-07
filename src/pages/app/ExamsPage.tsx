@@ -81,11 +81,6 @@ export const ExamsPage: React.FC = () => {
                     {asgn.exam?.questionCount || 0} questões
                   </span>
 
-                  {asgn.exam?.description && (
-                    <p className="text-sm text-slate-400 mt-1 line-clamp-2">
-                      {asgn.exam.description}
-                    </p>
-                  )}
                 </button>
               );
             })}

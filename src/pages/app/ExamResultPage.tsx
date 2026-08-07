@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, Award, ArrowLeft, BookOpen, AlertCircle, Sparkles, Check, BarChart3, ChevronDown
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds } from '../../services/firebaseService';
@@ -11,6 +11,7 @@ import { CommentMedia } from '../../components/CommentMedia';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
+  const navigate = useNavigate();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
@@ -130,10 +131,15 @@ export const ExamResultPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       
-      <Link to="/app/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Voltar para Minhas Provas</span>
-      </Link>
+      <button
+        type="button"
+        onClick={() => navigate('/app/history')}
+        aria-label="Voltar para o Histórico"
+        title="Voltar para o Histórico"
+        className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-[#050f41] hover:bg-slate-800 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </button>
 
       {/* Main KPI Banner Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
@@ -146,19 +152,13 @@ export const ExamResultPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41]">
               {attempt.examName || 'Simulado Ortopedia TEOT'}
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Desempenho avaliado pela Sociedade Brasileira de Ortopedia e Traumatologia.
-            </p>
           </div>
           <div className="text-center md:text-right shrink-0">
-            <div className={`text-4xl sm:text-5xl font-black tracking-tight ${
+            <div className={`text-6xl sm:text-7xl font-black tracking-tight ${
               isPassed ? 'text-teal-400' : 'text-amber-400'
             }`}>
               {attempt.scorePercentage}%
             </div>
-            <p className="text-xs font-semibold text-slate-300 mt-1">
-              {attempt.correctAnswers} acertos de {attempt.totalQuestions} questões
-            </p>
           </div>
         </div>
 
@@ -172,8 +172,7 @@ export const ExamResultPage: React.FC = () => {
                 <BarChart3 className="w-4 h-4 text-teal-400" />
                 Desempenho por Área nesta Prova
               </h3>
-              <p className="text-xs text-slate-400 mb-2">Percentual de acerto entre as questões respondidas, por área.</p>
-              <div className="h-56 sm:h-72 w-full">
+              <div className="h-56 sm:h-72 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={areaBreakdown} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
                     <CartesianGrid stroke="#dbe0f0" horizontal={false} />
@@ -209,9 +208,6 @@ export const ExamResultPage: React.FC = () => {
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-3 italic">
-                  Esses dados também alimentam as sugestões de revisão em "Meu Desempenho".
-                </p>
               </div>
             )}
           </div>
@@ -223,7 +219,7 @@ export const ExamResultPage: React.FC = () => {
         <section className="space-y-6">
           <h2 className="text-sm font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
-            Revisão Detalhada das Questões ({questions.length})
+            Questões, Gabaritos e Comentários
           </h2>
 
           <div className="space-y-6">
@@ -250,27 +246,37 @@ export const ExamResultPage: React.FC = () => {
                       <span className="text-xs font-bold text-slate-300">
                         Questão {idx + 1}
                       </span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
                       {sourceExamById[q.originalQuestionId] && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSourceExamChipClass(sourceExamById[q.originalQuestionId])}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ml-auto ${getSourceExamChipClass(sourceExamById[q.originalQuestionId])}`}>
                           {sourceExamById[q.originalQuestionId]}
                         </span>
                       )}
+                      {isCorrect ? (
+                        <span
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          role="img"
+                          aria-label="Questão correta"
+                          title="Correta"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </span>
+                      ) : selected ? (
+                        <span
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-red-500/20 text-red-300 border border-red-500/30"
+                          role="img"
+                          aria-label="Questão incorreta"
+                          title="Incorreta"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          Não Respondida
+                        </span>
+                      )}
                     </div>
-                    {isCorrect ? (
-                      <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Correta
-                      </span>
-                    ) : selected ? (
-                      <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
-                        Incorreta
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                        Não Respondida
-                      </span>
-                    )}
                   </div>
 
                   <p className="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed whitespace-pre-line mb-4">
@@ -322,31 +328,25 @@ export const ExamResultPage: React.FC = () => {
                     })}
                   </div>
 
-                  {key && (key.comments || key.solutionText || key.commentMediaUrl) && (
-                    <div className="rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden">
+                  {key && (key.comments || key.commentMediaUrl || key.correctAlternative) && (
+                    <div className="rounded-xl bg-teal-500/10 border border-teal-500/30 overflow-hidden">
                       <button
                         type="button"
                         onClick={() => setOpenComments(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
-                        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-xs font-semibold text-teal-400"
+                        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm font-bold text-teal-400"
                       >
-                        <span>Ver comentário do gabarito</span>
+                        <span>COMENTÁRIOS</span>
                         <ChevronDown
                           className={`w-4 h-4 shrink-0 transition-transform duration-200 ${openComments[q.id] ? 'rotate-180' : ''}`}
                         />
                       </button>
                       {openComments[q.id] && (
                         <div className="px-4 pb-4 text-xs text-slate-300 space-y-2">
-                          {key.solutionText && (
-                            <div>
-                              <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
-                              <p className="text-slate-300 leading-relaxed">{key.solutionText}</p>
-                            </div>
+                          {key.correctAlternative && (
+                            <p className="font-bold text-teal-400">GABARITO: {key.correctAlternative}</p>
                           )}
                           {key.comments && (
-                            <div>
-                              <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
-                              <p className="text-slate-300 leading-relaxed">{key.comments}</p>
-                            </div>
+                            <p className="text-slate-300 leading-relaxed mt-4">{key.comments}</p>
                           )}
                           {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                         </div>

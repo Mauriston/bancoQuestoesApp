@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MoreVertical, ChevronRight, Calendar } from 'lucide-react';
+import { MoreVertical, ChevronRight, Calendar, ThumbsUp, AlertTriangle, OctagonAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAttempts } from '../../services/firebaseService';
 import { Attempt } from '../../types';
@@ -10,6 +10,21 @@ function scoreColor(score: number): string {
   if (score >= 60) return 'text-emerald-400';
   if (score >= 50) return 'text-amber-400';
   return 'text-red-400';
+}
+
+function ScoreIcon({ score, className }: { score: number; className?: string }) {
+  if (score >= 60) return <ThumbsUp className={className} />;
+  if (score >= 50) return <AlertTriangle className={className} />;
+  return <OctagonAlert className={className} />;
+}
+
+// Divide o nome da prova em duas linhas quando houver um hífen cercado de
+// espaços (ex.: "PEDIÁTRICA - Trauma MMSS") — a parte antes fica em
+// destaque, a parte depois em uma segunda linha menor e mais discreta.
+function splitExamName(name: string): [string, string | null] {
+  const parts = name.split(/\s+-\s+/);
+  if (parts.length < 2) return [name, null];
+  return [parts[0], parts.slice(1).join(' - ')];
 }
 
 export const HistoryPage: React.FC = () => {
@@ -58,6 +73,7 @@ export const HistoryPage: React.FC = () => {
               const dest = isCompleted
                 ? `/app/attempts/${att.id}/result`
                 : `/app/exams/${att.assignmentId}`;
+              const [examNamePrimary, examNameSecondary] = splitExamName(att.examName || 'Simulado Ortopedia');
 
               return (
                 <Link
@@ -72,13 +88,19 @@ export const HistoryPage: React.FC = () => {
                     </span>
 
                     <h3 className="text-sm font-semibold text-slate-300 truncate">
-                      {att.examName || 'Simulado Ortopedia'}
+                      {examNamePrimary}
                     </h3>
+                    {examNameSecondary && (
+                      <h4 className="text-xs text-slate-500 truncate">
+                        {examNameSecondary}
+                      </h4>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
                     {isCompleted ? (
-                      <span className={`text-3xl sm:text-4xl font-black leading-none ${scoreColor(score)}`}>
+                      <span className={`flex items-center gap-1.5 text-2xl sm:text-3xl font-black leading-none ${scoreColor(score)}`}>
+                        <ScoreIcon score={score} className="w-5 h-5 sm:w-6 sm:h-6" />
                         {score}%
                       </span>
                     ) : (
