@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -114,32 +114,55 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown (substitui a antiga tira de ícones fixa —
-            some quando fechado, para não ocupar espaço vertical à toa) */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden border-t border-white/10 bg-[#050f41] px-3 py-2 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        )}
       </header>
+
+      {/* Backdrop do menu mobile — desfoca e escurece o plano de fundo,
+          com fade suave em conjunto com a gaveta abrindo/fechando. */}
+      <div
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+        className={`md:hidden fixed inset-0 z-40 bg-[#050f41]/60 backdrop-blur-sm transition-opacity duration-300 ${
+          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      {/* Gaveta do menu mobile — desliza da esquerda para a direita, limitada
+          a 60% da largura da tela quando totalmente expandida. */}
+      <nav
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-[60%] max-w-xs bg-[#050f41] border-r border-white/10 shadow-2xl px-3 py-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname.startsWith(item.path);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        {/* "Agenda" — item ainda sem destino definido; sem ação de clique
+            por enquanto (a página será definida em um próximo passo). */}
+        <div
+          className="flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium text-white/40 cursor-default"
+          title="Em breve"
+        >
+          <Calendar className="w-4 h-4 text-white/30" />
+          Agenda
+        </div>
+      </nav>
 
       {/* Desktop Sidebar — mesmo padrão da AdminLayout: fixa, colada na
           borda esquerda, recolhida (só ícones) por padrão, expande em
