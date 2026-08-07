@@ -1,4 +1,4 @@
-import { doc, writeBatch, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, writeBatch, serverTimestamp, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Area, Theme, Question, QuestionAnswer, QuestionBankJsonRaw } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
@@ -242,23 +242,28 @@ export async function importQuestionBankJson(
 }
 
 export interface SubAreaMigrationProgress {
+  phase: 'temas' | 'questoes';
   processedCount: number;
   totalCount: number;
 }
 
 export interface SubAreaMigrationResult {
   matched: number;
+  matchedQuestions: number;
   unmatched: string[]; // "Área > Tema" que não bateu com nenhum tema existente
   skippedAreas: string[]; // áreas sem agrupamento por subárea (ex.: Anatomia)
 }
 
-// Grava o campo `subArea` nos documentos de `themes` já existentes, a partir
-// de uma árvore Área → Subárea → Temas (ver reference/arvore_temas_subareas.json).
-// Os IDs de tema são determinísticos (`theme_<nome-normalizado>`, gerados em
-// importQuestionBankJson) — por isso dá para localizar o documento certo só
-// pelo nome do tema, sem precisar cruzar com o ID da área. Só atualiza temas
-// que já existem (nunca cria um tema novo); qualquer nome sem correspondência
-// exata volta na lista `unmatched` para reconciliação manual.
+// Grava o campo `subArea` nos documentos de `themes` já existentes E em
+// TODAS as questões de cada tema (coleção `questions` — denormalizado ali
+// para não depender de cruzar com `themes` a cada leitura/filtro/análise),
+// a partir de uma árvore Área → Subárea → Temas (ver
+// reference/arvore_temas_subareas.json). Os IDs de tema são determinísticos
+// (`theme_<nome-normalizado>`, gerados em importQuestionBankJson) — por isso
+// dá para localizar o documento certo só pelo nome do tema, sem precisar
+// cruzar com o ID da área. Só atualiza temas/questões que já existem (nunca
+// cria nada novo); qualquer nome de tema sem correspondência exata volta na
+// lista `unmatched` para reconciliação manual.
 export async function applyThemeSubAreas(
   treeJson: any[],
   onProgress?: (progress: SubAreaMigrationProgress) => void
@@ -272,7 +277,9 @@ export async function applyThemeSubAreas(
 
   const unmatched: string[] = [];
   const skippedAreas: string[] = [];
-  let matched = 0;
+  // themeId -> nome da subárea, só para os temas efetivamente encontrados —
+  // usado na segunda fase para atualizar as questões de cada tema.
+  const matchedThemeSubAreas = new Map<string, string>();
   let processedCount = 0;
 
   const totalCount = treeJson.reduce((sum: number, areaItem: any) => {
@@ -285,13 +292,14 @@ export async function applyThemeSubAreas(
   let opCount = 0;
 
   const commitIfNeeded = async () => {
-    if (opCount >= 180) {
+    if (opCount >= 400) {
       await batch.commit();
       batch = writeBatch(db);
       opCount = 0;
     }
   };
 
+  // Fase 1: temas
   for (const areaItem of treeJson) {
     const areaName = (areaItem['Área'] || areaItem.Area || areaItem.area || '').trim();
     const subAreas = areaItem['subáreas'] || areaItem.subareas || areaItem.subAreas;
@@ -321,14 +329,48 @@ export async function applyThemeSubAreas(
             updatedAt: serverTimestamp()
           }, { merge: true });
           opCount++;
-          matched++;
+          matchedThemeSubAreas.set(themeId, subAreaName);
           await commitIfNeeded();
         } else {
           unmatched.push(`${areaName} > ${temaName}`);
         }
 
-        onProgress?.({ processedCount, totalCount });
+        onProgress?.({ phase: 'temas', processedCount, totalCount });
       }
+    }
+  }
+
+  if (opCount > 0) {
+    await batch.commit();
+    batch = writeBatch(db);
+    opCount = 0;
+  }
+
+  // Fase 2: todas as questões de cada tema encontrado — o grosso da carga
+  // (milhares de documentos), por isso em lotes maiores. `Theme.questionCount`
+  // já é mantido pelas rotinas de escrita de questão, então dá para estimar
+  // o total da barra de progresso sem precisar consultar tudo antes.
+  let matchedQuestions = 0;
+  let questionsProcessed = 0;
+  const themeIds = Array.from(matchedThemeSubAreas.keys());
+  const themeById = new Map(existingThemes.map(t => [t.id, t]));
+  const estimatedTotalQuestions = themeIds.reduce((sum, id) => sum + (themeById.get(id)?.questionCount || 0), 0);
+
+  for (const themeId of themeIds) {
+    const subAreaName = matchedThemeSubAreas.get(themeId)!;
+
+    const questionsSnap = await getDocs(query(collection(db, 'questions'), where('themeId', '==', themeId)));
+    for (const qDoc of questionsSnap.docs) {
+      batch.set(doc(db, 'questions', qDoc.id), {
+        subArea: subAreaName,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      opCount++;
+      matchedQuestions++;
+      questionsProcessed++;
+      await commitIfNeeded();
+
+      onProgress?.({ phase: 'questoes', processedCount: questionsProcessed, totalCount: Math.max(estimatedTotalQuestions, questionsProcessed) });
     }
   }
 
@@ -336,5 +378,5 @@ export async function applyThemeSubAreas(
     await batch.commit();
   }
 
-  return { matched, unmatched, skippedAreas };
+  return { matched: matchedThemeSubAreas.size, matchedQuestions, unmatched, skippedAreas };
 }
