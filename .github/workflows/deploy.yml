@@ -32,16 +32,14 @@ jobs:
       - name: 5. Compilar o Projeto (Frontend)
         run: bun run build
 
-      - name: 6. Instalar Firebase CLI Globalmente
-        run: npm install -g firebase-tools
-
-      # O repositório não tem uma pasta functions/ (nenhuma Cloud Function
-      # foi escrita ainda — ver auditoria dos fluxos Firebase), então
-      # "--only functions,hosting" sempre falhava antes mesmo de tentar
-      # publicar: o Firebase CLI recusa alvos que não existem no projeto.
-      # Publicamos só o hosting (o frontend React estático) até existir
-      # código de functions de verdade para publicar.
-      - name: 7. Deploy no Firebase Hosting
-        run: firebase deploy --only hosting --project gen-lang-client-0316191622
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      # Migrado de `firebase deploy` autenticado por FIREBASE_TOKEN (deprecado
+      # pelo próprio Firebase e cujo token expirou) para a action oficial,
+      # que autentica via Service Account (secret FIREBASE_SERVICE_ACCOUNT
+      # com o conteúdo do JSON da chave) — sem depender de login interativo.
+      - name: 6. Deploy no Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: gen-lang-client-0316191622
+          channelId: live
