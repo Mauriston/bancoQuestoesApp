@@ -145,7 +145,7 @@ export const UserDetailPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Taxa Geral de Acerto</p>
-              <p className="text-xl font-black text-cyan-400 mt-0.5">{overallAcc}%</p>
+              <p className={`text-xl font-black mt-0.5 ${scoreColorClass(overallAcc)}`}>{overallAcc}%</p>
             </div>
           </div>
         </div>
@@ -162,7 +162,7 @@ export const UserDetailPage: React.FC = () => {
               <div key={item.id} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-slate-200">{item.name}</span>
-                  <span className="font-bold text-teal-400">{item.accuracy}% ({item.correct}/{item.solved})</span>
+                  <span className={`font-bold ${scoreColorClass(item.accuracy)}`}>{item.accuracy}% ({item.correct}/{item.solved})</span>
                 </div>
                 <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
                   <div
