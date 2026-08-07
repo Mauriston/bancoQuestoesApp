@@ -38,6 +38,7 @@ export const CreateExamPage: React.FC = () => {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [areaFilter, setAreaFilter] = useState('');
   const [themeFilter, setThemeFilter] = useState('');
+  const [subAreaFilter, setSubAreaFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   // Fonte da Questão: menu suspenso com caixas de seleção, mesma lista fixa
   // usada em QuestionsPage (ver SOURCE_EXAM_OPTIONS).
@@ -121,12 +122,24 @@ export const CreateExamPage: React.FC = () => {
 
   const themesForAreaFilter = areaFilter ? themes.filter(t => t.areaId === areaFilter) : themes;
 
+  // Subáreas distintas presentes entre os temas da área selecionada — vazio
+  // (e o seletor fica desabilitado) se nenhuma área foi escolhida ou se a
+  // área não tem subagrupamento (ex.: Anatomia, Ciência Básica).
+  const subAreasForAreaFilter = areaFilter
+    ? Array.from(new Set(themesForAreaFilter.map(t => t.subArea).filter((s): s is string => !!s)))
+    : [];
+
+  // Mapa themeId -> subArea, para filtrar questões (que só carregam
+  // themeId) sem precisar de outra ida ao Firestore.
+  const themeSubAreaById = new Map(themes.map(t => [t.id, t.subArea]));
+
   const filteredQuestions = allQuestions.filter(q => {
     const matchesArea = !areaFilter || q.areaId === areaFilter;
     const matchesTheme = !themeFilter || q.themeId === themeFilter;
+    const matchesSubArea = !subAreaFilter || themeSubAreaById.get(q.themeId) === subAreaFilter;
     const matchesSearch = !searchQuery || q.statement.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSource = selectedSourceExams.length === 0 || selectedSourceExams.includes(q.sourceExam);
-    return matchesArea && matchesTheme && matchesSearch && matchesSource;
+    return matchesArea && matchesTheme && matchesSubArea && matchesSearch && matchesSource;
   });
 
   useEffect(() => {
@@ -359,7 +372,7 @@ export const CreateExamPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <input
               type="text"
               placeholder="Filtrar enunciado..."
@@ -372,11 +385,23 @@ export const CreateExamPage: React.FC = () => {
               onChange={(e) => {
                 setAreaFilter(e.target.value);
                 setThemeFilter('');
+                setSubAreaFilter('');
               }}
               className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
             >
               <option value="">Todas as Áreas</option>
               {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+            <select
+              value={subAreaFilter}
+              onChange={(e) => setSubAreaFilter(e.target.value)}
+              disabled={!areaFilter || subAreasForAreaFilter.length === 0}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 disabled:opacity-50"
+            >
+              <option value="">
+                {!areaFilter ? 'Selecione uma área' : subAreasForAreaFilter.length === 0 ? 'Sem subáreas' : 'Todas as Subáreas'}
+              </option>
+              {subAreasForAreaFilter.map(sa => <option key={sa} value={sa}>{sa}</option>)}
             </select>
             <select
               value={themeFilter}
@@ -432,13 +457,14 @@ export const CreateExamPage: React.FC = () => {
             </div>
           </div>
 
-          {(searchQuery || areaFilter || themeFilter || selectedSourceExams.length > 0) && (
+          {(searchQuery || areaFilter || themeFilter || subAreaFilter || selectedSourceExams.length > 0) && (
             <div className="flex justify-end">
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setAreaFilter('');
                   setThemeFilter('');
+                  setSubAreaFilter('');
                   setSelectedSourceExams([]);
                 }}
                 className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#050f41] text-[11px] font-semibold"
