@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, FileCheck, CheckCircle2, Copy, Check } from 'lucide-react';
+import { X, FileCheck, CheckCircle2, Copy, Check, ChevronDown } from 'lucide-react';
 import { Question, ExamQuestion, QuestionAnswer } from '../types';
 import { QuestionImage } from './QuestionImage';
 import { CommentMedia } from './CommentMedia';
@@ -23,6 +23,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
   const [examsUsedIn, setExamsUsedIn] = useState<{ examId: string; examName: string }[]>([]);
   const [answer, setAnswer] = useState<QuestionAnswer | null>(null);
   const [copied, setCopied] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(originalQuestionId)
@@ -129,21 +130,29 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
             })}
           </div>
 
-          {answer && (answer.solutionText || answer.comments || answer.commentMediaUrl) && (
-            <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs sm:text-sm text-slate-300 space-y-2">
-              {answer.solutionText && (
-                <div>
-                  <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
-                  <p className="text-slate-300 leading-relaxed">{answer.solutionText}</p>
+          {answer && (answer.comments || answer.commentMediaUrl || answer.correctAlternative) && (
+            <div className="mt-4 rounded-xl bg-teal-500/10 border border-teal-500/30 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setCommentsOpen(prev => !prev)}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm font-bold text-teal-400"
+              >
+                <span>COMENTÁRIOS</span>
+                <ChevronDown
+                  className={`w-4 h-4 shrink-0 transition-transform duration-200 ${commentsOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {commentsOpen && (
+                <div className="px-4 pb-4 text-xs sm:text-sm text-slate-300 space-y-2">
+                  {answer.correctAlternative && (
+                    <p className="font-bold text-teal-400">GABARITO: {answer.correctAlternative}</p>
+                  )}
+                  {answer.comments && (
+                    <p className="text-slate-300 leading-relaxed mt-4">{answer.comments}</p>
+                  )}
+                  {answer.commentMediaUrl && <CommentMedia url={answer.commentMediaUrl} />}
                 </div>
               )}
-              {answer.comments && (
-                <div>
-                  <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
-                  <p className="text-slate-300 leading-relaxed">{answer.comments}</p>
-                </div>
-              )}
-              {answer.commentMediaUrl && <CommentMedia url={answer.commentMediaUrl} />}
             </div>
           )}
         </div>
