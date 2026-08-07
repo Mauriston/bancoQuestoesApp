@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown } from 'lucide-react';
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, updateExamContent } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
@@ -26,6 +26,7 @@ export const ExamViewPage: React.FC = () => {
   // carregamento inicial (uma vez que existe uma tentativa, ela nunca some).
   const [hasAttempts, setHasAttempts] = useState(false);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
   // mexer nas questões de uma prova inativa e sem tentativas registradas.
   // Derivado a cada render (em vez de um estado próprio) para não ficar
@@ -264,21 +265,29 @@ export const ExamViewPage: React.FC = () => {
                 })}
               </div>
 
-              {key && (key.solutionText || key.comments || key.commentMediaUrl) && (
-                <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 space-y-2">
-                  {key.solutionText && (
-                    <div>
-                      <strong className="text-teal-400 block mb-0.5 font-semibold">Resolução:</strong>
-                      <p className="text-slate-300 leading-relaxed">{key.solutionText}</p>
+              {key && (key.comments || key.commentMediaUrl || key.correctAlternative) && (
+                <div className="mt-4 rounded-xl bg-teal-500/10 border border-teal-500/30 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenComments(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
+                    className="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm font-bold text-teal-400"
+                  >
+                    <span>COMENTÁRIOS</span>
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 transition-transform duration-200 ${openComments[q.id] ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {openComments[q.id] && (
+                    <div className="px-4 pb-4 text-xs text-slate-300 space-y-2">
+                      {key.correctAlternative && (
+                        <p className="font-bold text-teal-400">GABARITO: {key.correctAlternative}</p>
+                      )}
+                      {key.comments && (
+                        <p className="text-slate-300 leading-relaxed mt-4">{key.comments}</p>
+                      )}
+                      {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                     </div>
                   )}
-                  {key.comments && (
-                    <div>
-                      <strong className="text-cyan-400 block mb-0.5 font-semibold">Comentários do Gabarito:</strong>
-                      <p className="text-slate-300 leading-relaxed">{key.comments}</p>
-                    </div>
-                  )}
-                  {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                 </div>
               )}
             </div>
