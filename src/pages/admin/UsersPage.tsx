@@ -162,18 +162,20 @@ export const UsersPage: React.FC = () => {
                     className="hover:bg-slate-800/40 transition-colors cursor-pointer"
                     title="Clique para ver histórico e desempenho"
                   >
-                    <td className="p-3.5 font-semibold text-[#050f41] flex items-center gap-2.5">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                        u.role === 'admin'
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                          : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                      }`}>
-                        {u.name.charAt(0).toUpperCase()}
+                    <td className="p-3.5 font-semibold text-[#050f41]">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                          u.role === 'admin'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                        }`}>
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="truncate">{u.name}</span>
                       </div>
-                      <span>{u.name}</span>
                     </td>
 
-                    <td className="p-3.5 text-slate-400">{u.email}</td>
+                    <td className="p-3.5 text-slate-400 max-w-[220px] truncate">{u.email}</td>
 
                     <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
                       <select

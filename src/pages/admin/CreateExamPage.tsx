@@ -261,15 +261,15 @@ export const CreateExamPage: React.FC = () => {
       {/* Step Indicator Header — sem a etapa de atribuição de usuários no
           modo de edição, já que os destinatários já existem e não são
           mexidos aqui. */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4 text-xs font-semibold">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-slate-800 pb-4 text-xs font-semibold">
         <span className={step >= 1 ? 'text-cyan-400' : 'text-slate-500'}>1. Dados Básicos</span>
-        <ChevronRight className="w-4 h-4 text-slate-600" />
+        <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
         <span className={step >= 2 ? 'text-cyan-400' : 'text-slate-500'}>2. Seleção de Questões ({selectedQuestions.length})</span>
-        <ChevronRight className="w-4 h-4 text-slate-600" />
+        <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
         {!isEditMode && (
           <>
             <span className={step >= 3 ? 'text-cyan-400' : 'text-slate-500'}>3. Atribuição de Usuários</span>
-            <ChevronRight className="w-4 h-4 text-slate-600" />
+            <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
           </>
         )}
         <span className={step >= 4 ? 'text-cyan-400' : 'text-slate-500'}>{isEditMode ? '3. Revisão e Salvamento' : '4. Revisão e Publicação'}</span>
@@ -558,16 +558,17 @@ export const CreateExamPage: React.FC = () => {
               {activeUsers.map(u => {
                 const isChecked = selectedUserIds.includes(u.id);
                 return (
-                  <label key={u.id} className="flex items-center gap-2 p-2 hover:bg-slate-900 rounded-lg cursor-pointer">
+                  <label key={u.id} className="flex items-center gap-2 p-2 hover:bg-slate-900 rounded-lg cursor-pointer min-w-0">
                     <input
                       type="checkbox"
                       checked={isChecked}
+                      className="shrink-0"
                       onChange={(e) => {
                         if (e.target.checked) setSelectedUserIds(prev => [...prev, u.id]);
                         else setSelectedUserIds(prev => prev.filter(id => id !== u.id));
                       }}
                     />
-                    <span className="text-slate-200">{u.name} ({u.email})</span>
+                    <span className="text-slate-200 truncate">{u.name} ({u.email})</span>
                   </label>
                 );
               })}

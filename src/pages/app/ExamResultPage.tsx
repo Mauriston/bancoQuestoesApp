@@ -149,8 +149,8 @@ export const ExamResultPage: React.FC = () => {
         }`} />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41]">
+          <div className="min-w-0 flex-1 text-center md:text-left">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41] break-words">
               {attempt.examName || 'Simulado Ortopedia TEOT'}
             </h1>
           </div>
