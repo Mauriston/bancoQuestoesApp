@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Settings, Sparkles
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Settings, Sparkles, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,7 +19,8 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   const navItems = [
     { label: 'Provas', path: '/app/exams', icon: FileText },
     { label: 'Histórico', path: '/app/history', icon: History },
-    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 }
+    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 },
+    { label: 'TEOT / TARO', path: '/app/exam-stats', icon: GraduationCap }
   ];
 
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Treinamento TEOT';
