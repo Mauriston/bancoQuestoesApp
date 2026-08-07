@@ -4,13 +4,7 @@ import { MoreVertical, ChevronRight, Calendar, ThumbsUp, AlertTriangle, OctagonA
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAttempts } from '../../services/firebaseService';
 import { Attempt } from '../../types';
-import { formatDateOnly } from '../../utils/helpers';
-
-function scoreColor(score: number): string {
-  if (score >= 60) return 'text-emerald-400';
-  if (score >= 50) return 'text-amber-400';
-  return 'text-red-400';
-}
+import { formatDateOnly, scoreColorClass } from '../../utils/helpers';
 
 function ScoreIcon({ score, className }: { score: number; className?: string }) {
   if (score >= 60) return <ThumbsUp className={className} />;
@@ -99,7 +93,7 @@ export const HistoryPage: React.FC = () => {
 
                   <div className="flex items-center gap-3 shrink-0">
                     {isCompleted ? (
-                      <span className={`flex items-center gap-1.5 text-2xl sm:text-3xl font-black leading-none ${scoreColor(score)}`}>
+                      <span className={`flex items-center gap-1.5 text-2xl sm:text-3xl font-black leading-none ${scoreColorClass(score)}`}>
                         <ScoreIcon score={score} className="w-5 h-5 sm:w-6 sm:h-6" />
                         {score}%
                       </span>

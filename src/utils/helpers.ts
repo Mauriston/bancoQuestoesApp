@@ -87,6 +87,23 @@ export function formatTimeSeconds(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+// Regra de cor institucional para qualquer valor numérico percentual de
+// desempenho exibido no app (usuário ou admin), e para as barras/fatias de
+// gráficos de desempenho por área/tema: <50% vermelho, 50–59% amarelo,
+// >=60% verde. Cores exatas pedidas (distintas dos tokens emerald/amber/red
+// já usados em outros contextos do design system).
+export function scoreColorHex(score: number): string {
+  if (score < 50) return '#E20018';
+  if (score < 60) return '#FAB932';
+  return '#079551';
+}
+
+export function scoreColorClass(score: number): string {
+  if (score < 50) return 'text-[#E20018]';
+  if (score < 60) return 'text-[#FAB932]';
+  return 'text-[#079551]';
+}
+
 // Export data array as CSV file download
 export function exportToCSV(filename: string, rows: Record<string, any>[]) {
   if (!rows || !rows.length) return;

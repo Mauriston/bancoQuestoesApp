@@ -9,29 +9,25 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserStats, getAllUserStats, getAreas, getThemes, getUserAttempts } from '../../services/firebaseService';
 import { UserStats, Area as ExamArea, Theme, Attempt } from '../../types';
-
-const MIN_TARGET = 60;
+import { scoreColorHex } from '../../utils/helpers';
 
 type Tier = 'good' | 'warn' | 'bad';
 
-// Regra de cor específica pedida para os valores numéricos de desempenho:
-// verde >= 60, amarelo 50-59, vermelho < 50.
+// Regra de cor institucional para qualquer valor numérico percentual de
+// desempenho (e barras/anéis associados): verde >= 60, amarelo 50-59,
+// vermelho < 50. Ver também scoreColorHex/scoreColorClass em utils/helpers.
 function scoreTier(accuracy: number): Tier {
   if (accuracy >= 60) return 'good';
   if (accuracy >= 50) return 'warn';
   return 'bad';
 }
 
-function getTier(accuracy: number): Tier {
-  if (accuracy >= MIN_TARGET) return 'good';
-  if (accuracy >= 40) return 'warn';
-  return 'bad';
-}
+const getTier = scoreTier;
 
 const TIER_STYLES: Record<Tier, { text: string; ring: string; bar: string }> = {
-  good: { text: 'text-emerald-400', ring: 'border-emerald-500/30', bar: 'bg-emerald-500' },
-  warn: { text: 'text-amber-400', ring: 'border-amber-500/30', bar: 'bg-amber-500' },
-  bad: { text: 'text-red-400', ring: 'border-red-500/30', bar: 'bg-red-500' }
+  good: { text: 'text-[#079551]', ring: 'border-[#079551]/30', bar: 'bg-[#079551]' },
+  warn: { text: 'text-[#FAB932]', ring: 'border-[#FAB932]/30', bar: 'bg-[#FAB932]' },
+  bad: { text: 'text-[#E20018]', ring: 'border-[#E20018]/30', bar: 'bg-[#E20018]' }
 };
 
 export const PerformancePage: React.FC = () => {
@@ -280,7 +276,6 @@ export const PerformancePage: React.FC = () => {
                     content={(props: any) => {
                       const { x, y, index, value } = props;
                       if (index !== evolutionMaxIdx && index !== evolutionMinIdx) return null;
-                      const isMax = index === evolutionMaxIdx;
                       return (
                         <text
                           x={x}
@@ -288,7 +283,7 @@ export const PerformancePage: React.FC = () => {
                           textAnchor="middle"
                           fontSize={11}
                           fontWeight={700}
-                          fill={isMax ? '#079551' : '#c7362f'}
+                          fill={scoreColorHex(value)}
                         >
                           {value}%
                         </text>

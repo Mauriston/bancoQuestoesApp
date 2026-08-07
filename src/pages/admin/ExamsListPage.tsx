@@ -5,12 +5,7 @@ import {
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts } from '../../services/firebaseService';
 import { Exam } from '../../types';
-
-function scoreColor(score: number): string {
-  if (score >= 60) return 'text-emerald-400';
-  if (score >= 50) return 'text-amber-400';
-  return 'text-red-400';
-}
+import { scoreColorClass } from '../../utils/helpers';
 
 export const ExamsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -169,7 +164,7 @@ export const ExamsListPage: React.FC = () => {
                   <p className="text-xs text-slate-400 mt-1.5">{ex.questionCount} questões</p>
 
                   {avgScoreByExamId[ex.id] !== undefined && (
-                    <p className={`mt-4 text-2xl font-black tracking-tight ${scoreColor(avgScoreByExamId[ex.id])}`}>
+                    <p className={`mt-4 text-2xl font-black tracking-tight ${scoreColorClass(avgScoreByExamId[ex.id])}`}>
                       {avgScoreByExamId[ex.id]}%
                     </p>
                   )}
