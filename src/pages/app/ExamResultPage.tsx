@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, ChevronLeft
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds } from '../../services/firebaseService';
@@ -25,6 +25,7 @@ export const ExamResultPage: React.FC = () => {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [selectedArea, setSelectedArea] = useState<{ areaId: string; name: string } | null>(null);
 
   useEffect(() => {
     async function loadResult() {
@@ -138,6 +139,26 @@ export const ExamResultPage: React.FC = () => {
       .sort((a, b) => a.accuracy - b.accuracy);
   }, [themeBreakdown]);
 
+  // Desempenho por Ortopedia x Traumatologia dentro da área clicada no
+  // gráfico de barras acima — drill-down disparado pelo clique na barra.
+  const areaSubAreaBreakdown = useMemo(() => {
+    if (!selectedArea) return [];
+    const map: Record<string, { subArea: string; total: number; correct: number }> = {};
+    questions.forEach(q => {
+      if (q.areaId !== selectedArea.areaId) return;
+      const ans = answers[q.id];
+      if (!ans || !ans.selectedAlternative) return;
+      const subArea = themes.find(th => th.id === q.themeId)?.subArea;
+      if (!subArea) return;
+      if (!map[subArea]) map[subArea] = { subArea, total: 0, correct: 0 };
+      map[subArea].total += 1;
+      if (ans.isCorrect) map[subArea].correct += 1;
+    });
+    return Object.values(map)
+      .map(s => ({ ...s, accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0 }))
+      .sort((a, b) => b.accuracy - a.accuracy);
+  }, [selectedArea, questions, answers, themes]);
+
   if (loading || !attempt) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -188,27 +209,77 @@ export const ExamResultPage: React.FC = () => {
           <div className="mt-8 pt-6 border-t border-slate-800 space-y-6">
             <div>
               <h3 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-teal-400" />
-                Desempenho por Área nesta Prova
+                {selectedArea ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedArea(null)}
+                    className="flex items-center gap-1 text-[#050f41] hover:text-teal-500 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-teal-400" />
+                    Ortopedia x Traumatologia · {selectedArea.name}
+                  </button>
+                ) : (
+                  <>
+                    <BarChart3 className="w-4 h-4 text-teal-400" />
+                    Desempenho por Área nesta Prova
+                  </>
+                )}
               </h3>
-              <div className="h-56 sm:h-72 w-full mt-2">
+              {!selectedArea && (
+                <p className="text-[11px] text-slate-500 mb-1">Toque em uma barra para ver Ortopedia x Traumatologia naquela área</p>
+              )}
+              <div key={selectedArea ? selectedArea.areaId : 'areas'} className="h-56 sm:h-72 w-full mt-2 animate-[chartDrillIn_0.35s_ease-out]">
+                {selectedArea && areaSubAreaBreakdown.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500 text-center px-4">
+                    Esta área não tem divisão entre Ortopedia e Traumatologia.
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={areaBreakdown} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
-                    <CartesianGrid stroke="#dbe0f0" horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#7680ac', fontSize: 10 }} unit="%" />
-                    <YAxis type="category" dataKey="name" width={110} tick={{ fill: '#4b567f', fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
-                      formatter={(value: number) => [`${value}%`, 'Aproveitamento']}
-                    />
-                    <Bar dataKey="accuracy" radius={[0, 6, 6, 0]}>
-                      {areaBreakdown.map(a => (
-                        <Cell key={a.areaId} fill={scoreColorHex(a.accuracy)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                  {selectedArea ? (
+                    <BarChart data={areaSubAreaBreakdown} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
+                      <CartesianGrid stroke="#dbe0f0" horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fill: '#7680ac', fontSize: 10 }} unit="%" />
+                      <YAxis type="category" dataKey="subArea" width={110} tick={{ fill: '#4b567f', fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value}%`, 'Aproveitamento']}
+                      />
+                      <Bar dataKey="accuracy" radius={[0, 6, 6, 0]}>
+                        {areaSubAreaBreakdown.map(s => (
+                          <Cell key={s.subArea} fill={scoreColorHex(s.accuracy)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  ) : (
+                    <BarChart data={areaBreakdown} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
+                      <CartesianGrid stroke="#dbe0f0" horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fill: '#7680ac', fontSize: 10 }} unit="%" />
+                      <YAxis type="category" dataKey="name" width={110} tick={{ fill: '#4b567f', fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value}%`, 'Aproveitamento']}
+                      />
+                      <Bar
+                        dataKey="accuracy"
+                        radius={[0, 6, 6, 0]}
+                        cursor="pointer"
+                        onClick={(data: any) => setSelectedArea({ areaId: data.areaId, name: data.name })}
+                      >
+                        {areaBreakdown.map(a => (
+                          <Cell key={a.areaId} fill={scoreColorHex(a.accuracy)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  )}
                 </ResponsiveContainer>
+                )}
               </div>
+              <style>{`
+                @keyframes chartDrillIn {
+                  from { opacity: 0; transform: translateX(12px); }
+                  to { opacity: 1; transform: translateX(0); }
+                }
+              `}</style>
             </div>
 
             {subAreaBreakdown.length > 0 && (
