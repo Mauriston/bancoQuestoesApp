@@ -125,6 +125,22 @@ export async function getThemes(areaId?: string): Promise<Theme[]> {
   return themes.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Distintas subáreas presentes entre os temas de uma área, na ordem em que
+// aparecem nos documentos (deduplicado). Áreas sem subagrupamento (Anatomia,
+// Ciência Básica) simplesmente retornam lista vazia — filtro client-side
+// sobre uma lista de temas já carregada, coerente com o resto do arquivo.
+export function getSubAreasForThemes(themesOfArea: Theme[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  themesOfArea.forEach(t => {
+    if (t.subArea && !seen.has(t.subArea)) {
+      seen.add(t.subArea);
+      result.push(t.subArea);
+    }
+  });
+  return result;
+}
+
 // --- QUESTIONS ---
 
 export async function getQuestions(filters?: {
