@@ -23,7 +23,7 @@ export const ImportPage: React.FC = () => {
   const [subAreaFile, setSubAreaFile] = useState<File | null>(null);
   const [subAreaPreview, setSubAreaPreview] = useState<any>(null);
   const [applyingSubAreas, setApplyingSubAreas] = useState(false);
-  const [subAreaProgress, setSubAreaProgress] = useState<{ processedCount: number; totalCount: number } | null>(null);
+  const [subAreaProgress, setSubAreaProgress] = useState<{ phase: 'temas' | 'questoes'; processedCount: number; totalCount: number } | null>(null);
   const [subAreaResult, setSubAreaResult] = useState<SubAreaMigrationResult | null>(null);
   const [subAreaError, setSubAreaError] = useState<string | null>(null);
 
@@ -287,7 +287,7 @@ export const ImportPage: React.FC = () => {
             {subAreaProgress && (
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-slate-300">
-                  <span>Atualizando temas...</span>
+                  <span>{subAreaProgress.phase === 'temas' ? 'Atualizando temas...' : 'Atualizando questões do banco...'}</span>
                   <span className="font-bold text-cyan-400">{subAreaProgress.processedCount} / {subAreaProgress.totalCount}</span>
                 </div>
                 <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
@@ -310,7 +310,7 @@ export const ImportPage: React.FC = () => {
               <div className="space-y-3">
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{subAreaResult.matched} tema(s) atualizado(s) com sucesso.</span>
+                  <span>{subAreaResult.matched} tema(s) e {subAreaResult.matchedQuestions} questão(ões) atualizados com sucesso.</span>
                 </div>
 
                 {subAreaResult.skippedAreas.length > 0 && (

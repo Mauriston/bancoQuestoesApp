@@ -43,6 +43,11 @@ export interface Question {
   areaName?: string;
   themeId: string;
   themeName?: string;
+  // Denormalizado do tema (ver Theme.subArea) para permitir filtrar e
+  // analisar desempenho por subárea sem precisar cruzar com a coleção
+  // `themes` a cada leitura. Ausente para áreas sem esse agrupamento
+  // (Anatomia, Ciência Básica) ou para questões ainda não migradas.
+  subArea?: string;
   sourceExam: string; // e.g. "TEOT 2023", "SBOT"
   statement: string;
   alternatives: QuestionAlternatives;
