@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Settings
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Settings, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -127,12 +127,20 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       />
 
       {/* Gaveta do menu mobile — desliza da esquerda para a direita, limitada
-          a 60% da largura da tela quando totalmente expandida. */}
+          a aproximadamente 50% da largura da tela quando totalmente
+          expandida. */}
       <nav
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-[60%] max-w-xs bg-[#050f41] border-r border-white/10 shadow-2xl px-3 py-4 flex flex-col gap-1 overflow-y-auto transition-transform duration-300 ease-out ${
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-1/2 max-w-xs bg-[#050f41] border-r border-white/10 shadow-2xl px-3 py-4 flex flex-col gap-1 overflow-y-auto transition-transform duration-300 ease-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
+        {/* Ícone do app — o mesmo usado na tela de login. */}
+        <div className="flex justify-center py-2 mb-1">
+          <div className="w-12 h-12 rounded-2xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20">
+            <Trophy className="w-6 h-6" />
+          </div>
+        </div>
+
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname.startsWith(item.path);
@@ -158,7 +166,8 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         {[
           { label: 'Temas', icon: ListChecks },
           { label: 'Cronograma', icon: CalendarDays },
-          { label: 'Sabatinas', icon: MessageSquare }
+          { label: 'Sabatinas', icon: MessageSquare },
+          { label: 'Extras', icon: Sparkles }
         ].map((item) => {
           const Icon = item.icon;
           return (
