@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle, Users, TrendingUp, TrendingDown, Minus, BarChart3, Layers
 } from 'lucide-react';
@@ -198,6 +199,9 @@ export const PerformancePage: React.FC = () => {
   const effectiveAreaId = selectedAreaId || areaPerformanceList[0]?.id || '';
   const selectedArea = areaPerformanceList.find(a => a.id === effectiveAreaId) || null;
   const selectedAreaSubAreas = subAreaPerformanceList.filter(s => s.areaId === effectiveAreaId);
+  const selectedAreaDelta = selectedArea && selectedArea.peerAverage !== null
+    ? selectedArea.accuracy - selectedArea.peerAverage
+    : null;
 
   const selectedAreaThemes = selectedArea
     ? themePerformanceList.filter(t => t.areaId === selectedArea.id).sort((a, b) => b.accuracy - a.accuracy)
@@ -356,62 +360,112 @@ export const PerformancePage: React.FC = () => {
         {!selectedArea ? (
           <p className="text-sm text-slate-500 italic">Complete simulados para visualizar a estatística por Área.</p>
         ) : (
-          <>
-            {/* Donut com o percentual da área filtrada no centro */}
-            <div className="relative w-48 h-48 sm:w-56 sm:h-56 mx-auto">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'acerto', value: selectedArea.accuracy },
-                      { name: 'resto', value: Math.max(0, 100 - selectedArea.accuracy) }
-                    ]}
-                    dataKey="value"
-                    innerRadius="72%"
-                    outerRadius="100%"
-                    startAngle={90}
-                    endAngle={-270}
-                    stroke="none"
-                    isAnimationActive={false}
-                  >
-                    <Cell fill={scoreColorHex(selectedArea.accuracy)} />
-                    <Cell fill="#1e293b" />
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4">
-                <span className={`text-3xl sm:text-4xl font-black ${TIER_STYLES[getTier(selectedArea.accuracy)].text}`}>
-                  {selectedArea.accuracy}%
-                </span>
-                <span className="text-[11px] text-slate-500 text-center mt-1 truncate max-w-full">{selectedArea.name}</span>
+          <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
+            {/* Donut com o percentual da área filtrada no centro — fica à
+                esquerda no desktop, ao lado das subáreas. */}
+            <div className="flex flex-col items-center shrink-0 mx-auto lg:mx-0">
+              <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'acerto', value: selectedArea.accuracy },
+                        { name: 'resto', value: Math.max(0, 100 - selectedArea.accuracy) }
+                      ]}
+                      dataKey="value"
+                      innerRadius="72%"
+                      outerRadius="100%"
+                      startAngle={90}
+                      endAngle={-270}
+                      stroke="none"
+                      isAnimationActive
+                      animationDuration={500}
+                      animationEasing="ease-out"
+                    >
+                      <Cell fill={scoreColorHex(selectedArea.accuracy)} />
+                      <Cell fill="#1e293b" />
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4 overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={effectiveAreaId}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                      className="flex flex-col items-center"
+                    >
+                      <span className={`text-3xl sm:text-4xl font-black ${TIER_STYLES[getTier(selectedArea.accuracy)].text}`}>
+                        {selectedArea.accuracy}%
+                      </span>
+                      <span className="text-[11px] text-slate-500 text-center mt-1 truncate max-w-full">{selectedArea.name}</span>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={effectiveAreaId}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="flex flex-col items-center"
+                >
+                  <p className="text-center text-xs text-slate-500 mt-3">
+                    {selectedArea.correct}/{selectedArea.solved} questões corretas
+                  </p>
+
+                  {/* Comparação com a média dos colegas, no mesmo formato do
+                      card de Taxa Geral de Acerto no topo da página. */}
+                  {selectedAreaDelta !== null && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs">
+                      {selectedAreaDelta > 0 && <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />}
+                      {selectedAreaDelta < 0 && <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
+                      {selectedAreaDelta === 0 && <Minus className="w-3.5 h-3.5 text-slate-500" />}
+                      <span className={selectedAreaDelta > 0 ? 'text-emerald-400 font-semibold' : selectedAreaDelta < 0 ? 'text-red-400 font-semibold' : 'text-slate-400'}>
+                        {selectedAreaDelta > 0 ? '+' : ''}{selectedAreaDelta} pp
+                      </span>
+                      <span className="text-slate-500">vs. média dos colegas ({selectedArea.peerAverage}%)</span>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
-            <p className="text-center text-xs text-slate-500 mt-3">
-              {selectedArea.correct}/{selectedArea.solved} questões corretas
-              {selectedArea.peerAverage !== null && ` · média dos colegas: ${selectedArea.peerAverage}%`}
-            </p>
 
             {/* Desempenho por Subárea dentro da área filtrada */}
             {selectedAreaSubAreas.length > 0 && (
-              <div className="mt-6 pt-5 border-t border-slate-800/80">
+              <div className="flex-1 w-full pt-5 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-800/80 lg:pl-8">
                 <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Desempenho por Subárea</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {selectedAreaSubAreas.map(item => {
-                    const style = TIER_STYLES[getTier(item.accuracy)];
-                    return (
-                      <div key={`${item.areaId}::${item.subArea}`} className={`bg-slate-950 border ${style.ring} rounded-xl p-3.5 sm:p-4`}>
-                        <p className="text-[11px] sm:text-xs font-semibold text-slate-300 truncate mb-1">{item.subArea}</p>
-                        <span className={`text-xl sm:text-2xl font-black ${style.text}`}>{item.accuracy}%</span>
-                        <div className="mt-2 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                          <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, item.accuracy)}%` }} />
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={effectiveAreaId}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                  >
+                    {selectedAreaSubAreas.map(item => {
+                      const style = TIER_STYLES[getTier(item.accuracy)];
+                      return (
+                        <div key={`${item.areaId}::${item.subArea}`} className={`bg-slate-950 border ${style.ring} rounded-xl p-3.5 sm:p-4`}>
+                          <p className="text-[11px] sm:text-xs font-semibold text-slate-300 truncate mb-1">{item.subArea}</p>
+                          <span className={`text-xl sm:text-2xl font-black ${style.text}`}>{item.accuracy}%</span>
+                          <div className="mt-2 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                            <div className={`h-full rounded-full ${style.bar} transition-all duration-500`} style={{ width: `${Math.min(100, item.accuracy)}%` }} />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
