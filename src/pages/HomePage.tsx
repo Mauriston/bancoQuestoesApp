@@ -103,16 +103,21 @@ export const HomePage: React.FC = () => {
 
       <motion.div
         layout
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
         className="max-w-md w-full z-10 flex flex-col items-center"
         style={{ flex: stage === 'splash' ? 1 : undefined }}
       >
         <motion.div
           layout
+          transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
           className={`flex flex-col items-center ${stage === 'splash' ? 'justify-center flex-1' : 'pt-16 md:pt-20'}`}
         >
           {/* Brand Header */}
-          <motion.div layout="position" className="text-center mb-8">
+          <motion.div
+            layout="position"
+            transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
+            className="text-center mb-8"
+          >
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FAB932] text-[#050f41] shadow-xl shadow-black/20 mb-4">
               <Trophy className="w-8 h-8" />
             </div>
@@ -124,10 +129,12 @@ export const HomePage: React.FC = () => {
             {stage === 'splash' && (
               <motion.p
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="text-[11px] text-white/40 tracking-wide animate-pulse"
+                animate={{ opacity: [0.35, 0.85, 0.35] }}
+                exit={{ opacity: 0, transition: { duration: 0.5, ease: 'easeInOut' } }}
+                transition={{
+                  opacity: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
+                }}
+                className="text-[11px] text-white/40 tracking-wide"
               >
                 clique para continuar
               </motion.p>
@@ -139,10 +146,10 @@ export const HomePage: React.FC = () => {
           {stage === 'gate' && (
             <motion.div
               key="gate-card"
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+              exit={{ opacity: 0, y: -8, transition: { duration: 0.4, ease: 'easeInOut' } }}
+              transition={{ type: 'spring', stiffness: 80, damping: 18, mass: 1, delay: 0.25 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full mt-2"
             >
@@ -151,10 +158,10 @@ export const HomePage: React.FC = () => {
                   {cardMode === 'user' ? (
                     <motion.div
                       key="user-card"
-                      initial={{ opacity: 0, x: -24 }}
+                      initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -24 }}
-                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      exit={{ opacity: 0, x: -16 }}
+                      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
                     >
                       <h2 className="text-sm font-semibold mb-1 flex items-center gap-2">
                         <User className="w-4 h-4 text-[#079551]" />
@@ -233,10 +240,10 @@ export const HomePage: React.FC = () => {
                   ) : (
                     <motion.div
                       key="admin-card"
-                      initial={{ opacity: 0, x: 24 }}
+                      initial={{ opacity: 0, x: 16 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 24 }}
-                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      exit={{ opacity: 0, x: 16 }}
+                      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
                     >
                       <button
                         onClick={() => setCardMode('user')}
