@@ -47,11 +47,21 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Necessário público para a tela de seleção de candidato em "/"
-    // (HomePage → getActiveUsers()), que roda antes de qualquer Auth.
+    // Leitura pública necessária tanto para o login de candidato em "/"
+    // (HomePage → loginUserWithPassword() precisa achar o doc pelo e-mail
+    // ANTES de existir qualquer sessão do Firebase Auth) quanto para o
+    // cadastro público em "/cadastro" (checagem de e-mail duplicado).
+    //
+    // `create` também precisa ficar aberto sem sessão para o mesmo cadastro
+    // público (RegisterPage) — mas só é permitido criar o próprio documento
+    // já nascendo inativo e com papel "user"; qualquer outra combinação
+    // exige uma sessão do Firebase Auth já autenticada (admin cadastrando
+    // alguém, ou o próprio usuário vinculando authUid após o login).
     match /users/{userId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow create: if isSignedIn() ||
+        (request.resource.data.active == false && request.resource.data.role == 'user');
+      allow update, delete: if isSignedIn();
     }
 
     match /areas/{areaId} {

@@ -57,7 +57,7 @@ Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authen
 │   Navegador (SPA React)   │        │        Projeto Firebase                │
 │                            │        │  gen-lang-client-0316191622            │
 │  index.html → main.tsx    │        │                                        │
-│  → App → AuthProvider     │──────▶ │  Auth        (login admin/anônimo)     │
+│  → App → AuthProvider     │──────▶ │  Auth        (login admin/candidato)   │
 │  → AppRoutes               │        │  Firestore   (dados da aplicação)      │
 │                            │        │  Storage     (imagens das questões)    │
 └───────────────────────────┘        │  Hosting     (serve o build estático)  │
@@ -98,7 +98,7 @@ bancoQuestoesApp/
     ├── services/
     │   ├── firebase.ts            # Inicialização do Firebase App/Auth/Firestore/Storage
     │   ├── firebaseService.ts     # Toda a camada de acesso a dados (Firestore + Storage)
-    │   ├── authService.ts         # Login admin (email/senha) e "login" de candidato (seleção de usuário)
+    │   ├── authService.ts         # Login admin e de candidato (email/senha), cadastro público e troca de credenciais
     │   ├── gradingService.ts      # Correção de provas e atualização de estatísticas agregadas
     │   └── importService.ts       # Importação em massa de banco de questões via JSON
     ├── firebase/config.ts         # Reexporta app/auth/db/storage/firebaseConfig para o resto do app
@@ -158,13 +158,14 @@ export const storage = getStorage(app);
 
 O app usa um modelo **híbrido** de identidade, combinando Firebase Auth com um cadastro de usuários próprio no Firestore (coleção `users`):
 
-- **Candidatos (`role: "user"`)** não digitam senha. O fluxo (`HomePage` → `authService.loginUserBySelection`) é: o candidato escolhe seu nome numa lista de usuários ativos cadastrados pelo admin, o app grava o `userId` selecionado em `localStorage` (`teot_active_session_user_id`) e autentica no Firebase via **login anônimo** (`signInAnonymously`) apenas para satisfazer as Regras de Segurança do Firestore/Storage (que exigem `request.auth != null`).
-- **Administradores (`role: "admin"`)** fazem login com e-mail/senha reais (`AdminLoginPage` → `authService.loginAdminWithPassword`), usando `signInWithEmailAndPassword`. Há lógica de auto-bootstrap: se o e-mail ainda não existir no Firebase Auth, o app tenta criar a conta na hora (`createUserWithEmailAndPassword`) e, se não existir documento correspondente em `users`, cria um automaticamente com `role: "admin"`.
+- **Candidatos (`role: "user"`)** fazem login com e-mail/senha reais (`HomePage` → `authService.loginUserWithPassword`), usando `signInWithEmailAndPassword`. O app busca o documento em `users` pelo e-mail informado, confere `active`, autentica no Firebase e vincula o `authUid` retornado ao documento (se ainda não vinculado). Se o e-mail não corresponder a nenhum usuário cadastrado, a UI oferece um link para `/cadastro` (`RegisterPage`), que cria o usuário já com `active: false` — o acesso só é liberado depois que um admin o ativa em `UsersPage`. Candidatos podem trocar seu e-mail/senha em `/app/settings` (`SettingsPage` → `authService.updateOwnCredentials`, que reautentica com a senha atual antes de aplicar a troca).
+- **Administradores (`role: "admin"`)** fazem login com e-mail/senha reais (`AdminLoginPage`/card "Área restrita" na `HomePage` → `authService.loginAdminWithPassword`), usando `signInWithEmailAndPassword`. Há lógica de auto-bootstrap: se o e-mail ainda não existir no Firebase Auth, o app tenta criar a conta na hora (`createUserWithEmailAndPassword`) e, se não existir documento correspondente em `users`, cria um automaticamente com `role: "admin"`.
 - `firebaseService.ensureAdminUserExists()` roda automaticamente ao carregar o módulo de serviços e garante a existência de um admin "seed" (`usr_mauriston_admin`, e-mail `mauriston@oncoortopedia.com`) na coleção `users`.
 - `AuthContext` (`src/contexts/AuthContext.tsx`) é a fonte de verdade do usuário logado na UI: ele lê o `userId` da sessão local, busca o documento correspondente em `users` no Firestore, e também escuta `onAuthStateChanged` do Firebase Auth para re-sincronizar.
 - `AppRoutes.tsx` implementa dois *route guards*: `UserProtectedRoute` (exige `currentUser.active`) e `AdminProtectedRoute` (exige adicionalmente `role === "admin"`), redirecionando para `/`, `/inactive` ou `/unauthorized` conforme o caso.
+- Usuários que já existiam em `users` **antes** dessa mudança para login por senha não têm nenhuma conta no Firebase Auth associada — rode `npm run setup:user-passwords` (`scripts/setup-user-passwords.mjs`) uma vez para criar essas contas com a senha padrão `123456` (redefinível depois pelo próprio usuário em `/app/settings`) e vincular o `authUid` de cada uma. Ver o cabeçalho do script para pré-requisitos de credencial.
 
-> Ou seja: o Firebase Auth garante que toda sessão (mesmo de candidato) tenha um `request.auth` válido perante as Regras de Segurança, mas a **autorização de negócio** (quem é admin, quem está ativo) é decidida pelo documento em `users` no Firestore, não por *custom claims* do Firebase Auth. **Importante**: sessões de candidato (Auth anônimo) nunca persistem o vínculo entre o `authUid` anônimo gerado pelo Firebase e o `AppUser.id` correspondente — ver a limitação detalhada em [Regras de Segurança](#regras-de-segurança-firestorestorage).
+> Ou seja: o Firebase Auth garante que toda sessão tenha um `request.auth` válido perante as Regras de Segurança, mas a **autorização de negócio** (quem é admin, quem está ativo) é decidida pelo documento em `users` no Firestore, não por *custom claims* do Firebase Auth.
 
 ## Firestore — modelo de dados
 
@@ -260,15 +261,15 @@ Até recentemente, as Regras de Segurança do Firestore e do Storage **não esta
 
 **Importante**: esses arquivos foram escritos a partir do comportamento observado no código (quais telas leem/escrevem cada coleção, e se isso acontece antes ou depois de qualquer login) — **não foram extraídos das regras hoje publicadas** no console do Firebase, já que este ambiente de desenvolvimento não tem acesso às credenciais do projeto para fazer esse `diff`. Antes do primeiro `firebase deploy --only firestore:rules,storage:rules`, é preciso comparar manualmente estes arquivos com o que está publicado hoje — o deploy do Hosting (CI) continua rodando com `--only hosting` e **não** publica essas regras automaticamente, então adicioná-las aqui não muda nada em produção até alguém rodar esse deploy deliberadamente.
 
-A política adotada nos dois arquivos é a linha de base alcançável hoje, dada a arquitetura atual do app: **qualquer leitura/escrita exige uma sessão do Firebase Auth** (`request.auth != null` — anônima ou de admin), com duas exceções propositais para leitura pública:
+A política adotada nos dois arquivos é a linha de base alcançável hoje, dada a arquitetura atual do app: **qualquer leitura/escrita exige uma sessão do Firebase Auth** (`request.auth != null`), com exceções propositais para acesso público:
 
-- Coleção `users` no Firestore — a tela inicial (`HomePage`) precisa listar candidatos ativos **antes** de qualquer login/Auth anônimo.
+- Coleção `users` no Firestore — leitura pública porque o login (`HomePage`) precisa achar o documento pelo e-mail **antes** de qualquer sessão do Firebase Auth existir, e o cadastro público (`/cadastro`) precisa checar e-mail duplicado do mesmo jeito. `create` também é público, mas só quando o payload já nasce com `active == false` e `role == 'user'` — qualquer outra combinação (admin cadastrando alguém, ativar/promover um usuário, vincular `authUid`) exige uma sessão já autenticada.
 - Caminhos `question-images/**` e `imagens_questoes/**` no Storage — as imagens são carregadas via `<img src>` comum, inclusive em telas que podem abrir sem sessão prévia.
 
 Duas limitações arquiteturais **não são resolvidas só por essas regras** (documentadas em detalhe nos comentários de `firestore.rules`):
 
-1. **O gabarito é lido do navegador.** `gradingService.ts` roda inteiramente no cliente — não há Cloud Function fazendo a correção. Isso significa que qualquer sessão autenticada (inclusive anônima) consegue, tecnicamente, ler `questionAnswers/{questionId}` de **qualquer** questão via SDK, não só da questão que está sendo respondida no momento. Resolver isso de verdade exigiria mover a correção para uma Cloud Function que seja a única com permissão de leitura sobre `questionAnswers`.
-2. **Não há isolamento real por dono do documento.** `examAssignments.userId`, `attempts.userId` etc. guardam o ID interno do app (`users/{id}`), não `request.auth.uid` — e sessões de candidato (Auth anônimo) nunca persistem o vínculo entre o `authUid` anônimo e o `AppUser.id`. Por isso não é possível, hoje, escrever uma regra do tipo "só o dono pode ler/escrever sua própria tentativa" — qualquer sessão autenticada tem acesso equivalente a qualquer outra. Corrigir isso exigiria persistir esse vínculo no login (gravar `authUid` no documento do usuário a cada `signInAnonymously`) e usar `get()` nas regras para conferi-lo.
+1. **O gabarito é lido do navegador.** `gradingService.ts` roda inteiramente no cliente — não há Cloud Function fazendo a correção. Isso significa que qualquer sessão autenticada consegue, tecnicamente, ler `questionAnswers/{questionId}` de **qualquer** questão via SDK, não só da questão que está sendo respondida no momento. Resolver isso de verdade exigiria mover a correção para uma Cloud Function que seja a única com permissão de leitura sobre `questionAnswers`.
+2. **Não há isolamento real por dono do documento nas regras.** `examAssignments.userId`, `attempts.userId` etc. guardam o ID interno do app (`users/{id}`), não `request.auth.uid`. Desde a migração para login por e-mail/senha, `loginUserWithPassword` passou a persistir esse vínculo (`authUid` gravado no documento do usuário a cada login), mas as regras ainda não usam esse vínculo para restringir acesso — continua sendo possível, hoje, qualquer sessão autenticada ler/escrever tentativas de qualquer usuário. Corrigir isso de verdade exigiria usar `get()` nas regras para conferir esse `authUid` contra `request.auth.uid`.
 
 ## Firebase Hosting e deploy (CI/CD)
 
@@ -315,7 +316,8 @@ Definidas em `src/routes/AppRoutes.tsx`, todas client-side (React Router).
 
 | Rota | Página |
 |---|---|
-| `/` | `HomePage` — seleção de candidato / entrada |
+| `/` | `HomePage` — login de candidato (e-mail/senha) + acesso "Área restrita" do admin |
+| `/cadastro` | `RegisterPage` — cadastro público de candidato (nasce inativo, aguardando aprovação do admin) |
 | `/admin/login` | `AdminLoginPage` — login de administrador (e-mail/senha) |
 | `/unauthorized` | Usuário autenticado sem permissão de admin |
 | `/inactive` | Usuário/candidato desativado pelo admin |
@@ -330,6 +332,7 @@ Definidas em `src/routes/AppRoutes.tsx`, todas client-side (React Router).
 | `/app/attempts/:attemptId/result` | `ExamResultPage` — resultado/correção |
 | `/app/history` | `HistoryPage` — histórico de tentativas |
 | `/app/performance` | `PerformancePage` — desempenho por área/tema |
+| `/app/settings` | `SettingsPage` — troca de e-mail/senha do próprio candidato |
 
 ### Administração — `AdminProtectedRoute` (exige sessão ativa + `role === "admin"`)
 

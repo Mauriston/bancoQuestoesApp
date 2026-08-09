@@ -1,27 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Trophy, User, Lock, AlertCircle, ArrowRight, CheckCircle2, ShieldCheck, Mail, ArrowLeft
+  Trophy, Lock, AlertCircle, ArrowRight, ShieldCheck, Mail, ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getActiveUsers } from '../services/firebaseService';
-import { AppUser } from '../types';
+import { UserInactiveError, UserNotRegisteredError } from '../services/authService';
 
 type Stage = 'splash' | 'gate';
 type CardMode = 'user' | 'admin';
 
 export const HomePage: React.FC = () => {
-  const { selectUserSession, adminLogin } = useAuth();
+  const { userLogin, adminLogin } = useAuth();
   const navigate = useNavigate();
 
   const [stage, setStage] = useState<Stage>('splash');
   const [cardMode, setCardMode] = useState<CardMode>('user');
 
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string>('');
+  const [notRegisteredEmail, setNotRegisteredEmail] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const [adminEmail, setAdminEmail] = useState('mauriston@oncoortopedia.com');
@@ -29,47 +28,23 @@ export const HomePage: React.FC = () => {
   const [adminError, setAdminError] = useState('');
   const [adminSubmitting, setAdminSubmitting] = useState(false);
 
-  const fetchUsersList = async () => {
-    setLoadingUsers(true);
-    try {
-      const activeList = await getActiveUsers();
-      // O admin já tem seu próprio caminho de acesso (link "Área restrita" no
-      // rodapé, autenticado por senha). Ele não deve aparecer na lista de
-      // seleção de candidatos.
-      setUsers(activeList.filter(u => u.role !== 'admin'));
-    } catch (err) {
-      console.error("Erro ao carregar usuários:", err);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsersList();
-  }, []);
-
-  const handleAccess = async () => {
+  const handleAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
     setAuthError('');
-    if (!selectedUserId) {
-      setAuthError('Por favor, selecione seu nome na lista para acessar.');
-      return;
-    }
+    setNotRegisteredEmail('');
 
-    const targetUser = users.find(u => u.id === selectedUserId);
-    if (!targetUser) return;
-
-    if (!targetUser.active) {
-      navigate('/inactive');
-      return;
-    }
-
-    // Common user session start
     try {
       setSubmitting(true);
-      await selectUserSession(targetUser.id);
+      await userLogin(email, password);
       navigate('/app/exams');
     } catch (err: any) {
-      setAuthError(err.message || 'Erro ao iniciar sessão.');
+      if (err instanceof UserNotRegisteredError) {
+        setNotRegisteredEmail(err.email);
+      } else if (err instanceof UserInactiveError) {
+        navigate('/inactive');
+      } else {
+        setAuthError(err.message || 'Erro ao iniciar sessão.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -164,9 +139,23 @@ export const HomePage: React.FC = () => {
                       transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
                     >
                       <h2 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                        <User className="w-4 h-4 text-[#079551]" />
-                        Identificação do Usuário
+                        <Mail className="w-4 h-4 text-[#079551]" />
+                        Acesso do Candidato
                       </h2>
+                      <p className="text-xs text-slate-400 mb-4">Entre com seu e-mail e senha cadastrados.</p>
+
+                      {notRegisteredEmail && (
+                        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <span>
+                            Não encontramos cadastro para o e-mail <strong>{notRegisteredEmail}</strong>.{' '}
+                            <Link to="/cadastro" state={{ email: notRegisteredEmail }} className="font-bold underline hover:text-amber-900">
+                              Clique aqui para se cadastrar
+                            </Link>
+                            .
+                          </span>
+                        </div>
+                      )}
 
                       {authError && (
                         <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2.5">
@@ -175,54 +164,46 @@ export const HomePage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* User Select Box */}
-                      <div className="space-y-2 mb-6 max-h-60 overflow-y-auto pr-1">
-                        {loadingUsers ? (
-                          <div className="text-center py-6 text-xs text-slate-400">Carregando usuários cadastrados...</div>
-                        ) : users.length === 0 ? (
-                          <div className="text-center py-6 text-xs text-slate-400">
-                            Nenhum usuário ativo encontrado. Procure o administrador para ser cadastrado.
+                      <form onSubmit={handleAccess} className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">E-mail</label>
+                          <div className="relative">
+                            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              type="email"
+                              required
+                              placeholder="seuemail@exemplo.com"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                            />
                           </div>
-                        ) : (
-                          users.map((user) => {
-                            const isSelected = selectedUserId === user.id;
-                            return (
-                              <button
-                                key={user.id}
-                                onClick={() => {
-                                  setSelectedUserId(user.id);
-                                  setAuthError('');
-                                }}
-                                className={`w-full flex items-center justify-between p-3 min-h-[52px] rounded-xl border text-left transition-all ${
-                                  isSelected
-                                    ? 'bg-[#079551]/10 border-[#079551]/40 text-[#050f41] shadow-sm'
-                                    : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-900 hover:text-[#050f41]'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-[#079551]/15 text-[#079551] border border-[#079551]/30">
-                                    {user.name.charAt(0).toUpperCase()}
-                                  </div>
-                                  <p className="text-base font-bold leading-none">{user.name}</p>
-                                </div>
+                        </div>
 
-                                <div className="flex items-center gap-2">
-                                  {isSelected && <CheckCircle2 className="w-4 h-4 text-[#079551]" />}
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Senha</label>
+                          <div className="relative">
+                            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              type="password"
+                              required
+                              placeholder="••••••••"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                            />
+                          </div>
+                        </div>
 
-                      <button
-                        onClick={handleAccess}
-                        disabled={!selectedUserId || submitting}
-                        className="w-full flex items-center justify-center gap-2 bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#050f41]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
-                      >
-                        <span>{submitting ? 'Acessando...' : 'Entrar'}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                        <button
+                          type="submit"
+                          disabled={submitting}
+                          className="w-full flex items-center justify-center gap-2 bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#050f41]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                        >
+                          <span>{submitting ? 'Acessando...' : 'Entrar'}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </form>
 
                       <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-center">
                         <button

@@ -3,14 +3,14 @@ import { onAuthStateChanged, User as FbUser } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { AppUser } from '../types';
 import { getUserById } from '../services/firebaseService';
-import { getCurrentSessionUserId, loginUserBySelection, loginAdminWithPassword, clearSession } from '../services/authService';
+import { getCurrentSessionUserId, loginUserWithPassword, loginAdminWithPassword, clearSession } from '../services/authService';
 
 interface AuthContextType {
   currentUser: AppUser | null;
   firebaseUser: FbUser | null;
   role: "user" | "admin" | null;
   loading: boolean;
-  selectUserSession: (userId: string) => Promise<AppUser>;
+  userLogin: (email: string, pass: string) => Promise<AppUser>;
   adminLogin: (email: string, pass: string) => Promise<AppUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -54,10 +54,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const selectUserSession = async (userId: string) => {
+  const userLogin = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const user = await loginUserBySelection(userId);
+      const user = await loginUserWithPassword(email, pass);
       setCurrentUser(user);
       return user;
     } finally {
@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       firebaseUser,
       role: currentUser ? currentUser.role : null,
       loading,
-      selectUserSession,
+      userLogin,
       adminLogin,
       logout,
       refreshUser
