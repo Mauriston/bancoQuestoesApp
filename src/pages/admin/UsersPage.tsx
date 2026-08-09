@@ -279,19 +279,20 @@ export const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
-                  {role === 'admin' ? 'Senha do Administrador (opcional)' : 'Senha de Acesso (opcional)'}
+                  {role === 'admin' ? 'Senha do Administrador (opcional)' : 'Senha de Acesso'}
                 </label>
                 <input
                   type="password"
-                  placeholder="Mínimo 6 caracteres (deixe em branco para acesso direto)"
+                  required={role === 'user'}
+                  placeholder="Mínimo 6 caracteres (ex: 123456)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
-                  {role === 'admin' 
-                    ? 'Se informada, cria conta segura no Firebase Auth para login com senha.' 
-                    : 'Acesso simplificado pela lista ou com senha se preenchida.'}
+                  {role === 'admin'
+                    ? 'Se informada, cria conta segura no Firebase Auth para login com senha.'
+                    : 'O usuário fará login na página inicial com este e-mail e esta senha.'}
                 </p>
               </div>
 

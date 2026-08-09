@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "import:images": "node scripts/import-question-images.mjs"
+    "import:images": "node scripts/import-question-images.mjs",
+    "setup:user-passwords": "node scripts/setup-user-passwords.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

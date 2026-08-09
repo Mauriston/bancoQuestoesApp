@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from '../pages/HomePage';
 import { AdminLoginPage } from '../pages/AdminLoginPage';
+import { RegisterPage } from '../pages/RegisterPage';
 import { UnauthorizedPage, InactivePage, NotFoundPage } from '../pages/UnauthorizedPage';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,6 +13,7 @@ import { ExamResultPage } from '../pages/app/ExamResultPage';
 import { HistoryPage } from '../pages/app/HistoryPage';
 import { PerformancePage } from '../pages/app/PerformancePage';
 import { ExamStatsPage } from '../pages/app/ExamStatsPage';
+import { SettingsPage } from '../pages/app/SettingsPage';
 
 import { AdminLayout } from '../layouts/AdminLayout';
 import { DashboardPage } from '../pages/admin/DashboardPage';
@@ -79,6 +81,7 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Landing & Login Routes */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/cadastro" element={<RegisterPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route path="/inactive" element={<InactivePage />} />
@@ -92,6 +95,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="history" element={<HistoryPage />} />
         <Route path="performance" element={<PerformancePage />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Admin Application Routes */}

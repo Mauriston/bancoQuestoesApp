@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Settings, Sparkles, GraduationCap
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Sparkles, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,7 +23,8 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     { label: 'TEOT / TARO', path: '/app/exam-stats', icon: GraduationCap }
   ];
 
-  const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Treinamento TEOT';
+  const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label
+    || (location.pathname.startsWith('/app/settings') ? 'Ajustes' : 'Treinamento TEOT');
 
   // Execução de prova roda em tela cheia: sem topbar, sem navegação para
   // outras páginas e sem rodapé — só o conteúdo da prova (TakeExamPage já
@@ -186,14 +187,22 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           );
         })}
 
-        {/* "Ajustes" fica fixo no rodapé do menu lateral. */}
-        <div
-          className="mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium text-white/40 cursor-default"
-          title="Em breve"
+        {/* Avatar + nome do usuário fica fixo no rodapé do menu lateral,
+            dando acesso à tela de Ajustes (troca de e-mail/senha). */}
+        <Link
+          to="/app/settings"
+          onClick={() => setMobileMenuOpen(false)}
+          className={`mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors ${
+            location.pathname.startsWith('/app/settings')
+              ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
+              : 'text-white/80 hover:bg-white/10 hover:text-white'
+          }`}
         >
-          <Settings className="w-4 h-4 text-white/30" />
-          Ajustes
-        </div>
+          <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px] shrink-0">
+            {currentUser?.name.charAt(0).toUpperCase()}
+          </div>
+          <span className="truncate">{currentUser?.name}</span>
+        </Link>
       </nav>
 
       {/* Desktop Sidebar — mesmo padrão da AdminLayout: fixa, colada na
@@ -231,6 +240,23 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             );
           })}
         </nav>
+
+        {/* Avatar + nome do usuário fica fixo no rodapé do menu lateral,
+            dando acesso à tela de Ajustes (troca de e-mail/senha). */}
+        <Link
+          to="/app/settings"
+          title={currentUser?.name}
+          className={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
+            location.pathname.startsWith('/app/settings')
+              ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+              : 'text-white/70 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px] shrink-0">
+            {currentUser?.name.charAt(0).toUpperCase()}
+          </div>
+          <span className="hidden group-hover/sidebar:inline truncate">{currentUser?.name}</span>
+        </Link>
       </aside>
 
       {/* Main Body */}
