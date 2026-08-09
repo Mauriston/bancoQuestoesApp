@@ -11,6 +11,50 @@ import {
 import { finishAndGradeAttempt } from '../../services/gradingService';
 import { Exam, ExamQuestion } from '../../types';
 
+// Cache local (por navegador/dispositivo) da alternativa selecionada na
+// questão atual, ainda NÃO confirmada em Firestore (isso só acontece ao
+// clicar "Avançar" — ver handleAdvance). Sem isso, um refresh de página,
+// queda de internet ou fechamento acidental da aba entre a seleção e o
+// clique em avançar perderia essa escolha, mesmo a tentativa continuando
+// 'in_progress' e retomável. Respostas já confirmadas continuam vindo de
+// Firestore (getAttemptAnswers) — este cache cobre só o "rascunho" da
+// questão em que o residente parou.
+const DRAFT_KEY_PREFIX = 'teot_exam_draft_';
+
+type AltValue = "A" | "B" | "C" | "D";
+
+function loadDraft(attemptId: string): Record<string, AltValue> {
+  try {
+    const raw = localStorage.getItem(`${DRAFT_KEY_PREFIX}${attemptId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDraft(attemptId: string, examQuestionId: string, alt: AltValue | null) {
+  try {
+    const draft = loadDraft(attemptId);
+    if (alt === null) {
+      delete draft[examQuestionId];
+    } else {
+      draft[examQuestionId] = alt;
+    }
+    localStorage.setItem(`${DRAFT_KEY_PREFIX}${attemptId}`, JSON.stringify(draft));
+  } catch {
+    // localStorage indisponível (modo privado, quota cheia etc.) — degrada
+    // silenciosamente para o comportamento sem cache local de rascunho.
+  }
+}
+
+function clearDraft(attemptId: string) {
+  try {
+    localStorage.removeItem(`${DRAFT_KEY_PREFIX}${attemptId}`);
+  } catch {
+    // ignore
+  }
+}
+
 export const TakeExamPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const { currentUser } = useAuth();
@@ -87,7 +131,17 @@ export const TakeExamPage: React.FC = () => {
         const firstUnanswered = examQuestions.findIndex(q => !altMap[q.id]);
         const resumeIndex = firstUnanswered === -1 ? examQuestions.length - 1 : firstUnanswered;
         setCurrentIndex(resumeIndex);
-        setCurrentAlt(altMap[examQuestions[resumeIndex]?.id] ?? null);
+
+        // A questão em que o residente parou pode ter uma alternativa
+        // selecionada mas ainda não confirmada (não chegou a clicar
+        // "Avançar") — recupera esse rascunho do cache local, se houver.
+        const resumeQuestionId = examQuestions[resumeIndex]?.id;
+        const draft = resumeQuestionId ? loadDraft(attId) : {};
+        setCurrentAlt(
+          (resumeQuestionId ? altMap[resumeQuestionId] : null) ??
+          (resumeQuestionId ? draft[resumeQuestionId] : null) ??
+          null
+        );
 
       } catch (err: any) {
         console.error("Erro ao iniciar prova:", err);
@@ -103,7 +157,11 @@ export const TakeExamPage: React.FC = () => {
   const isLastQuestion = currentIndex === questions.length - 1;
 
   const handleSelectOption = (alt: "A" | "B" | "C" | "D") => {
-    setCurrentAlt(prev => (prev === alt ? null : alt));
+    setCurrentAlt(prev => {
+      const next = prev === alt ? null : alt;
+      if (currentQ && attemptId) saveDraft(attemptId, currentQ.id, next);
+      return next;
+    });
   };
 
   const handleAdvance = async () => {
@@ -124,13 +182,22 @@ export const TakeExamPage: React.FC = () => {
         currentQ.themeId
       );
       setSavedAlt(prev => ({ ...prev, [currentQ.id]: currentAlt }));
+      // Resposta confirmada em Firestore — o rascunho local desta questão
+      // não é mais necessário.
+      saveDraft(attemptId, currentQ.id, null);
 
       if (isLastQuestion) {
         await handleFinishExam();
       } else {
         const nextIndex = currentIndex + 1;
         setCurrentIndex(nextIndex);
-        setCurrentAlt(savedAlt[questions[nextIndex]?.id] ?? null);
+        const nextQuestionId = questions[nextIndex]?.id;
+        const draft = nextQuestionId ? loadDraft(attemptId) : {};
+        setCurrentAlt(
+          (nextQuestionId ? savedAlt[nextQuestionId] : null) ??
+          (nextQuestionId ? draft[nextQuestionId] : null) ??
+          null
+        );
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (e) {
@@ -148,6 +215,7 @@ export const TakeExamPage: React.FC = () => {
 
     try {
       await finishAndGradeAttempt(attemptId);
+      clearDraft(attemptId);
       navigate(`/app/attempts/${attemptId}/result`);
     } catch (err) {
       console.error("Erro ao finalizar prova:", err);
