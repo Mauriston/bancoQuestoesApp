@@ -19,8 +19,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   const navItems = [
     { label: 'Provas', path: '/app/exams', icon: FileText },
     { label: 'Histórico', path: '/app/history', icon: History },
-    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 },
-    { label: 'TEOT / TARO', path: '/app/exam-stats', icon: GraduationCap }
+    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 }
   ];
 
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label
@@ -92,15 +91,21 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               })}
             </nav>
 
-            {/* Active User Badge & Logout */}
+            {/* Active User Badge & Logout — avatar sozinho no mobile, chip
+                completo (avatar + nome) a partir de sm. */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {currentUser && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-semibold text-[11px]">
+                <>
+                  <div className="sm:hidden w-8 h-8 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-semibold text-xs shrink-0" title={currentUser.name}>
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="font-medium text-white max-w-[120px] truncate">{currentUser.name}</span>
-                </div>
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-semibold text-[11px]">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium text-white max-w-[120px] truncate">{currentUser.name}</span>
+                  </div>
+                </>
               )}
 
               <button
@@ -169,6 +174,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         {/* Itens ainda sem destino definido — sem ação de clique por
             enquanto (as páginas/ações serão definidas em próximos passos). */}
         {[
+          { label: 'TEOT / TARO', icon: GraduationCap },
           { label: 'Temas', icon: ListChecks },
           { label: 'Cronograma', icon: CalendarDays },
           { label: 'Sabatinas', icon: MessageSquare },

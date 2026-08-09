@@ -44,6 +44,12 @@ export const ExamsPage: React.FC = () => {
   return (
     <div className="space-y-8">
 
+      {currentUser && (
+        <div className="flex items-center">
+          <span className="text-sm font-bold text-slate-300 truncate">{currentUser.name}</span>
+        </div>
+      )}
+
       {/* Active / In-Progress Section */}
       <section className="space-y-4">
         {availableExams.length === 0 ? (
