@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Power, PowerOff, Pencil, Users
+  FileCheck, Plus, Trash2, Pencil, Users, Eye
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts } from '../../services/firebaseService';
 import { Exam } from '../../types';
@@ -116,8 +116,8 @@ export const ExamsListPage: React.FC = () => {
         </Link>
       </div>
 
-      {/* Exams Grid */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+      {/* Exams Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         {loading ? (
           <div className="p-8 text-center text-xs text-slate-500">Carregando lista de provas...</div>
         ) : exams.length === 0 ? (
@@ -125,83 +125,86 @@ export const ExamsListPage: React.FC = () => {
             Nenhuma prova cadastrada ainda. Clique no botão acima para criar o primeiro simulado!
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {exams.map((ex) => {
-              const names = respondentNamesByExamId[ex.id] || [];
-              const respondentsTooltip = names.length > 0
-                ? `Responderam: ${names.join(', ')}`
-                : 'Ninguém respondeu ainda';
-              return (
-              <div
-                key={ex.id}
-                onClick={() => navigate(`/admin/exams/${ex.id}`)}
-                className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-slate-700 transition-all cursor-pointer"
-                title="Clique para visualizar a prova completa"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-bold text-[#050f41] line-clamp-2 text-left">
-                      {ex.name}
-                    </h3>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                        isExamActive(ex)
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}>
-                        {isExamActive(ex) ? 'Ativa' : 'Inativa'}
-                      </span>
-                      <span
-                        className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 cursor-default"
-                        title={respondentsTooltip}
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        {respondentCountByExamId[ex.id] || 0}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-400 mt-1.5">{ex.questionCount} questões</p>
-
-                  {avgScoreByExamId[ex.id] !== undefined && (
-                    <p className={`mt-4 text-2xl font-black tracking-tight ${scoreColorClass(avgScoreByExamId[ex.id])}`}>
-                      {avgScoreByExamId[ex.id]}%
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-end gap-1">
-                  {isEditable(ex) && (
-                    <Link
-                      to={`/admin/exams/${ex.id}/edit`}
-                      onClick={(e) => e.stopPropagation()}
-                      title="Editar dados e questões desta prova"
-                      className="p-2 rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Link>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleActive(ex); }}
-                    disabled={togglingId === ex.id}
-                    title={isExamActive(ex) ? 'Desativar' : 'Ativar'}
-                    className={`p-2 rounded-lg disabled:opacity-40 ${
-                      isExamActive(ex) ? 'text-amber-400 hover:bg-amber-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'
-                    }`}
-                  >
-                    {isExamActive(ex) ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
-                    title="Excluir"
-                    className="p-2 rounded-lg text-red-400 hover:bg-red-500/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="p-3.5">Prova</th>
+                  <th className="p-3.5">Questões</th>
+                  <th className="p-3.5">Respondentes</th>
+                  <th className="p-3.5">Média</th>
+                  <th className="p-3.5 text-center">Ativa</th>
+                  <th className="p-3.5 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {exams.map((ex) => {
+                  const names = respondentNamesByExamId[ex.id] || [];
+                  const respondentsTooltip = names.length > 0
+                    ? `Responderam: ${names.join(', ')}`
+                    : 'Ninguém respondeu ainda';
+                  return (
+                    <tr key={ex.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="p-3.5 font-semibold text-[#050f41] max-w-[280px]">
+                        <span className="line-clamp-2">{ex.name}</span>
+                      </td>
+                      <td className="p-3.5 text-slate-400">{ex.questionCount}</td>
+                      <td className="p-3.5 text-slate-400" title={respondentsTooltip}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" />
+                          {respondentCountByExamId[ex.id] || 0}
+                        </span>
+                      </td>
+                      <td className="p-3.5">
+                        {avgScoreByExamId[ex.id] !== undefined ? (
+                          <span className={`font-bold ${scoreColorClass(avgScoreByExamId[ex.id])}`}>{avgScoreByExamId[ex.id]}%</span>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isExamActive(ex)}
+                          disabled={togglingId === ex.id}
+                          onChange={() => handleToggleActive(ex)}
+                          title={isExamActive(ex) ? 'Desativar prova' : 'Ativar prova'}
+                          aria-label={isExamActive(ex) ? 'Desativar prova' : 'Ativar prova'}
+                          className="w-4 h-4 accent-emerald-500 cursor-pointer disabled:opacity-40"
+                        />
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => navigate(`/admin/exams/${ex.id}`)}
+                            title="Ver prova"
+                            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {isEditable(ex) && (
+                            <Link
+                              to={`/admin/exams/${ex.id}/edit`}
+                              title="Editar dados e questões desta prova"
+                              className="p-2 rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Link>
+                          )}
+                          <button
+                            onClick={() => handleDelete(ex.id)}
+                            title="Excluir"
+                            className="p-2 rounded-lg text-red-400 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

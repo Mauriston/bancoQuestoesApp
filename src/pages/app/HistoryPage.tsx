@@ -53,6 +53,12 @@ export const HistoryPage: React.FC = () => {
   return (
     <div className="space-y-6">
 
+      {currentUser && (
+        <div className="flex items-center">
+          <span className="text-sm font-bold text-slate-300 truncate">{currentUser.name}</span>
+        </div>
+      )}
+
       {/* History table list */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         {attempts.length === 0 ? (

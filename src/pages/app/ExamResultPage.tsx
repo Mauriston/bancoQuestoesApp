@@ -188,15 +188,20 @@ export const ExamResultPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
 
-      <button
-        type="button"
-        onClick={() => navigate('/app/history')}
-        aria-label="Voltar para o Histórico"
-        title="Voltar para o Histórico"
-        className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-[#050f41] hover:bg-slate-800 transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/app/history')}
+          aria-label="Voltar para o Histórico"
+          title="Voltar para o Histórico"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-[#050f41] hover:bg-slate-800 transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        {attempt.userName && (
+          <span className="text-sm font-bold text-slate-300 truncate">{attempt.userName}</span>
+        )}
+      </div>
 
       {/* Main KPI Banner Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, Trophy, Menu, X
+  LogOut, Trophy, Menu, X, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,7 +23,8 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { label: 'Provas', path: '/admin/exams', icon: FileCheck },
     { label: 'Resultados', path: '/admin/attempts', icon: History },
     { label: 'Usuários', path: '/admin/users', icon: Users },
-    { label: 'Importar', path: '/admin/import', icon: UploadCloud }
+    { label: 'Importar', path: '/admin/import', icon: UploadCloud },
+    { label: 'TEOT / TARO', path: '/admin/exam-stats', icon: GraduationCap }
   ];
 
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Painel Administrativo';
@@ -49,18 +50,24 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
               {currentTitle}
             </h1>
 
-            {/* Admin User Info & Logout */}
+            {/* Admin User Info & Logout — avatar sozinho no mobile, chip
+                completo (avatar + nome + e-mail) a partir de sm. */}
             <div className="flex-1 flex items-center justify-end gap-3">
               {currentUser && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px]">
+                <>
+                  <div className="sm:hidden w-8 h-8 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-xs shrink-0" title={currentUser.name}>
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-white leading-none">{currentUser.name}</p>
-                    <p className="text-[10px] text-white/60 leading-none mt-0.5">{currentUser.email}</p>
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px]">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-white leading-none">{currentUser.name}</p>
+                      <p className="text-[10px] text-white/60 leading-none mt-0.5">{currentUser.email}</p>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               <button
