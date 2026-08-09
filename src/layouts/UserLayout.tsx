@@ -136,10 +136,13 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         }`}
       >
         {/* Ícone do app — o mesmo usado na tela de login. */}
-        <div className="flex justify-center py-2 mb-1">
+        <div className="flex flex-col items-center py-2 mb-1">
           <div className="w-12 h-12 rounded-2xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20">
             <Trophy className="w-6 h-6" />
           </div>
+          <span className="mt-2 text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap">
+            TEOT HMA 2027
+          </span>
         </div>
 
         {navItems.map((item) => {
@@ -198,6 +201,15 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           overlay ao passar o mouse. Só aparece a partir de lg; abaixo disso
           a navegação continua na gaveta/topbar mobile de sempre. */}
       <aside className="group/sidebar hidden lg:flex fixed inset-y-0 top-16 bottom-0 left-0 z-30 w-16 hover:w-64 bg-[#0c1c5c] border-r border-white/10 py-4 px-3 transition-[width] duration-200 flex-col shadow-2xl overflow-hidden">
+        <div className="flex flex-col items-center pb-4 mb-4 border-b border-white/10 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 shrink-0">
+            <Trophy className="w-5 h-5" />
+          </div>
+          <span className="mt-2 hidden text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap group-hover/sidebar:block">
+            TEOT HMA 2027
+          </span>
+        </div>
+
         <nav className="space-y-1.5 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
