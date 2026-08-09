@@ -33,7 +33,7 @@ export const HomePage: React.FC = () => {
     setLoadingUsers(true);
     try {
       const activeList = await getActiveUsers();
-      // O admin já tem seu próprio caminho de acesso (link "Login Admin" no
+      // O admin já tem seu próprio caminho de acesso (link "Área restrita" no
       // rodapé, autenticado por senha). Ele não deve aparecer na lista de
       // seleção de candidatos.
       setUsers(activeList.filter(u => u.role !== 'admin'));
@@ -220,7 +220,7 @@ export const HomePage: React.FC = () => {
                         disabled={!selectedUserId || submitting}
                         className="w-full flex items-center justify-center gap-2 bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#050f41]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
                       >
-                        <span>{submitting ? 'Acessando...' : 'Acessar Sistema'}</span>
+                        <span>{submitting ? 'Acessando...' : 'Entrar'}</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
 
@@ -233,7 +233,7 @@ export const HomePage: React.FC = () => {
                           className="text-xs text-slate-400 hover:text-[#050f41] inline-flex items-center gap-1.5 py-2.5 transition-colors"
                         >
                           <Lock className="w-3.5 h-3.5" />
-                          <span>Login Admin</span>
+                          <span>Área restrita</span>
                         </button>
                       </div>
                     </motion.div>
@@ -258,8 +258,7 @@ export const HomePage: React.FC = () => {
                           <ShieldCheck className="w-6 h-6" />
                         </div>
                         <div>
-                          <h1 className="text-base font-bold text-[#050f41]">Acesso Administrativo</h1>
-                          <p className="text-xs text-slate-400">Autenticação com Firebase Auth</p>
+                          <h1 className="text-base font-bold text-[#050f41]">Área restrita</h1>
                         </div>
                       </div>
 
@@ -306,7 +305,7 @@ export const HomePage: React.FC = () => {
                           disabled={adminSubmitting}
                           className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 min-h-11 rounded-xl shadow-lg shadow-cyan-500/20 text-sm transition-all disabled:opacity-50"
                         >
-                          {adminSubmitting ? 'Autenticando...' : 'Entrar no Painel Admin'}
+                          {adminSubmitting ? 'Autenticando...' : 'Entrar'}
                         </button>
                       </form>
                     </motion.div>

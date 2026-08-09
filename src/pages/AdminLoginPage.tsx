@@ -42,8 +42,7 @@ export const AdminLoginPage: React.FC = () => {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-[#050f41]">Acesso Administrativo</h1>
-              <p className="text-xs text-slate-400">Autenticação com Firebase Auth</p>
+              <h1 className="text-base font-bold text-[#050f41]">Área restrita</h1>
             </div>
           </div>
 
@@ -90,7 +89,7 @@ export const AdminLoginPage: React.FC = () => {
               disabled={submitting}
               className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 min-h-11 rounded-xl shadow-lg shadow-cyan-500/20 text-sm transition-all disabled:opacity-50"
             >
-              {submitting ? 'Autenticando...' : 'Entrar no Painel Admin'}
+              {submitting ? 'Autenticando...' : 'Entrar'}
             </button>
           </form>
 
