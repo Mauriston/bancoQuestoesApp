@@ -8,9 +8,10 @@ import {
   AreaChart, Area as RechartsArea, XAxis, YAxis, ReferenceLine, LabelList, PieChart, Pie, Cell
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserStats, getAllUserStats, getAreas, getThemes, getUserAttempts } from '../../services/firebaseService';
+import { getUserStats, getAllUserStats, getAreas, getThemes, getUserAttempts, getUsers } from '../../services/firebaseService';
 import { UserStats, Area as ExamArea, Theme, Attempt } from '../../types';
 import { scoreColorHex } from '../../utils/helpers';
+import { RankingChart, RankingEntry } from '../../components/RankingChart';
 
 type Tier = 'good' | 'warn' | 'bad';
 
@@ -38,6 +39,8 @@ export const PerformancePage: React.FC = () => {
   const [areas, setAreas] = useState<ExamArea[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [allStatsForRanking, setAllStatsForRanking] = useState<UserStats[]>([]);
+  const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
 
@@ -46,15 +49,18 @@ export const PerformancePage: React.FC = () => {
       if (!currentUser) return;
       try {
         setLoading(true);
-        const [uStats, allStats, areaList, themeList, userAttempts] = await Promise.all([
+        const [uStats, allStats, areaList, themeList, userAttempts, allUsers] = await Promise.all([
           getUserStats(currentUser.id),
           getAllUserStats(),
           getAreas(),
           getThemes(),
-          getUserAttempts(currentUser.id)
+          getUserAttempts(currentUser.id),
+          getUsers()
         ]);
         setStats(uStats);
         setPeerStats(allStats.filter(s => s.userId !== currentUser.id));
+        setAllStatsForRanking(allStats);
+        setUserNameById(Object.fromEntries(allUsers.map(u => [u.id, u.name])));
         setAreas(areaList);
         setThemes(themeList);
         setAttempts(userAttempts);
@@ -221,6 +227,14 @@ export const PerformancePage: React.FC = () => {
       }, {} as Record<string, typeof selectedAreaThemes>)
     : null;
 
+  const rankingData: RankingEntry[] = allStatsForRanking
+    .filter(s => (s.totalSolved || 0) > 0 && s.userId)
+    .map(s => ({
+      userId: s.userId!,
+      name: userNameById[s.userId!] || (s.userId === currentUser?.id ? currentUser?.name || 'Você' : 'Usuário'),
+      score: s.overallScorePercentage ?? Math.round(((s.totalCorrect || 0) / (s.totalSolved || 1)) * 100)
+    }));
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
 
@@ -229,6 +243,13 @@ export const PerformancePage: React.FC = () => {
           <span className="text-sm font-bold text-slate-300 truncate">{currentUser.name}</span>
         </div>
       )}
+
+      {/* Ranking Geral — mesmo gráfico do Dashboard admin, sem drill-down aqui */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
+        <h2 className="text-sm font-bold text-[#050f41]">Ranking Geral</h2>
+        <p className="text-xs text-slate-400">Desempenho geral de todos os residentes, do 1º ao último colocado.</p>
+        <RankingChart data={rankingData} />
+      </div>
 
       {/* Overall Accuracy KPI — cartão mais proeminente da página */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
