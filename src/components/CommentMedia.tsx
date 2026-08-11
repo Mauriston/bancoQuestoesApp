@@ -36,7 +36,7 @@ export const CommentMedia: React.FC<CommentMediaProps> = ({ url }) => {
 
   if (youTubeId) {
     return (
-      <div className="mt-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video max-w-md">
+      <div className="mt-3 mx-auto rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video max-w-md">
         <iframe
           src={`https://www.youtube.com/embed/${youTubeId}`}
           title="Vídeo do comentário do gabarito"
@@ -69,7 +69,7 @@ export const CommentMedia: React.FC<CommentMediaProps> = ({ url }) => {
   }
 
   return (
-    <div className="mt-3 p-2 rounded-xl bg-slate-950 border border-slate-800 inline-block max-w-full">
+    <div className="mt-3 p-2 rounded-xl bg-slate-950 border border-slate-800 block w-fit mx-auto max-w-full">
       <img
         src={url}
         alt="Mídia do comentário do gabarito"

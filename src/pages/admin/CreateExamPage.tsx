@@ -11,6 +11,8 @@ import {
 import { Question, Area, Theme, AppUser, QuestionAnswer } from '../../types';
 import { SOURCE_EXAM_OPTIONS } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
+import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
+import { Switch } from '../../components/Switch';
 
 export const CreateExamPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -37,9 +39,11 @@ export const CreateExamPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [areaFilter, setAreaFilter] = useState('');
-  const [themeFilter, setThemeFilter] = useState('');
+  const [themeFilterIds, setThemeFilterIds] = useState<string[]>([]);
   const [subAreaFilter, setSubAreaFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  // Switch para restringir a lista às questões já marcadas para a prova.
+  const [showOnlySelected, setShowOnlySelected] = useState(false);
   // Fonte da Questão: menu suspenso com caixas de seleção, mesma lista fixa
   // usada em QuestionsPage (ver SOURCE_EXAM_OPTIONS).
   const [selectedSourceExams, setSelectedSourceExams] = useState<string[]>([]);
@@ -135,11 +139,12 @@ export const CreateExamPage: React.FC = () => {
 
   const filteredQuestions = allQuestions.filter(q => {
     const matchesArea = !areaFilter || q.areaId === areaFilter;
-    const matchesTheme = !themeFilter || q.themeId === themeFilter;
+    const matchesTheme = themeFilterIds.length === 0 || themeFilterIds.includes(q.themeId);
     const matchesSubArea = !subAreaFilter || themeSubAreaById.get(q.themeId) === subAreaFilter;
     const matchesSearch = !searchQuery || q.statement.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSource = selectedSourceExams.length === 0 || selectedSourceExams.includes(q.sourceExam);
-    return matchesArea && matchesTheme && matchesSubArea && matchesSearch && matchesSource;
+    const matchesSelected = !showOnlySelected || selectedQuestions.some(sq => sq.id === q.id);
+    return matchesArea && matchesTheme && matchesSubArea && matchesSearch && matchesSource && matchesSelected;
   });
 
   useEffect(() => {
@@ -359,17 +364,24 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 2: Question Selection */}
       {step === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div>
               <h2 className="text-sm font-bold text-[#050f41]">Etapa 2: Selecionar Questões do Banco</h2>
               <p className="text-slate-400">Questões selecionadas: <strong className="text-cyan-400">{selectedQuestions.length}</strong></p>
             </div>
-            <button
-              onClick={handleSelectAllFiltered}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-            >
-              Selecionar Todas as Filtradas
-            </button>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={showOnlySelected}
+                onChange={setShowOnlySelected}
+                label="Mostrar apenas selecionadas"
+              />
+              <button
+                onClick={handleSelectAllFiltered}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0"
+              >
+                Selecionar Todas as Filtradas
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -384,7 +396,7 @@ export const CreateExamPage: React.FC = () => {
               value={areaFilter}
               onChange={(e) => {
                 setAreaFilter(e.target.value);
-                setThemeFilter('');
+                setThemeFilterIds([]);
                 setSubAreaFilter('');
               }}
               className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
@@ -403,15 +415,14 @@ export const CreateExamPage: React.FC = () => {
               </option>
               {subAreasForAreaFilter.map(sa => <option key={sa} value={sa}>{sa}</option>)}
             </select>
-            <select
-              value={themeFilter}
-              onChange={(e) => setThemeFilter(e.target.value)}
+            <CheckboxMultiSelect
+              label="Tema"
+              options={themesForAreaFilter.map(t => ({ id: t.id, label: t.name }))}
+              selectedIds={themeFilterIds}
+              onChange={setThemeFilterIds}
+              emptyLabel={areaFilter ? 'Todos os Temas' : 'Selecione uma área'}
               disabled={!areaFilter}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 disabled:opacity-50"
-            >
-              <option value="">{areaFilter ? 'Todos os Temas' : 'Selecione uma área'}</option>
-              {themesForAreaFilter.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            />
 
             <div className="relative" ref={sourceDropdownRef}>
               <button
@@ -457,23 +468,27 @@ export const CreateExamPage: React.FC = () => {
             </div>
           </div>
 
-          {(searchQuery || areaFilter || themeFilter || subAreaFilter || selectedSourceExams.length > 0) && (
-            <div className="flex justify-end">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-[11px] text-slate-400">
+              <strong className="text-cyan-400 font-bold">{filteredQuestions.length}</strong> questõe{filteredQuestions.length === 1 ? '' : 's'} encontrada{filteredQuestions.length === 1 ? '' : 's'} para os filtros atuais.
+            </p>
+            {(searchQuery || areaFilter || themeFilterIds.length > 0 || subAreaFilter || selectedSourceExams.length > 0 || showOnlySelected) && (
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setAreaFilter('');
-                  setThemeFilter('');
+                  setThemeFilterIds([]);
                   setSubAreaFilter('');
                   setSelectedSourceExams([]);
+                  setShowOnlySelected(false);
                 }}
                 className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#050f41] text-[11px] font-semibold"
               >
                 <XCircle className="w-3.5 h-3.5" />
                 <span>Limpar Filtros</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
             {filteredQuestions.map(q => {

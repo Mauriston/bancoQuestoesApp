@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, QuestionAnswer } from '../../types';
 import { SOURCE_EXAM_OPTIONS, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
+import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
+import { QuestionImage } from '../../components/QuestionImage';
 
 export const QuestionsPage: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -18,7 +20,10 @@ export const QuestionsPage: React.FC = () => {
 
   // Filters
   const [selectedAreaId, setSelectedAreaId] = useState('');
-  const [selectedThemeId, setSelectedThemeId] = useState('');
+  // Tema em caixas de seleção (multi-seleção) — o filtro server-side de
+  // getQuestions só suporta um themeId por vez, então quando há mais de um
+  // tema selecionado buscamos por área/fonte e filtramos o tema no cliente.
+  const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   // Fonte da Questão: menu suspenso com caixas de seleção, com a lista fixa
   // de fontes definida pelo admin (ver SOURCE_EXAM_OPTIONS).
@@ -50,21 +55,29 @@ export const QuestionsPage: React.FC = () => {
   const [commentMediaUrl, setCommentMediaUrl] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  // Imagem que a questão tinha ao abrir o modal de edição — usado para saber
+  // se o admin removeu uma imagem existente (ver handleRemoveImage) e, nesse
+  // caso, apagar de fato o objeto no Storage ao salvar.
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+  const [removingImage, setRemovingImage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchQuestionsList = async () => {
     setLoading(true);
     try {
-      const [qList, arList, thList] = await Promise.all([
+      const [qListRaw, arList, thList] = await Promise.all([
         getQuestions({
           areaId: selectedAreaId || undefined,
-          themeId: selectedThemeId || undefined,
+          themeId: selectedThemeIds.length === 1 ? selectedThemeIds[0] : undefined,
           sourceExamIn: selectedSourceExams.length > 0 ? selectedSourceExams : undefined,
           searchQuery: searchQuery || undefined
         }),
         getAreas(),
         getThemes(selectedAreaId || undefined)
       ]);
+      const qList = selectedThemeIds.length > 1
+        ? qListRaw.filter(q => selectedThemeIds.includes(q.themeId))
+        : qListRaw;
       setQuestions(qList);
       setAreas(arList);
       setThemes(thList);
@@ -80,7 +93,7 @@ export const QuestionsPage: React.FC = () => {
 
   useEffect(() => {
     fetchQuestionsList();
-  }, [selectedAreaId, selectedThemeId, selectedSourceExams, searchQuery]);
+  }, [selectedAreaId, selectedThemeIds, selectedSourceExams, searchQuery]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -114,6 +127,7 @@ export const QuestionsPage: React.FC = () => {
     setCommentMediaUrl('');
     setImageUrl(null);
     setImageFile(null);
+    setOriginalImageUrl(null);
     setModalThemes(defaultAreaId ? await getThemes(defaultAreaId) : []);
     setModalOpen(true);
   };
@@ -130,6 +144,7 @@ export const QuestionsPage: React.FC = () => {
     setAltD(q.alternatives.D);
     setImageUrl(q.imageUrl || null);
     setImageFile(null);
+    setOriginalImageUrl(q.imageUrl || null);
     setModalThemes(await getThemes(q.areaId));
 
     // Fetch answer key
@@ -168,6 +183,13 @@ export const QuestionsPage: React.FC = () => {
       if (imageFile) {
         const qIdToUse = editingQId || 'q_' + Date.now();
         finalImageUrl = await uploadQuestionImage(qIdToUse, imageFile);
+      } else if (editingQId && originalImageUrl && !imageUrl) {
+        // Imagem existente foi removida (botão "Remover imagem") e nenhuma
+        // nova foi escolhida — apaga de fato o objeto no Storage e limpa o
+        // campo, já que saveQuestion() com merge:true não removeria um
+        // campo simplesmente por vir undefined.
+        await deleteQuestionImage(editingQId, originalImageUrl);
+        finalImageUrl = null;
       }
 
       await saveQuestion(
@@ -199,100 +221,107 @@ export const QuestionsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-cyan-400" />
-            Banco de Questões
-          </h1>
-        </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Nova Questão</span>
-        </button>
-      </div>
+      {/* Header + Filter Bar fixos no topo durante o scroll */}
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 bg-slate-950/95 backdrop-blur space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-cyan-400" />
+              Banco de Questões
+            </h1>
+          </div>
 
-      {/* Filter Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Pesquisar enunciado..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-          />
-        </div>
-
-        <select
-          value={selectedAreaId}
-          onChange={(e) => {
-            setSelectedAreaId(e.target.value);
-            setSelectedThemeId('');
-          }}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-        >
-          <option value="">Todas as Áreas</option>
-          {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-
-        <select
-          value={selectedThemeId}
-          onChange={(e) => setSelectedThemeId(e.target.value)}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-        >
-          <option value="">Todos os Temas</option>
-          {themes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-
-        <div className="relative" ref={sourceDropdownRef}>
           <button
-            type="button"
-            onClick={() => setSourceDropdownOpen(prev => !prev)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 flex items-center justify-between gap-2"
+            onClick={handleOpenCreateModal}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all self-start sm:self-auto"
           >
-            <span className="truncate">
-              {selectedSourceExams.length === 0
-                ? 'Todas as Fontes'
-                : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
-            </span>
-            <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Nova Questão</span>
           </button>
+        </div>
 
-          {sourceDropdownOpen && (
-            <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
-              {selectedSourceExams.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedSourceExams([])}
-                  className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
-                >
-                  Limpar seleção
-                </button>
-              )}
-              {SOURCE_EXAM_OPTIONS.map(opt => (
-                <label
-                  key={opt}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedSourceExams.includes(opt)}
-                    onChange={() => toggleSourceExam(opt)}
-                    className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
-                  />
-                  <span className="truncate">{opt}</span>
-                </label>
-              ))}
+        {/* Filter Bar */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Pesquisar enunciado..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              />
             </div>
-          )}
+
+            <select
+              value={selectedAreaId}
+              onChange={(e) => {
+                setSelectedAreaId(e.target.value);
+                setSelectedThemeIds([]);
+              }}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+            >
+              <option value="">Todas as Áreas</option>
+              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+
+            <CheckboxMultiSelect
+              label="Tema"
+              options={themes.map(t => ({ id: t.id, label: t.name }))}
+              selectedIds={selectedThemeIds}
+              onChange={setSelectedThemeIds}
+              emptyLabel="Todos os Temas"
+            />
+
+            <div className="relative" ref={sourceDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setSourceDropdownOpen(prev => !prev)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 flex items-center justify-between gap-2"
+              >
+                <span className="truncate">
+                  {selectedSourceExams.length === 0
+                    ? 'Todas as Fontes'
+                    : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {sourceDropdownOpen && (
+                <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
+                  {selectedSourceExams.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSourceExams([])}
+                      className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
+                    >
+                      Limpar seleção
+                    </button>
+                  )}
+                  {SOURCE_EXAM_OPTIONS.map(opt => (
+                    <label
+                      key={opt}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSourceExams.includes(opt)}
+                        onChange={() => toggleSourceExam(opt)}
+                        className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                      />
+                      <span className="truncate">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-400">
+            <strong className="text-cyan-400 font-bold">{questions.length}</strong> questõe{questions.length === 1 ? '' : 's'} encontrada{questions.length === 1 ? '' : 's'} para os filtros atuais.
+          </p>
         </div>
       </div>
 
@@ -326,12 +355,6 @@ export const QuestionsPage: React.FC = () => {
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSourceExamChipClass(q.sourceExam)}`}>
                         {q.sourceExam}
                       </span>
-                      {q.imageUrl && (
-                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                          <ImageIcon className="w-3 h-3" />
-                          Com Imagem
-                        </span>
-                      )}
                     </div>
 
                     <p className="text-sm sm:text-base font-semibold text-[#050f41] line-clamp-2 leading-relaxed">
@@ -486,12 +509,30 @@ export const QuestionsPage: React.FC = () => {
 
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Imagem da Questão (Upload Firebase Storage)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-400"
-                />
+                <div className="flex items-start gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-400"
+                  />
+                  {imageUrl && !imageFile && (
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl(null)}
+                      disabled={removingImage}
+                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 font-semibold disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Remover imagem
+                    </button>
+                  )}
+                </div>
+                {imageUrl && !imageFile && (
+                  <div className="mt-2">
+                    <QuestionImage src={imageUrl} alt="Imagem atual da questão" className="max-h-40 rounded-xl border border-slate-800" />
+                  </div>
+                )}
               </div>
 
               <div>

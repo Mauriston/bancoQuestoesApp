@@ -342,6 +342,20 @@ export async function uploadQuestionImage(questionId: string, file: File): Promi
   return await getDownloadURL(storageRef);
 }
 
+// Remove a imagem de uma questão: apaga o objeto no Storage (a partir da
+// própria download URL salva em imageUrl — funciona tanto para
+// question-images/ quanto para imagens_questoes/, os dois caminhos usados
+// hoje) e limpa o campo no Firestore. Falhas ao apagar o objeto (ex.: URL já
+// não existe mais no bucket) não impedem limpar o campo do documento.
+export async function deleteQuestionImage(questionId: string, imageUrl: string): Promise<void> {
+  try {
+    await deleteObject(ref(storage, imageUrl));
+  } catch (err) {
+    console.warn("Não foi possível apagar o objeto de imagem no Storage:", err);
+  }
+  await updateDoc(doc(db, 'questions', questionId), { imageUrl: deleteField(), updatedAt: serverTimestamp() });
+}
+
 // Envia uma imagem para imagens_questoes/{prova}/{arquivo} e vincula a URL
 // pública resultante ao campo imageUrl de questions/{questionId} — usado
 // pela importação em lote de imagens (BulkImagesPage), onde o id da questão

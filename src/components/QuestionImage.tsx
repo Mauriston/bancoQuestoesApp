@@ -8,12 +8,14 @@ interface QuestionImageProps {
   src: string;
   alt?: string;
   allowZoom?: boolean;
+  className?: string;
 }
 
 export const QuestionImage: React.FC<QuestionImageProps> = ({
   src,
   alt = 'Imagem da questão',
-  allowZoom = true
+  allowZoom = true,
+  className = ''
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -58,7 +60,10 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
 
   return (
     <>
-      <div className="my-4 p-2 rounded-2xl bg-slate-950 border border-slate-800 inline-block max-w-full">
+      {/* mx-auto + block centraliza a imagem quando o container pai ocupa a
+          largura toda (ver pedido de centralização em ExamViewPage,
+          ExamResultPage, TakeExamPage, QuestionPreviewModal). */}
+      <div className={`my-4 p-2 rounded-2xl bg-slate-950 border border-slate-800 block w-fit mx-auto max-w-full ${className}`}>
         <div 
           className={`relative group ${allowZoom ? 'cursor-pointer' : ''}`}
           onClick={() => allowZoom && setIsZoomed(true)}
