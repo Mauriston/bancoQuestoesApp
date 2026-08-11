@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, ListChecks, CalendarDays, MessageSquare, Sparkles, GraduationCap
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, CalendarDays, Sparkles, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { MobileBottomNav } from '../components/MobileBottomNav';
+import { Avatar } from '../components/Avatar';
 
 export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { currentUser, logout } = useAuth();
@@ -19,7 +21,10 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   const navItems = [
     { label: 'Provas', path: '/app/exams', icon: FileText },
     { label: 'Histórico', path: '/app/history', icon: History },
-    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 }
+    { label: 'Desempenho', path: '/app/performance', icon: BarChart3 },
+    { label: 'Cronograma', path: '/app/cronograma', icon: CalendarDays },
+    { label: 'TARO/TEOT', path: '/app/exam-stats', icon: GraduationCap },
+    { label: 'Extras', path: '/app/extras', icon: Sparkles }
   ];
 
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label
@@ -57,7 +62,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
 
-              <Link to="/app/exams" className="hidden md:flex items-center gap-2.5 group min-w-0 shrink-0">
+              <Link to="/app/home" className="hidden md:flex items-center gap-2.5 group min-w-0 shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
                   <Trophy className="w-5 h-5" />
                 </div>
@@ -96,13 +101,11 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {currentUser && (
                 <>
-                  <div className="sm:hidden w-8 h-8 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-semibold text-xs shrink-0" title={currentUser.name}>
-                    {currentUser.name.charAt(0).toUpperCase()}
+                  <div className="sm:hidden shrink-0" title={currentUser.name}>
+                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
                   </div>
                   <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
-                    <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-semibold text-[11px]">
-                      {currentUser.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
                     <span className="font-medium text-white max-w-[120px] truncate">{currentUser.name}</span>
                   </div>
                 </>
@@ -171,28 +174,6 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           );
         })}
 
-        {/* Itens ainda sem destino definido — sem ação de clique por
-            enquanto (as páginas/ações serão definidas em próximos passos). */}
-        {[
-          { label: 'TEOT / TARO', icon: GraduationCap },
-          { label: 'Temas', icon: ListChecks },
-          { label: 'Cronograma', icon: CalendarDays },
-          { label: 'Sabatinas', icon: MessageSquare },
-          { label: 'Extras', icon: Sparkles }
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.label}
-              className="flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium text-white/40 cursor-default"
-              title="Em breve"
-            >
-              <Icon className="w-4 h-4 text-white/30" />
-              {item.label}
-            </div>
-          );
-        })}
-
         {/* Avatar + nome do usuário fica fixo no rodapé do menu lateral,
             dando acesso à tela de Ajustes (troca de e-mail/senha). */}
         <Link
@@ -204,9 +185,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               : 'text-white/80 hover:bg-white/10 hover:text-white'
           }`}
         >
-          <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px] shrink-0">
-            {currentUser?.name.charAt(0).toUpperCase()}
-          </div>
+          {currentUser && <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />}
           <span className="truncate">{currentUser?.name}</span>
         </Link>
       </nav>
@@ -258,15 +237,13 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               : 'text-white/70 hover:bg-white/10 hover:text-white'
           }`}
         >
-          <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px] shrink-0">
-            {currentUser?.name.charAt(0).toUpperCase()}
-          </div>
+          {currentUser && <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />}
           <span className="hidden group-hover/sidebar:inline truncate">{currentUser?.name}</span>
         </Link>
       </aside>
 
       {/* Main Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 lg:pl-[calc(1rem+4rem)] py-4 sm:py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 lg:pl-[calc(1rem+4rem)] py-4 sm:py-6 pb-20 lg:pb-6">
         {children || <Outlet />}
       </main>
 
@@ -274,6 +251,12 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       <footer className="hidden sm:block border-t border-white/10 bg-[#050f41] py-6 text-center text-xs text-white/50">
         <p>2026. Developed by Mauriston Martins. Powered by Claude Code / Google AI Studio.</p>
       </footer>
+
+      <MobileBottomNav
+        home={{ path: '/app/home', icon: Trophy, label: 'Home' }}
+        left={{ path: '/app/history', icon: History, label: 'Histórico' }}
+        right={{ path: '/app/performance', icon: BarChart3, label: 'Desempenho' }}
+      />
     </div>
   );
 };

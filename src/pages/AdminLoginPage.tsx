@@ -19,7 +19,7 @@ export const AdminLoginPage: React.FC = () => {
 
     try {
       await adminLogin(email, password);
-      navigate('/admin/dashboard');
+      navigate('/admin/home');
     } catch (err: any) {
       setError(err.message || 'Falha na autenticação administrativa. Verifique seu e-mail e senha.');
     } finally {

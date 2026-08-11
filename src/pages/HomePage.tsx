@@ -36,7 +36,7 @@ export const HomePage: React.FC = () => {
     try {
       setSubmitting(true);
       await userLogin(email, password);
-      navigate('/app/exams');
+      navigate('/app/home');
     } catch (err: any) {
       if (err instanceof UserNotRegisteredError) {
         setNotRegisteredEmail(err.email);
@@ -56,7 +56,7 @@ export const HomePage: React.FC = () => {
     setAdminSubmitting(true);
     try {
       await adminLogin(adminEmail, adminPassword);
-      navigate('/admin/dashboard');
+      navigate('/admin/home');
     } catch (err: any) {
       setAdminError(err.message || 'Falha na autenticação administrativa. Verifique seu e-mail e senha.');
     } finally {

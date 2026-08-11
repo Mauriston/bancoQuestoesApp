@@ -14,6 +14,10 @@ import { HistoryPage } from '../pages/app/HistoryPage';
 import { PerformancePage } from '../pages/app/PerformancePage';
 import { ExamStatsPage } from '../pages/app/ExamStatsPage';
 import { SettingsPage } from '../pages/app/SettingsPage';
+import { ExtrasPage } from '../pages/ExtrasPage';
+import { CronogramaPage } from '../pages/app/CronogramaPage';
+import { HomePage as AppHomePage } from '../pages/app/HomePage';
+import { HomePage as AdminHomePage } from '../pages/admin/HomePage';
 
 import { AdminLayout } from '../layouts/AdminLayout';
 import { DashboardPage } from '../pages/admin/DashboardPage';
@@ -88,19 +92,23 @@ export const AppRoutes: React.FC = () => {
 
       {/* User Application Routes */}
       <Route path="/app" element={<UserProtectedRoute />}>
-        <Route index element={<Navigate to="/app/exams" replace />} />
+        <Route index element={<Navigate to="/app/home" replace />} />
+        <Route path="home" element={<AppHomePage />} />
         <Route path="exams" element={<ExamsPage />} />
         <Route path="exams/:assignmentId" element={<TakeExamPage />} />
         <Route path="attempts/:attemptId/result" element={<ExamResultPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="performance" element={<PerformancePage />} />
+        <Route path="cronograma" element={<CronogramaPage />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
+        <Route path="extras" element={<ExtrasPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Admin Application Routes */}
       <Route path="/admin" element={<AdminProtectedRoute />}>
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route index element={<Navigate to="/admin/home" replace />} />
+        <Route path="home" element={<AdminHomePage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:userId" element={<UserDetailPage />} />
@@ -113,6 +121,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="exams/:examId" element={<ExamViewPage />} />
         <Route path="attempts" element={<AttemptsPage />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
+        <Route path="extras" element={<ExtrasPage />} />
       </Route>
 
       {/* Fallback 404 */}
