@@ -101,6 +101,24 @@ export async function updateUserRole(userId: string, role: "user" | "admin"): Pr
   await updateDoc(userRef, { role, updatedAt: serverTimestamp() });
 }
 
+// Apaga o documento do usuário. Não cascateia attempts/userStats/assignments
+// para preservar o histórico agregado (dashboards, ranking) mesmo após a
+// remoção do cadastro — diferente de deleteExam(), que precisa cascatear
+// porque provas excluídas não devem deixar rastro de dados órfãos.
+export async function deleteUserAccount(userId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId));
+}
+
+export async function uploadUserAvatar(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop() || 'jpg';
+  const fileName = `${Date.now()}.${fileExt}`;
+  const storageRef = ref(storage, `user-avatars/${userId}/${fileName}`);
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  await updateDoc(doc(db, 'users', userId), { photoUrl: url, updatedAt: serverTimestamp() });
+  return url;
+}
+
 // --- AREAS & THEMES ---
 
 export async function getAreas(): Promise<Area[]> {

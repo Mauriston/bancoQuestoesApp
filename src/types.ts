@@ -6,6 +6,9 @@ export interface AppUser {
   email: string;
   role: UserRole;
   active: boolean;
+  // Foto de perfil (Firebase Storage, path user-avatars/{userId}/...). Sem
+  // isso, o avatar mostra a inicial do nome (ver componente Avatar).
+  photoUrl?: string;
   createdAt?: any;
   updatedAt?: any;
   authUid?: string;

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, UserPlus, Search, UserCheck, UserX, AlertCircle, X
+  Users, UserPlus, Search, UserCheck, UserX, AlertCircle, X, Trash2
 } from 'lucide-react';
-import { getUsers, saveUser, updateUserActiveStatus, updateUserRole } from '../../services/firebaseService';
+import { getUsers, saveUser, updateUserActiveStatus, updateUserRole, deleteUserAccount } from '../../services/firebaseService';
 import { createNewUserWithAuth } from '../../services/authService';
 import { AppUser } from '../../types';
+import { Avatar } from '../../components/Avatar';
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,6 +46,16 @@ export const UsersPage: React.FC = () => {
       await fetchUsers();
     } catch (err) {
       alert("Erro ao alterar status do usuário.");
+    }
+  };
+
+  const handleDeleteUser = async (user: AppUser) => {
+    if (!confirm(`Excluir definitivamente o usuário "${user.name}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await deleteUserAccount(user.id);
+      await fetchUsers();
+    } catch (err) {
+      alert("Erro ao excluir usuário.");
     }
   };
 
@@ -164,13 +175,7 @@ export const UsersPage: React.FC = () => {
                   >
                     <td className="p-3.5 font-semibold text-[#050f41]">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                          u.role === 'admin'
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                            : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                        }`}>
-                          {u.name.charAt(0).toUpperCase()}
-                        </div>
+                        <Avatar name={u.name} photoUrl={u.photoUrl} role={u.role} size="sm" />
                         <span className="truncate">{u.name}</span>
                       </div>
                     </td>
@@ -209,6 +214,13 @@ export const UsersPage: React.FC = () => {
                         }`}
                       >
                         {u.active ? 'Inativar' : 'Ativar'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(u)}
+                        title="Excluir usuário"
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors border border-red-500/30 align-middle"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>

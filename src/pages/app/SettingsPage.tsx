@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Settings, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Settings, Mail, Lock, AlertCircle, CheckCircle2, Camera } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateOwnCredentials } from '../../services/authService';
+import { uploadUserAvatar } from '../../services/firebaseService';
+import { Avatar } from '../../components/Avatar';
 
 export const SettingsPage: React.FC = () => {
   const { currentUser, refreshUser } = useAuth();
@@ -13,6 +15,21 @@ export const SettingsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = async (file: File | null) => {
+    if (!file || !currentUser) return;
+    setUploadingPhoto(true);
+    try {
+      await uploadUserAvatar(currentUser.id, file);
+      await refreshUser();
+    } catch (err) {
+      setError('Erro ao enviar foto de perfil.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +73,24 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="max-w-md space-y-6 pb-12">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-[#FAB932]/20 text-[#FAB932] border border-[#FAB932]/30 flex items-center justify-center font-bold text-lg shrink-0">
-          {currentUser.name.charAt(0).toUpperCase()}
+        <div className="relative shrink-0">
+          <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="lg" />
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            title="Alterar foto de perfil"
+            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-teal-500 hover:bg-teal-400 border-2 border-slate-950 flex items-center justify-center text-slate-950 disabled:opacity-50"
+          >
+            <Camera className="w-2.5 h-2.5" />
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handlePhotoChange(e.target.files?.[0] || null)}
+          />
         </div>
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-[#050f41] truncate">{currentUser.name}</h1>
