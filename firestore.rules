@@ -126,6 +126,23 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Extras (Videoteca / Aulas) — mesma política "signed-in" das demais
+    // coleções administradas pelo admin e consumidas pelos usuários.
+    match /videotecaItems/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /aulaItems/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /materialViewLogs/{logId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
     // Nega explicitamente qualquer coleção não listada acima.
     match /{document=**} {
       allow read, write: if false;

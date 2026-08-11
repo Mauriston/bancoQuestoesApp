@@ -7,6 +7,7 @@ import { importQuestionBankJson, ImportProgress, applyThemeSubAreas, SubAreaMigr
 import arvoreLocalJson from '../../../arvore_temas.json';
 import subAreaTreeJson from '../../../reference/arvore_temas_subareas.json';
 import { BulkImagesSection } from './BulkImagesPage';
+import { CsvBulkImportSection } from '../../components/CsvBulkImportSection';
 
 export const ImportPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -349,6 +350,24 @@ export const ImportPage: React.FC = () => {
 
       <div className="pt-4 border-t border-slate-800">
         <BulkImagesSection />
+      </div>
+
+      <div className="pt-4 border-t border-slate-800 space-y-4">
+        <h2 className="text-lg font-bold text-[#050f41]">Envio em Lote para a Videoteca</h2>
+        <CsvBulkImportSection
+          materialType="video"
+          title="Upload de Arquivo CSV — Videoteca"
+          description="Cadastra vários vídeos do YouTube de uma vez."
+        />
+      </div>
+
+      <div className="pt-4 border-t border-slate-800 space-y-4">
+        <h2 className="text-lg font-bold text-[#050f41]">Envio de Aulas em Lote</h2>
+        <CsvBulkImportSection
+          materialType="aula"
+          title="Upload de Arquivo CSV — Aulas"
+          description="Cadastra várias apresentações (Canva ou Google Slides) de uma vez."
+        />
       </div>
 
     </div>

@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Layers, ListOrdered, PieChart as PieChartIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GraduationCap, Layers, ListOrdered, ClipboardList } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, Legend,
   PieChart, Pie
 } from 'recharts';
 import { getQuestions, getAreas, getThemes } from '../../services/firebaseService';
 import { Question, Area, Theme } from '../../types';
+import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
+
+const PIE_COLORS = ['#050f41', '#06b6d4', '#FAB932', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
 
 type ExamType = 'TEOT' | 'TARO' | 'OUTROS';
 
@@ -34,6 +38,7 @@ export const ExamStatsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [examTypeFilter, setExamTypeFilter] = useState<'TODOS' | ExamType>('TODOS');
   const [yearFilter, setYearFilter] = useState<number | 'TODOS'>('TODOS');
+  const [areaFilterIds, setAreaFilterIds] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -86,9 +91,22 @@ export const ExamStatsPage: React.FC = () => {
     return teotTaroQuestions.filter(q => {
       if (examTypeFilter !== 'TODOS' && q.type !== examTypeFilter) return false;
       if (yearFilter !== 'TODOS' && q.year !== yearFilter) return false;
+      if (areaFilterIds.length > 0 && !areaFilterIds.includes(q.areaId)) return false;
       return true;
     });
-  }, [teotTaroQuestions, examTypeFilter, yearFilter]);
+  }, [teotTaroQuestions, examTypeFilter, yearFilter, areaFilterIds]);
+
+  // Legenda de filtros ativos exibida dentro do card "Total de Questões".
+  const activeFiltersLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (examTypeFilter !== 'TODOS') parts.push(examTypeFilter);
+    if (yearFilter !== 'TODOS') parts.push(String(yearFilter));
+    if (areaFilterIds.length > 0) {
+      const names = areaFilterIds.map(id => areas.find(a => a.id === id)?.name).filter(Boolean);
+      parts.push(`Área: ${names.join(', ')}`);
+    }
+    return parts.join(' · ');
+  }, [examTypeFilter, yearFilter, areaFilterIds, areas]);
 
   // Distribuição por ano, separada em série TEOT e TARO — base do gráfico
   // de barras agrupadas no topo da página (não é afetada pelo filtro de
@@ -142,26 +160,6 @@ export const ExamStatsPage: React.FC = () => {
       .slice(0, 10);
   }, [filteredQuestions, themes, areas]);
 
-  // Ortopedia x Traumatologia dentro do recorte de filtros atual — só
-  // considera temas com subArea migrado.
-  const subAreaDistribution = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredQuestions.forEach(q => {
-      const subArea = themes.find(t => t.id === q.themeId)?.subArea;
-      if (!subArea) return;
-      map[subArea] = (map[subArea] || 0) + 1;
-    });
-    const total = Object.values(map).reduce((s, v) => s + v, 0);
-    return Object.entries(map).map(([name, count]) => ({
-      name,
-      count,
-      pct: total > 0 ? Math.round((count / total) * 1000) / 10 : 0
-    }));
-  }, [filteredQuestions, themes]);
-
-  const totalTeot = teotTaroQuestions.filter(q => q.type === 'TEOT').length;
-  const totalTaro = teotTaroQuestions.filter(q => q.type === 'TARO').length;
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -171,22 +169,20 @@ export const ExamStatsPage: React.FC = () => {
     );
   }
 
+  const filterKey = `${examTypeFilter}|${yearFilter}|${areaFilterIds.join(',')}`;
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
 
-      {/* KPIs gerais: quantas questões o banco tem de cada prova, no total */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        <div className="bg-slate-900 border border-[#079551]/30 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <p className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide">Questões de TEOT</p>
-          <p className="text-3xl sm:text-4xl font-black text-[#079551] mt-1">{totalTeot}</p>
-        </div>
-        <div className="bg-slate-900 border border-[#FAB932]/30 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <p className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide">Questões de TARO</p>
-          <p className="text-3xl sm:text-4xl font-black text-[#FAB932] mt-1">{totalTaro}</p>
-        </div>
+      {/* Título e subtítulo da página */}
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#050f41]">Estatísticas TEOT e TARO</h1>
+        <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          Verifique as áreas e temas mais frequentes por prova e ano. TEOT 2021 a 2026 | TARO 2016 - 2026.
+        </p>
       </div>
 
-      {/* Filtros: tipo de prova + ano */}
+      {/* Filtros: tipo de prova + ano + área */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1">
           {(['TODOS', 'TEOT', 'TARO'] as const).map(opt => (
@@ -216,155 +212,161 @@ export const ExamStatsPage: React.FC = () => {
           ))}
         </select>
 
-        <span className="text-xs text-slate-500 ml-auto">
-          {filteredQuestions.length} questão(ões) no recorte selecionado
-        </span>
+        <CheckboxMultiSelect
+          label="Área"
+          options={areas.map(a => ({ id: a.id, label: a.name }))}
+          selectedIds={areaFilterIds}
+          onChange={setAreaFilterIds}
+          emptyLabel="Todas as Áreas"
+          className="w-44"
+        />
       </div>
 
-      {/* Distribuição histórica por ano — TEOT vs TARO, questões cadastradas no banco */}
-      {yearDistribution.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-            <ListOrdered className="w-4 h-4 text-teal-400" />
-            Questões Cadastradas por Ano
-          </h2>
-          <p className="text-xs text-slate-400 mb-2">Quantidade de questões do banco, por ano de prova.</p>
-          <div className="h-56 sm:h-72 w-full mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yearDistribution} margin={{ top: 4, right: 8, bottom: 4, left: -12 }}>
-                <CartesianGrid stroke="#dbe0f0" vertical={false} />
-                <XAxis dataKey="year" tick={{ fill: '#4b567f', fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
-                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                {(examTypeFilter === 'TODOS' || examTypeFilter === 'TEOT') && (
-                  <Bar dataKey="TEOT" fill={EXAM_TYPE_COLOR.TEOT} radius={[4, 4, 0, 0]} />
-                )}
-                {(examTypeFilter === 'TODOS' || examTypeFilter === 'TARO') && (
-                  <Bar dataKey="TARO" fill={EXAM_TYPE_COLOR.TARO} radius={[4, 4, 0, 0]} />
-                )}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {/* Distribuição por área, dentro do recorte de filtros ativo */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-        <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-          <GraduationCap className="w-4 h-4 text-teal-400" />
-          Áreas Mais Cobradas
-        </h2>
-        <p className="text-xs text-slate-400 mb-2">Distribuição de questões por área, no recorte selecionado acima.</p>
-        {areaDistribution.length === 0 ? (
-          <p className="text-sm text-slate-500 italic py-4">Nenhuma questão encontrada para este recorte.</p>
-        ) : (
-          <div className="h-64 sm:h-80 w-full mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={areaDistribution} layout="vertical" margin={{ top: 4, right: 32, bottom: 4, left: 4 }}>
-                <CartesianGrid stroke="#dbe0f0" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
-                <YAxis type="category" dataKey="name" width={130} tick={{ fill: '#4b567f', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
-                  formatter={(value: number, _n, item: any) => [`${value} questões (${item.payload.pct}%)`, 'Total']}
-                />
-                <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                  {areaDistribution.map((a, i) => (
-                    <Cell key={a.areaId} fill={i === 0 ? '#050f41' : '#3548a8'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {/* Card em destaque com o total de questões no recorte de filtros ativo */}
+      <div className="bg-slate-900 border border-teal-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
+        <p className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+          <ClipboardList className="w-3.5 h-3.5 text-teal-400" />
+          Total de Questões
+        </p>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={filteredQuestions.length}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.25 }}
+            className="text-3xl sm:text-4xl font-black text-teal-400 mt-1"
+          >
+            {filteredQuestions.length}
+          </motion.p>
+        </AnimatePresence>
+        {activeFiltersLabel && (
+          <p className="text-[11px] text-slate-500 mt-1">{activeFiltersLabel}</p>
         )}
       </div>
 
-      {/* Ortopedia x Traumatologia, dentro do recorte ativo */}
-      {subAreaDistribution.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-            <PieChartIcon className="w-4 h-4 text-teal-400" />
-            Ortopedia x Traumatologia
-          </h2>
-          <p className="text-xs text-slate-400 mb-2">Proporção de questões, no recorte selecionado acima.</p>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="h-56 w-56 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={subAreaDistribution}
-                    dataKey="count"
-                    nameKey="name"
-                    innerRadius="55%"
-                    outerRadius="90%"
-                    paddingAngle={2}
-                  >
-                    {subAreaDistribution.map((s, i) => (
-                      <Cell key={s.name} fill={i === 0 ? '#050f41' : '#FAB932'} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
-                    formatter={(value: number, name: string) => [`${value} questões`, name]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={filterKey}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25 }}
+          className="space-y-6 sm:space-y-8"
+        >
+          {/* Distribuição histórica por ano — TEOT vs TARO, questões cadastradas no banco */}
+          {yearDistribution.length > 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+              <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-teal-400" />
+                Questões Cadastradas por Ano
+              </h2>
+              <p className="text-xs text-slate-400 mb-2">Quantidade de questões do banco, por ano de prova.</p>
+              <div className="h-56 sm:h-72 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={yearDistribution} margin={{ top: 4, right: 8, bottom: 4, left: -12 }}>
+                    <CartesianGrid stroke="#dbe0f0" vertical={false} />
+                    <XAxis dataKey="year" tick={{ fill: '#4b567f', fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
+                    <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    {(examTypeFilter === 'TODOS' || examTypeFilter === 'TEOT') && (
+                      <Bar dataKey="TEOT" fill={EXAM_TYPE_COLOR.TEOT} radius={[4, 4, 0, 0]} />
+                    )}
+                    {(examTypeFilter === 'TODOS' || examTypeFilter === 'TARO') && (
+                      <Bar dataKey="TARO" fill={EXAM_TYPE_COLOR.TARO} radius={[4, 4, 0, 0]} />
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="flex-1 w-full space-y-2">
-              {subAreaDistribution.map((s, i) => (
-                <div key={s.name} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
-                  <span className="flex items-center gap-2 text-slate-300">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: i === 0 ? '#050f41' : '#FAB932' }} />
-                    {s.name}
-                  </span>
-                  <span className="font-bold text-slate-200 shrink-0">{s.count} <span className="text-xs text-slate-500 font-normal">({s.pct}%)</span></span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Top 10 temas mais cobrados, dentro do recorte ativo */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-        <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-          <Layers className="w-4 h-4 text-teal-400" />
-          Temas Mais Cobrados
-        </h2>
-        <p className="text-xs text-slate-400 mb-3">Top 10 temas com mais questões, no recorte selecionado acima.</p>
-        {topThemes.length === 0 ? (
-          <p className="text-sm text-slate-500 italic py-4">Nenhuma questão encontrada para este recorte.</p>
-        ) : (
-          <div className="space-y-2">
-            {topThemes.map((t, idx) => {
-              const maxCount = topThemes[0].count;
-              return (
-                <div key={t.themeId} className="py-2 border-b border-slate-800/60 last:border-0">
-                  <div className="flex items-center justify-between gap-3 text-sm mb-1.5">
-                    <span className="text-slate-300 truncate flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-slate-600 w-4 shrink-0">{idx + 1}º</span>
-                      {t.name}
-                      {(t.areaName || t.subArea) && (
-                        <span className="text-slate-500 font-normal text-xs truncate">
-                          · {[t.areaName, t.subArea].filter(Boolean).join(' · ')}
-                        </span>
-                      )}
-                    </span>
-                    <span className="font-bold text-[#050f41] shrink-0">{t.count}</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-teal-500"
-                      style={{ width: `${maxCount > 0 ? Math.round((t.count / maxCount) * 100) : 0}%` }}
+          {/* Distribuição por área, dentro do recorte de filtros ativo */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+            <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-teal-400" />
+              Áreas Mais Cobradas
+            </h2>
+            <p className="text-xs text-slate-400 mb-2">Distribuição de questões por área, no recorte selecionado acima.</p>
+            {areaDistribution.length === 0 ? (
+              <p className="text-sm text-slate-500 italic py-4">Nenhuma questão encontrada para este recorte.</p>
+            ) : (
+              <div className="h-64 sm:h-80 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={areaDistribution} layout="vertical" margin={{ top: 4, right: 32, bottom: 4, left: 4 }}>
+                    <CartesianGrid stroke="#dbe0f0" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={130} tick={{ fill: '#4b567f', fontSize: 11 }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                      formatter={(value: number, _n, item: any) => [`${value} questões (${item.payload.pct}%)`, 'Total']}
                     />
-                  </div>
-                </div>
-              );
-            })}
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                      {areaDistribution.map((a, i) => (
+                        <Cell key={a.areaId} fill={i === 0 ? '#050f41' : '#3548a8'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Top 10 temas mais cobrados, dentro do recorte ativo — pizza */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+            <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-teal-400" />
+              Temas Mais Cobrados
+            </h2>
+            <p className="text-xs text-slate-400 mb-3">Top 10 temas com mais questões, no recorte selecionado acima.</p>
+            {topThemes.length === 0 ? (
+              <p className="text-sm text-slate-500 italic py-4">Nenhuma questão encontrada para este recorte.</p>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="h-64 w-64 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={topThemes}
+                        dataKey="count"
+                        nameKey="name"
+                        innerRadius="45%"
+                        outerRadius="90%"
+                        paddingAngle={2}
+                      >
+                        {topThemes.map((t, i) => (
+                          <Cell key={t.themeId} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                        formatter={(value: number, name: string) => [`${value} questões`, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 w-full space-y-2">
+                  {topThemes.map((t, idx) => (
+                    <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
+                      <span className="flex items-center gap-2 text-slate-300 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                        <span className="truncate">{t.name}</span>
+                        {(t.areaName || t.subArea) && (
+                          <span className="text-slate-500 font-normal text-xs truncate">
+                            · {[t.areaName, t.subArea].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-bold text-slate-200 shrink-0">{t.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
 
     </div>
   );

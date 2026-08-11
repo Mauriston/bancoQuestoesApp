@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, updateExamContent } from '../../services/firebaseService';
-import { Exam, ExamQuestion, QuestionAnswer, Question } from '../../types';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ClipboardList } from 'lucide-react';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas } from '../../services/firebaseService';
+import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { getSourceExamChipClass } from '../../constants';
 import { scoreColorClass } from '../../utils/helpers';
+
+interface SubmittedRow {
+  attempt: Attempt;
+  areaScores: Record<string, number | null>; // areaId -> percentage (null = sem questões dessa área nessa tentativa)
+}
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -28,6 +33,10 @@ export const ExamViewPage: React.FC = () => {
   const [hasAttempts, setHasAttempts] = useState(false);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  // Tabela "Respostas Enviadas" — uma linha completada por tentativa
+  // concluída, com o desempenho por área derivado das respostas individuais.
+  const [submittedRows, setSubmittedRows] = useState<SubmittedRow[]>([]);
+  const [examAreas, setExamAreas] = useState<Area[]>([]);
   // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
   // mexer nas questões de uma prova inativa e sem tentativas registradas.
   // Derivado a cada render (em vez de um estado próprio) para não ficar
@@ -42,16 +51,41 @@ export const ExamViewPage: React.FC = () => {
       if (!examId) return;
       try {
         setLoading(true);
-        const [examData, examQs, questionStats, attempts] = await Promise.all([
+        const [examData, examQs, questionStats, attempts, allAreas] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
           getExamQuestionStats(examId),
-          getAttemptsForExam(examId)
+          getAttemptsForExam(examId),
+          getAreas()
         ]);
         setExam(examData);
         setQuestions(examQs);
         setStats(questionStats);
         setHasAttempts(attempts.length > 0);
+
+        // Áreas presentes nesta prova (colunas da tabela de respostas
+        // enviadas), na mesma ordem de getAreas() (alfabética).
+        const areaIdsInExam = new Set(examQs.map(q => q.areaId));
+        setExamAreas(allAreas.filter(a => areaIdsInExam.has(a.id)));
+
+        const completedAttempts = attempts.filter(a => a.status === 'completed');
+        const rows = await Promise.all(completedAttempts.map(async (attempt) => {
+          const answers = await getAttemptAnswers(attempt.id);
+          const byArea: Record<string, { correct: number; total: number }> = {};
+          answers.forEach(ans => {
+            if (!byArea[ans.areaId]) byArea[ans.areaId] = { correct: 0, total: 0 };
+            byArea[ans.areaId].total += 1;
+            if (ans.isCorrect) byArea[ans.areaId].correct += 1;
+          });
+          const areaScores: Record<string, number | null> = {};
+          Array.from(areaIdsInExam).forEach(areaId => {
+            const data = byArea[areaId];
+            areaScores[areaId] = data && data.total > 0 ? Math.round((data.correct / data.total) * 100) : null;
+          });
+          return { attempt, areaScores };
+        }));
+        rows.sort((a, b) => (b.attempt.scorePercentage || 0) - (a.attempt.scorePercentage || 0));
+        setSubmittedRows(rows);
 
         const keysMap: Record<string, QuestionAnswer> = {};
         await Promise.all(examQs.map(async (q) => {
@@ -181,6 +215,46 @@ export const ExamViewPage: React.FC = () => {
           <span>{isExamActive(exam) ? 'Desativar Prova' : 'Ativar Prova'}</span>
         </button>
       </div>
+
+      {submittedRows.length > 0 && (
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-cyan-400" />
+            Respostas Enviadas ({submittedRows.length})
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Usuário</th>
+                  <th className="p-3">Desempenho na Prova</th>
+                  {examAreas.map(area => (
+                    <th key={area.id} className="p-3">{area.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {submittedRows.map(({ attempt, areaScores }) => (
+                  <tr key={attempt.id}>
+                    <td className="p-3 font-semibold text-[#050f41]">{attempt.userName || '—'}</td>
+                    <td className={`p-3 font-black ${scoreColorClass(attempt.scorePercentage || 0)}`}>
+                      {attempt.scorePercentage ?? 0}%
+                    </td>
+                    {examAreas.map(area => {
+                      const score = areaScores[area.id];
+                      return (
+                        <td key={area.id} className={score === null ? 'p-3 text-slate-600' : `p-3 font-bold ${scoreColorClass(score)}`}>
+                          {score === null ? '—' : `${score}%`}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-6">
         {questions.map((q, idx) => {

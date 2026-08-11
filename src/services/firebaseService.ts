@@ -5,9 +5,10 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
-import { 
-   AppUser, Area, Theme, Question, QuestionAnswer, Exam, ExamQuestion, 
-   ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog 
+import {
+   AppUser, Area, Theme, Question, QuestionAnswer, Exam, ExamQuestion,
+   ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
+   VideotecaItem, AulaItem, MaterialViewLog
  } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
 
@@ -99,6 +100,24 @@ export async function updateUserActiveStatus(userId: string, active: boolean): P
 export async function updateUserRole(userId: string, role: "user" | "admin"): Promise<void> {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { role, updatedAt: serverTimestamp() });
+}
+
+// Apaga o documento do usuário. Não cascateia attempts/userStats/assignments
+// para preservar o histórico agregado (dashboards, ranking) mesmo após a
+// remoção do cadastro — diferente de deleteExam(), que precisa cascatear
+// porque provas excluídas não devem deixar rastro de dados órfãos.
+export async function deleteUserAccount(userId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId));
+}
+
+export async function uploadUserAvatar(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop() || 'jpg';
+  const fileName = `${Date.now()}.${fileExt}`;
+  const storageRef = ref(storage, `user-avatars/${userId}/${fileName}`);
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  await updateDoc(doc(db, 'users', userId), { photoUrl: url, updatedAt: serverTimestamp() });
+  return url;
 }
 
 // --- AREAS & THEMES ---
@@ -322,6 +341,20 @@ export async function uploadQuestionImage(questionId: string, file: File): Promi
   const storageRef = ref(storage, `question-images/${questionId}/${fileName}`);
   await uploadBytes(storageRef, file);
   return await getDownloadURL(storageRef);
+}
+
+// Remove a imagem de uma questão: apaga o objeto no Storage (a partir da
+// própria download URL salva em imageUrl — funciona tanto para
+// question-images/ quanto para imagens_questoes/, os dois caminhos usados
+// hoje) e limpa o campo no Firestore. Falhas ao apagar o objeto (ex.: URL já
+// não existe mais no bucket) não impedem limpar o campo do documento.
+export async function deleteQuestionImage(questionId: string, imageUrl: string): Promise<void> {
+  try {
+    await deleteObject(ref(storage, imageUrl));
+  } catch (err) {
+    console.warn("Não foi possível apagar o objeto de imagem no Storage:", err);
+  }
+  await updateDoc(doc(db, 'questions', questionId), { imageUrl: deleteField(), updatedAt: serverTimestamp() });
 }
 
 // Envia uma imagem para imagens_questoes/{prova}/{arquivo} e vincula a URL
@@ -967,4 +1000,70 @@ export async function addAdminLog(adminId: string, adminName: string, action: st
     details,
     timestamp: serverTimestamp()
   });
+}
+
+// --- EXTRAS (Videoteca / Aulas) ---
+
+export async function getVideotecaItems(): Promise<VideotecaItem[]> {
+  const snapshot = await getDocs(collection(db, 'videotecaItems'));
+  const items: VideotecaItem[] = [];
+  snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as VideotecaItem));
+  return items.sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export async function createVideotecaItem(data: Omit<VideotecaItem, 'id' | 'createdAt'>): Promise<string> {
+  const id = generateId('vid');
+  await setDoc(doc(db, 'videotecaItems', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
+  return id;
+}
+
+export async function getAulaItems(): Promise<AulaItem[]> {
+  const snapshot = await getDocs(collection(db, 'aulaItems'));
+  const items: AulaItem[] = [];
+  snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as AulaItem));
+  return items.sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export async function createAulaItem(data: Omit<AulaItem, 'id' | 'createdAt'>): Promise<string> {
+  const id = generateId('aula');
+  await setDoc(doc(db, 'aulaItems', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
+  return id;
+}
+
+// Registra que um usuário abriu um material — usado tanto para marcar
+// "visto"/"não visto" para o próprio usuário quanto para o admin conferir
+// quem e quando visualizou cada material (ver getMaterialViewLogs).
+export async function logMaterialView(materialId: string, materialType: 'video' | 'aula', userId: string, userName: string): Promise<void> {
+  const id = generateId('view');
+  await setDoc(doc(db, 'materialViewLogs', id), {
+    id,
+    materialId,
+    materialType,
+    userId,
+    userName,
+    viewedAt: serverTimestamp()
+  });
+}
+
+export async function getMaterialViewLogs(materialId: string): Promise<MaterialViewLog[]> {
+  const q = query(collection(db, 'materialViewLogs'), where('materialId', '==', materialId));
+  const snapshot = await getDocs(q);
+  const logs: MaterialViewLog[] = [];
+  snapshot.forEach(d => logs.push({ id: d.id, ...d.data() } as MaterialViewLog));
+  return logs.sort((a, b) => {
+    const aT = a.viewedAt && typeof a.viewedAt === 'object' && 'seconds' in a.viewedAt ? a.viewedAt.seconds : 0;
+    const bT = b.viewedAt && typeof b.viewedAt === 'object' && 'seconds' in b.viewedAt ? b.viewedAt.seconds : 0;
+    return bT - aT;
+  });
+}
+
+// IDs de materiais já vistos pelo usuário (Videoteca + Aulas juntas — o
+// materialId já é suficiente para identificar unicamente o item de qualquer
+// um dos dois tipos, já que são gerados com prefixos diferentes: vid_/aula_).
+export async function getViewedMaterialIds(userId: string): Promise<Set<string>> {
+  const q = query(collection(db, 'materialViewLogs'), where('userId', '==', userId));
+  const snapshot = await getDocs(q);
+  const ids = new Set<string>();
+  snapshot.forEach(d => ids.add((d.data() as MaterialViewLog).materialId));
+  return ids;
 }

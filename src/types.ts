@@ -6,6 +6,9 @@ export interface AppUser {
   email: string;
   role: UserRole;
   active: boolean;
+  // Foto de perfil (Firebase Storage, path user-avatars/{userId}/...). Sem
+  // isso, o avatar mostra a inicial do nome (ver componente Avatar).
+  photoUrl?: string;
   createdAt?: any;
   updatedAt?: any;
   authUid?: string;
@@ -196,6 +199,41 @@ export interface ImportLog {
   importedCount: number;
   timestamp?: any;
   details?: any;
+}
+
+// --- EXTRAS (Videoteca / Aulas) ---
+
+export interface VideotecaItem {
+  id: string;
+  title: string;
+  areaId: string;
+  areaName?: string;
+  themeId: string;
+  themeName?: string;
+  url: string; // link do YouTube, embedado na Videoteca
+  createdBy: string;
+  createdAt?: any;
+}
+
+export interface AulaItem {
+  id: string;
+  title: string;
+  areaId: string;
+  areaName?: string;
+  themeId: string;
+  themeName?: string;
+  url: string; // link de apresentação (Canva ou Google Slides, modo "present")
+  createdBy: string;
+  createdAt?: any;
+}
+
+export interface MaterialViewLog {
+  id: string;
+  materialId: string;
+  materialType: 'video' | 'aula';
+  userId: string;
+  userName?: string;
+  viewedAt?: any;
 }
 
 export interface QuestionBankJsonRaw {

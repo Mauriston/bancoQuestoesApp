@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, BookOpen, CheckCircle2, Award, ChevronRight, Trash2
+  ArrowLeft, BookOpen, CheckCircle2, Award, ChevronRight, Trash2, Camera
 } from 'lucide-react';
-import { getUserById, getUserStats, getUserAttempts, getAreas, deleteAttempt } from '../../services/firebaseService';
+import { getUserById, getUserStats, getUserAttempts, getAreas, deleteAttempt, uploadUserAvatar } from '../../services/firebaseService';
 import { AppUser, UserStats, Attempt, Area } from '../../types';
 import { formatDate, scoreColorClass } from '../../utils/helpers';
+import { Avatar } from '../../components/Avatar';
 
 export const UserDetailPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -15,6 +16,8 @@ export const UserDetailPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const loadUser = useCallback(async () => {
     if (!userId) return;
@@ -58,6 +61,19 @@ export const UserDetailPage: React.FC = () => {
     }
   };
 
+  const handlePhotoChange = async (file: File | null) => {
+    if (!file || !userId) return;
+    setUploadingPhoto(true);
+    try {
+      await uploadUserAvatar(userId, file);
+      await loadUser();
+    } catch (err) {
+      alert("Erro ao enviar foto de perfil.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -98,8 +114,24 @@ export const UserDetailPage: React.FC = () => {
       </Link>
 
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-cyan-600/30 text-cyan-300 flex items-center justify-center font-bold text-lg shrink-0">
-          {user.name.charAt(0).toUpperCase()}
+        <div className="relative shrink-0">
+          <Avatar name={user.name} photoUrl={user.photoUrl} role={user.role} size="lg" />
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            title="Alterar foto de perfil"
+            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-cyan-600 hover:bg-cyan-500 border-2 border-slate-950 flex items-center justify-center text-white disabled:opacity-50"
+          >
+            <Camera className="w-2.5 h-2.5" />
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handlePhotoChange(e.target.files?.[0] || null)}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold text-[#050f41] truncate">{user.name}</h1>

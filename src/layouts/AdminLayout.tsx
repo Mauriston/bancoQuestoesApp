@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, Trophy, Menu, X, GraduationCap
+  LogOut, Trophy, Menu, X, GraduationCap, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { MobileBottomNav } from '../components/MobileBottomNav';
+import { Avatar } from '../components/Avatar';
 
 export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { currentUser, logout } = useAuth();
@@ -24,7 +26,8 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { label: 'Resultados', path: '/admin/attempts', icon: History },
     { label: 'Usuários', path: '/admin/users', icon: Users },
     { label: 'Importar', path: '/admin/import', icon: UploadCloud },
-    { label: 'TEOT / TARO', path: '/admin/exam-stats', icon: GraduationCap }
+    { label: 'TEOT / TARO', path: '/admin/exam-stats', icon: GraduationCap },
+    { label: 'Extras', path: '/admin/extras', icon: Sparkles }
   ];
 
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Painel Administrativo';
@@ -55,13 +58,11 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             <div className="flex-1 flex items-center justify-end gap-3">
               {currentUser && (
                 <>
-                  <div className="sm:hidden w-8 h-8 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-xs shrink-0" title={currentUser.name}>
-                    {currentUser.name.charAt(0).toUpperCase()}
+                  <div className="sm:hidden shrink-0" title={currentUser.name}>
+                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
                   </div>
                   <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
-                    <div className="w-6 h-6 rounded-full bg-[#FAB932]/25 text-[#FAB932] flex items-center justify-center font-bold text-[11px]">
-                      {currentUser.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
                     <div className="text-left">
                       <p className="font-semibold text-white leading-none">{currentUser.name}</p>
                       <p className="text-[10px] text-white/60 leading-none mt-0.5">{currentUser.email}</p>
@@ -144,7 +145,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
       {/* Main Shell — margem esquerda fixa no desktop equivalente à largura
           recolhida da sidebar (w-16); a expansão por hover é um overlay e
           não deve empurrar o conteúdo. */}
-      <div className="flex-1 max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8 lg:pl-[calc(1rem+4rem)] py-6 lg:ml-0">
+      <div className="flex-1 max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8 lg:pl-[calc(1rem+4rem)] py-6 pb-20 lg:pb-6 lg:ml-0">
 
         {/* Content Area */}
         <section className="flex-1 min-w-0">
@@ -152,6 +153,12 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
         </section>
 
       </div>
+
+      <MobileBottomNav
+        home={{ path: '/admin/home', icon: Trophy, label: 'Home' }}
+        left={{ path: '/admin/questions', icon: BookOpen, label: 'Questões' }}
+        right={{ path: '/admin/exams', icon: FileCheck, label: 'Provas' }}
+      />
 
     </div>
   );
