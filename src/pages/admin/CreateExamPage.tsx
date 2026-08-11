@@ -364,7 +364,9 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 2: Question Selection */}
       {step === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          {/* Cabeçalho + barra de filtros fixos ao rolar a lista de questões abaixo */}
+          <div className="sticky top-14 sm:top-16 z-20 bg-slate-900 -mx-6 px-6 pt-1 pb-3 space-y-4 border-b border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-[#050f41]">Etapa 2: Selecionar Questões do Banco</h2>
               <p className="text-slate-400">Questões selecionadas: <strong className="text-cyan-400">{selectedQuestions.length}</strong></p>
@@ -488,6 +490,7 @@ export const CreateExamPage: React.FC = () => {
                 <span>Limpar Filtros</span>
               </button>
             )}
+          </div>
           </div>
 
           <div className="max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
