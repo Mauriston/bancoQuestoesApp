@@ -277,7 +277,7 @@ export const ExamViewPage: React.FC = () => {
   // realizar esta prova (/app/exams/:assignmentId) — o admin ainda revisa e
   // confirma o envio dentro do próprio WhatsApp antes de disparar.
   const handleSendInvite = (assignment: ExamAssignment & { userName: string; userPhone?: string }) => {
-    if (!exam || !assignment.userPhone) return;
+    if (!exam || !assignment.userPhone || assignment.status !== 'available') return;
     const link = `${window.location.origin}/app/exams/${assignment.id}`;
     const message = `*TEOT HMA 2027:*\n\n${assignment.userName}, a prova ${exam.name} está disponível para você.\n\nAcesse : ${link}`;
     window.open(buildWhatsAppLink(assignment.userPhone, message), '_blank', 'noopener,noreferrer');
@@ -431,7 +431,17 @@ export const ExamViewPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        {a.userPhone ? (
+                        {a.status !== 'available' ? (
+                          <button
+                            type="button"
+                            disabled
+                            title={a.status === 'completed' ? 'Esta prova já foi concluída pelo candidato.' : 'Esta prova já está em andamento para o candidato.'}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-500 border border-slate-700 opacity-60 cursor-not-allowed"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            Enviar Convite
+                          </button>
+                        ) : a.userPhone ? (
                           <button
                             type="button"
                             onClick={() => handleSendInvite(a)}
