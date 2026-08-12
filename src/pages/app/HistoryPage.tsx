@@ -55,7 +55,9 @@ export const HistoryPage: React.FC = () => {
 
       {currentUser && (
         <div className="flex items-center">
-          <span className="text-sm font-bold text-slate-300 truncate">{currentUser.name}</span>
+          <h1 className="text-base sm:text-lg font-bold text-slate-300">
+            {currentUser.name}, esse é o seu histórico de provas realizadas.
+          </h1>
         </div>
       )}
 
