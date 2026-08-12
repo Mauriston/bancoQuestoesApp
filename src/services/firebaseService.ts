@@ -890,6 +890,42 @@ export async function getExamAssignmentsWithUsers(
     .sort((a, b) => a.userName.localeCompare(b.userName));
 }
 
+// Todos os assignments de todas as provas — usado em ExamsListPage para
+// contar convites enviados por prova (coluna "Convites") sem precisar de
+// uma consulta por prova (mesmo padrão de getAllAttempts()).
+export async function getAllExamAssignments(): Promise<ExamAssignment[]> {
+  const snapshot = await getDocs(collection(db, 'examAssignments'));
+  const assignments: ExamAssignment[] = [];
+  snapshot.forEach(doc => assignments.push({ id: doc.id, ...doc.data() } as ExamAssignment));
+  return assignments;
+}
+
+// Marca que o admin disparou o convite de WhatsApp para este assignment —
+// não mexe em `status` de propósito (ver comentário em ExamAssignment).
+export async function markAssignmentInvited(assignmentId: string): Promise<void> {
+  await updateDoc(doc(db, 'examAssignments', assignmentId), { invitedAt: serverTimestamp() });
+}
+
+// Atribui a prova a candidatos adicionais depois de já elaborada/publicada
+// (ver "Adicionar Candidatos" em ExamViewPage) — mesmo formato de assignment
+// criado em createAndPublishExam, só que num batch avulso.
+export async function addExamAssignments(examId: string, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+  const batch = writeBatch(db);
+  for (const userId of userIds) {
+    const assignId = generateId('asgn');
+    const assignment: ExamAssignment = {
+      id: assignId,
+      examId,
+      userId,
+      status: 'available',
+      assignedAt: serverTimestamp() as any
+    };
+    batch.set(doc(db, 'examAssignments', assignId), assignment);
+  }
+  await batch.commit();
+}
+
 // Versão "ao vivo" de getUserAssignments() — usada em ExamsPage para que uma
 // prova recém-atribuída (ou reativada) pelo admin apareça na hora, sem o
 // residente precisar recarregar a página. Retorna a função de unsubscribe.

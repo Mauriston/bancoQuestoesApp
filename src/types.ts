@@ -165,6 +165,14 @@ export interface ExamAssignment {
   userId: string;
   status: 'available' | 'started' | 'completed';
   assignedAt?: any;
+  // Marca quando o admin enviou o convite de WhatsApp para este assignment
+  // (ver ExamViewPage/handleSendInvite) — separado de `status` de propósito:
+  // status segue o ciclo de vida real da prova para o candidato (usado por
+  // ExamsPage/HomePage/TakeExamPage para decidir o que mostrar/permitir), e
+  // não deve mudar só porque um convite foi enviado. invitedAt é só uma
+  // marcação administrativa, contabilizada na coluna "Convites" de
+  // ExamsListPage e no rótulo "Convidado" da tabela de candidatos.
+  invitedAt?: any;
   startedAt?: any;
   completedAt?: any;
   attemptId?: string;

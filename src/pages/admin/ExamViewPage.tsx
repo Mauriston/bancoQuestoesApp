@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers } from '../../services/firebaseService';
-import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment } from '../../types';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
+import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
+import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { getSourceExamChipClass } from '../../constants';
 import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
 
@@ -67,6 +68,11 @@ export const ExamViewPage: React.FC = () => {
   // Candidatos atribuídos a esta prova, para a seção "Convidar Candidatos"
   // (botão de envio de convite por WhatsApp com o link direto do assignment).
   const [assignments, setAssignments] = useState<(ExamAssignment & { userName: string; userPhone?: string })[]>([]);
+  // "Adicionar Candidatos" — usuários ativos ainda não atribuídos a esta
+  // prova, para incluí-los mesmo depois dela já elaborada/publicada.
+  const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
+  const [selectedNewUserIds, setSelectedNewUserIds] = useState<string[]>([]);
+  const [addingCandidates, setAddingCandidates] = useState(false);
   const [examAreas, setExamAreas] = useState<Area[]>([]);
   // Nome de cada tema/área, usado só para rotular as tabelas e o gráfico de
   // distribuição da prova (ver areaDistribution/themeDistribution abaixo).
@@ -86,6 +92,13 @@ export const ExamViewPage: React.FC = () => {
   // visível mesmo depois de a prova ser ativada, causando o erro "Só é
   // possível editar provas inativas." ao clicar.
   const canEdit = !!exam && !isExamActive(exam) && !hasAttempts;
+
+  // Usuários ativos que ainda não têm assignment nesta prova — opções do
+  // seletor de "Adicionar Candidatos".
+  const unassignedActiveUsers = useMemo(() => {
+    const assignedUserIds = new Set(assignments.map(a => a.userId));
+    return activeUsers.filter(u => !assignedUserIds.has(u.id));
+  }, [activeUsers, assignments]);
 
   // Quantidade de questões por área nesta prova — 1ª tabela (raiz do filtro
   // cruzado, não é afetada pela seleção de área/tema).
@@ -191,7 +204,7 @@ export const ExamViewPage: React.FC = () => {
       if (!examId) return;
       try {
         setLoading(true);
-        const [examData, examQs, questionStats, attempts, allAreas, allThemes, refList, assignmentList] = await Promise.all([
+        const [examData, examQs, questionStats, attempts, allAreas, allThemes, refList, assignmentList, activeUserList] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
           getExamQuestionStats(examId),
@@ -199,7 +212,8 @@ export const ExamViewPage: React.FC = () => {
           getAreas(),
           getThemes(),
           getReferences(),
-          getExamAssignmentsWithUsers(examId)
+          getExamAssignmentsWithUsers(examId),
+          getActiveUsers()
         ]);
         setExam(examData);
         setQuestions(examQs);
@@ -207,6 +221,8 @@ export const ExamViewPage: React.FC = () => {
         setHasAttempts(attempts.length > 0);
         setReferences(refList);
         setAssignments(assignmentList);
+        // O admin não realiza provas — nunca deve aparecer como candidato.
+        setActiveUsers(activeUserList.filter(u => u.role !== 'admin'));
 
         // Áreas presentes nesta prova (colunas da tabela de respostas
         // enviadas), na mesma ordem de getAreas() (alfabética).
@@ -275,12 +291,35 @@ export const ExamViewPage: React.FC = () => {
   // Abre o WhatsApp Web/app com uma mensagem pré-preenchida (nome do
   // candidato + nome da prova) e o link direto para o assignment dele
   // realizar esta prova (/app/exams/:assignmentId) — o admin ainda revisa e
-  // confirma o envio dentro do próprio WhatsApp antes de disparar.
+  // confirma o envio dentro do próprio WhatsApp antes de disparar. Marca o
+  // convite como enviado (invitedAt) tanto no Firestore quanto localmente,
+  // para contabilizar na coluna "Convites" de ExamsListPage e mostrar
+  // "Convidado" nesta tabela.
   const handleSendInvite = (assignment: ExamAssignment & { userName: string; userPhone?: string }) => {
     if (!exam || !assignment.userPhone || assignment.status !== 'available') return;
     const link = `${window.location.origin}/app/exams/${assignment.id}`;
     const message = `*TEOT HMA 2027:*\n\n${assignment.userName}, a prova ${exam.name} está disponível para você.\n\nAcesse : ${link}`;
     window.open(buildWhatsAppLink(assignment.userPhone, message), '_blank', 'noopener,noreferrer');
+
+    markAssignmentInvited(assignment.id).catch(err => console.error('Erro ao registrar convite enviado:', err));
+    setAssignments(prev => prev.map(a => (a.id === assignment.id ? { ...a, invitedAt: new Date() } : a)));
+  };
+
+  // Atribui a prova (já publicada) a candidatos adicionais escolhidos entre
+  // os usuários ativos ainda não atribuídos (ver unassignedActiveUsers).
+  const handleAddCandidates = async () => {
+    if (!exam || selectedNewUserIds.length === 0) return;
+    setAddingCandidates(true);
+    try {
+      await addExamAssignments(exam.id, selectedNewUserIds);
+      const updated = await getExamAssignmentsWithUsers(exam.id);
+      setAssignments(updated);
+      setSelectedNewUserIds([]);
+    } catch (err: any) {
+      alert("Erro ao adicionar candidatos: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setAddingCandidates(false);
+    }
   };
 
   const handleToggleActive = async () => {
@@ -400,7 +439,37 @@ export const ExamViewPage: React.FC = () => {
         </button>
       </div>
 
-      {assignments.length > 0 && (
+      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+        <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+          <UserPlus className="w-4 h-4 text-cyan-400" />
+          Adicionar Candidatos
+        </h2>
+        <p className="text-xs text-slate-400 -mt-1">
+          Inclua outros usuários ativos para realizar esta prova, mesmo já elaborada.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <CheckboxMultiSelect
+            className="flex-1"
+            label="Candidato"
+            options={unassignedActiveUsers.map(u => ({ id: u.id, label: u.name }))}
+            selectedIds={selectedNewUserIds}
+            onChange={setSelectedNewUserIds}
+            emptyLabel={unassignedActiveUsers.length === 0 ? 'Todos os usuários ativos já foram atribuídos' : 'Selecione candidatos'}
+            disabled={unassignedActiveUsers.length === 0}
+          />
+          <button
+            type="button"
+            onClick={handleAddCandidates}
+            disabled={selectedNewUserIds.length === 0 || addingCandidates}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-md shadow-cyan-600/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            {addingCandidates ? 'Adicionando...' : 'Adicionar'}
+          </button>
+        </div>
+      </section>
+
+      {isExamActive(exam) && assignments.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
             <Send className="w-4 h-4 text-cyan-400" />
@@ -417,11 +486,13 @@ export const ExamViewPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {assignments.map((a) => {
-                  const statusMeta = {
-                    available: { label: 'Disponível', className: 'bg-slate-800 text-slate-300 border-slate-700' },
-                    started: { label: 'Em andamento', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-                    completed: { label: 'Concluída', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' }
-                  }[a.status];
+                  const statusMeta = a.status === 'started'
+                    ? { label: 'Em andamento', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' }
+                    : a.status === 'completed'
+                      ? { label: 'Concluída', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' }
+                      : a.invitedAt
+                        ? { label: 'Convidado', className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' }
+                        : { label: 'Disponível', className: 'bg-slate-800 text-slate-300 border-slate-700' };
                   return (
                     <tr key={a.id}>
                       <td className="p-3 font-semibold text-[#050f41]">{a.userName}</td>

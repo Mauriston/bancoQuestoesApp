@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Pencil, Users, Eye
+  FileCheck, Plus, Trash2, Pencil, Users, Eye, Send
 } from 'lucide-react';
-import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts } from '../../services/firebaseService';
+import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts, getAllExamAssignments } from '../../services/firebaseService';
 import { Exam } from '../../types';
 import { scoreColorClass } from '../../utils/helpers';
 
@@ -18,17 +18,26 @@ export const ExamsListPage: React.FC = () => {
   const [respondentCountByExamId, setRespondentCountByExamId] = useState<Record<string, number>>({});
   const [respondentNamesByExamId, setRespondentNamesByExamId] = useState<Record<string, string[]>>({});
   const [avgScoreByExamId, setAvgScoreByExamId] = useState<Record<string, number>>({});
+  // Nº de convites de WhatsApp já enviados por prova (ver invitedAt em
+  // ExamAssignment / handleSendInvite em ExamViewPage) — coluna "Convites".
+  const [inviteCountByExamId, setInviteCountByExamId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchExamsList = async () => {
     setLoading(true);
     try {
-      const [list, attempts] = await Promise.all([getExams(), getAllAttempts()]);
+      const [list, attempts, assignments] = await Promise.all([getExams(), getAllAttempts(), getAllExamAssignments()]);
       setExams(list);
       const counts: Record<string, number> = {};
       attempts.forEach(a => { counts[a.examId] = (counts[a.examId] || 0) + 1; });
       setAttemptCountByExamId(counts);
+
+      const inviteCounts: Record<string, number> = {};
+      assignments.forEach(a => {
+        if (a.invitedAt) inviteCounts[a.examId] = (inviteCounts[a.examId] || 0) + 1;
+      });
+      setInviteCountByExamId(inviteCounts);
 
       const completed = attempts.filter(a => a.status === 'completed');
       const respondentsByExam: Record<string, Map<string, string>> = {};
@@ -132,6 +141,7 @@ export const ExamsListPage: React.FC = () => {
                   <th className="p-3.5">Prova</th>
                   <th className="p-3.5">Questões</th>
                   <th className="p-3.5">Respondentes</th>
+                  <th className="p-3.5">Convites</th>
                   <th className="p-3.5">Média</th>
                   <th className="p-3.5 text-center">Ativa</th>
                   <th className="p-3.5 text-right">Ações</th>
@@ -153,6 +163,12 @@ export const ExamsListPage: React.FC = () => {
                         <span className="inline-flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5" />
                           {respondentCountByExamId[ex.id] || 0}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-slate-400" title="Convites de WhatsApp enviados">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Send className="w-3.5 h-3.5" />
+                          {inviteCountByExamId[ex.id] || 0}
                         </span>
                       </td>
                       <td className="p-3.5">
