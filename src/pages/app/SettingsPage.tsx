@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { Settings, Mail, Lock, AlertCircle, CheckCircle2, Camera } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Settings, Mail, Lock, AlertCircle, CheckCircle2, Camera, Phone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateOwnCredentials } from '../../services/authService';
-import { uploadUserAvatar } from '../../services/firebaseService';
+import { uploadUserAvatar, updateUserPhone } from '../../services/firebaseService';
+import { maskPhoneInput } from '../../utils/helpers';
 import { Avatar } from '../../components/Avatar';
 
 export const SettingsPage: React.FC = () => {
@@ -18,6 +19,16 @@ export const SettingsPage: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Telefone/WhatsApp, mascarado à digitação (ver maskPhoneInput) — usado
+  // pelo admin para enviar convites de prova (ExamViewPage).
+  const [phoneInput, setPhoneInput] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneSaved, setPhoneSaved] = useState(false);
+
+  useEffect(() => {
+    setPhoneInput(currentUser?.phone ? maskPhoneInput(currentUser.phone) : '');
+  }, [currentUser?.phone]);
+
   const handlePhotoChange = async (file: File | null) => {
     if (!file || !currentUser) return;
     setUploadingPhoto(true);
@@ -28,6 +39,21 @@ export const SettingsPage: React.FC = () => {
       setError('Erro ao enviar foto de perfil.');
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const handleSavePhone = async () => {
+    if (!currentUser || phoneInput === (currentUser.phone ? maskPhoneInput(currentUser.phone) : '')) return;
+    setSavingPhone(true);
+    try {
+      await updateUserPhone(currentUser.id, phoneInput);
+      await refreshUser();
+      setPhoneSaved(true);
+      setTimeout(() => setPhoneSaved(false), 2000);
+    } catch (err) {
+      setError('Erro ao salvar telefone.');
+    } finally {
+      setSavingPhone(false);
     }
   };
 
@@ -96,6 +122,34 @@ export const SettingsPage: React.FC = () => {
           <h1 className="text-xl font-bold text-[#050f41] truncate">{currentUser.name}</h1>
           <p className="text-xs text-slate-400 truncate">{currentUser.email}</p>
         </div>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+        <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+          <Phone className="w-4 h-4 text-teal-400" />
+          Telefone / WhatsApp
+        </h2>
+        <p className="text-xs text-slate-400 -mt-2">
+          Usado para receber convites de prova.
+        </p>
+        <div className="relative">
+          <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+          <input
+            type="tel"
+            inputMode="numeric"
+            placeholder="(00) 00000-0000"
+            value={phoneInput}
+            onChange={(e) => setPhoneInput(maskPhoneInput(e.target.value))}
+            onBlur={handleSavePhone}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-teal-500"
+          />
+        </div>
+        {savingPhone && <p className="text-[11px] text-slate-500">Salvando...</p>}
+        {!savingPhone && phoneSaved && (
+          <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Telefone salvo.
+          </p>
+        )}
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
