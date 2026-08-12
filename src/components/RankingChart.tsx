@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { scoreColorHex } from '../utils/helpers';
 
 export interface RankingEntry {
@@ -20,7 +20,9 @@ interface RankingChartProps {
 // página de Desempenho do usuário (somente leitura, sem onSelectUser).
 export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId, onSelectUser, height }) => {
   const sorted = [...data].sort((a, b) => b.score - a.score);
-  const chartHeight = height || Math.max(120, sorted.length * 32);
+  // Linha mais alta por usuário (antes 32px) para acomodar barras mais
+  // grossas e o rótulo de nome maior, tanto no mobile quanto no desktop.
+  const chartHeight = height || Math.max(160, sorted.length * 52);
 
   if (sorted.length === 0) {
     return <p className="text-xs text-slate-500 italic py-6 text-center">Sem dados suficientes para o ranking ainda.</p>;
@@ -28,13 +30,13 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
 
   return (
     <ResponsiveContainer width="100%" height={chartHeight}>
-      <BarChart data={sorted} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
+      <BarChart data={sorted} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 4 }} barCategoryGap="28%">
         <XAxis type="number" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} unit="%" />
         <YAxis
           type="category"
           dataKey="name"
           width={140}
-          tick={{ fill: '#cbd5e1', fontSize: 11 }}
+          tick={{ fill: '#050f41', fontSize: 14, fontWeight: 700 }}
           interval={0}
         />
         <Tooltip
@@ -55,6 +57,12 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
               opacity={!selectedUserId || selectedUserId === entry.userId ? 1 : 0.35}
             />
           ))}
+          <LabelList
+            dataKey="score"
+            position="right"
+            formatter={(value: any) => `${value}%`}
+            style={{ fill: '#050f41', fontSize: 13, fontWeight: 700 }}
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>

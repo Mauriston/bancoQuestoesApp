@@ -238,22 +238,18 @@ export const PerformancePage: React.FC = () => {
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
 
-      {currentUser && (
-        <div className="flex items-center">
-          <span className="text-sm font-bold text-slate-300 truncate">{currentUser.name}</span>
-        </div>
-      )}
-
       {/* Ranking Geral — mesmo gráfico do Dashboard admin, sem drill-down aqui */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
         <h2 className="text-sm font-bold text-[#050f41]">Ranking Geral</h2>
-        <p className="text-xs text-slate-400">Desempenho geral de todos os residentes, do 1º ao último colocado.</p>
+        <p className="text-xs text-slate-400">Desempenho geral residentes.</p>
         <RankingChart data={rankingData} />
       </div>
 
       {/* Overall Accuracy KPI — cartão mais proeminente da página */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Taxa Geral de Acerto</p>
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          {currentUser?.name ? `${currentUser.name} - Desempenho Geral` : 'Desempenho Geral'}
+        </p>
         <p className={`text-5xl sm:text-6xl font-black leading-none mt-2 ${TIER_STYLES[overallTier].text}`}>
           {overallAcc}%
         </p>
