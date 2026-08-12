@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, Trophy, Menu, X, GraduationCap, Sparkles, Home
+  LogOut, Trophy, Menu, X, GraduationCap, Sparkles, Home, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -24,6 +24,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { label: 'Questões', path: '/admin/questions', icon: BookOpen },
     { label: 'Provas', path: '/admin/exams', icon: FileCheck },
     { label: 'Resultados', path: '/admin/attempts', icon: History },
+    { label: 'Sabatinas', path: '/admin/sabatinas', icon: MessageSquare },
     { label: 'Usuários', path: '/admin/users', icon: Users },
     { label: 'Importar', path: '/admin/import', icon: UploadCloud },
     { label: 'TEOT / TARO', path: '/admin/exam-stats', icon: GraduationCap },

@@ -8,7 +8,7 @@ import { db, storage } from '../firebase/config';
 import {
    AppUser, Area, Theme, Question, QuestionAnswer, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
-   VideotecaItem, AulaItem, MaterialViewLog
+   VideotecaItem, AulaItem, MaterialViewLog, Sabatina
  } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
 
@@ -1092,4 +1092,19 @@ export async function getViewedMaterialIds(userId: string): Promise<Set<string>>
   const ids = new Set<string>();
   snapshot.forEach(d => ids.add((d.data() as MaterialViewLog).materialId));
   return ids;
+}
+
+// --- SABATINAS ---
+
+export async function getSabatinas(): Promise<Sabatina[]> {
+  const snapshot = await getDocs(collection(db, 'sabatinas'));
+  const items: Sabatina[] = [];
+  snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as Sabatina));
+  return items;
+}
+
+export async function createSabatina(data: Omit<Sabatina, 'id' | 'createdAt'>): Promise<string> {
+  const id = generateId('sab');
+  await setDoc(doc(db, 'sabatinas', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
+  return id;
 }
