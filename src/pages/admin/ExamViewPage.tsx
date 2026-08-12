@@ -406,9 +406,11 @@ export const ExamViewPage: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Áreas da Prova — raiz do filtro cruzado */}
-            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+            {/* Áreas da Prova — raiz do filtro cruzado. 2/7 da largura no
+                desktop (mesmo tanto que a tabela de Temas; o gráfico fica
+                com 3/7). */}
+            <section className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-cyan-400" />
                 Áreas da Prova
@@ -470,8 +472,8 @@ export const ExamViewPage: React.FC = () => {
               )}
             </section>
 
-            {/* Temas da Prova — filtrado pela área selecionada, se houver */}
-            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            {/* Temas da Prova — filtrado pela área selecionada, se houver. 2/7 da largura no desktop. */}
+            <section className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
                 <Layers className="w-4 h-4 text-cyan-400" />
                 Temas da Prova
@@ -533,8 +535,8 @@ export const ExamViewPage: React.FC = () => {
               )}
             </section>
 
-            {/* Gráfico — reflete os filtros de área e tema selecionados */}
-            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            {/* Gráfico — reflete os filtros de área e tema selecionados. 3/7 da largura no desktop. */}
+            <section className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
                 Distribuição por Tema
