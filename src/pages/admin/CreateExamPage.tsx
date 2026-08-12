@@ -13,6 +13,7 @@ import { SOURCE_EXAM_OPTIONS } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { Switch } from '../../components/Switch';
+import { useHideOnScroll } from '../../hooks/useHideOnScroll';
 
 export const CreateExamPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -156,6 +157,11 @@ export const CreateExamPage: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Mobile: some ao rolar para baixo, reaparece ao rolar para cima (não tem
+  // efeito no desktop, onde a barra vira sidebar fixa — ver lg:translate-y-0
+  // sempre aplicado abaixo).
+  const filterBarHidden = useHideOnScroll();
 
   const toggleSourceExam = (value: string) => {
     setSelectedSourceExams(prev =>
@@ -364,8 +370,6 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 2: Question Selection */}
       {step === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          {/* Cabeçalho + barra de filtros fixos ao rolar a lista de questões abaixo */}
-          <div className="sticky top-14 sm:top-16 z-20 bg-slate-900 -mx-6 px-6 pt-1 pb-3 space-y-4 border-b border-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-[#050f41]">Etapa 2: Selecionar Questões do Banco</h2>
@@ -386,164 +390,177 @@ export const CreateExamPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <input
-              type="text"
-              placeholder="Filtrar enunciado..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
-            />
-            <select
-              value={areaFilter}
-              onChange={(e) => {
-                setAreaFilter(e.target.value);
-                setThemeFilterIds([]);
-                setSubAreaFilter('');
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
+          {/* Barra de filtros: sidebar fixa ao lado da lista no desktop
+              (lg+); no mobile continua acima da lista, some ao rolar para
+              baixo e reaparece ao rolar para cima (useHideOnScroll). */}
+          <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-6">
+            <div
+              className={`lg:w-72 xl:w-80 shrink-0 sticky top-16 lg:top-20 z-20 transition-transform duration-300 ease-in-out lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${
+                filterBarHidden ? '-translate-y-[calc(100%+1rem)]' : 'translate-y-0'
+              } lg:translate-y-0`}
             >
-              <option value="">Todas as Áreas</option>
-              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            <select
-              value={subAreaFilter}
-              onChange={(e) => setSubAreaFilter(e.target.value)}
-              disabled={!areaFilter || subAreasForAreaFilter.length === 0}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 disabled:opacity-50"
-            >
-              <option value="">
-                {!areaFilter ? 'Selecione uma área' : subAreasForAreaFilter.length === 0 ? 'Sem subáreas' : 'Todas as Subáreas'}
-              </option>
-              {subAreasForAreaFilter.map(sa => <option key={sa} value={sa}>{sa}</option>)}
-            </select>
-            <CheckboxMultiSelect
-              label="Tema"
-              options={themesForAreaFilter.map(t => ({ id: t.id, label: t.name }))}
-              selectedIds={themeFilterIds}
-              onChange={setThemeFilterIds}
-              emptyLabel={areaFilter ? 'Todos os Temas' : 'Selecione uma área'}
-              disabled={!areaFilter}
-            />
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Filtrar enunciado..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
+                  />
+                  <select
+                    value={areaFilter}
+                    onChange={(e) => {
+                      setAreaFilter(e.target.value);
+                      setThemeFilterIds([]);
+                      setSubAreaFilter('');
+                    }}
+                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
+                  >
+                    <option value="">Todas as Áreas</option>
+                    {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <select
+                    value={subAreaFilter}
+                    onChange={(e) => setSubAreaFilter(e.target.value)}
+                    disabled={!areaFilter || subAreasForAreaFilter.length === 0}
+                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 disabled:opacity-50"
+                  >
+                    <option value="">
+                      {!areaFilter ? 'Selecione uma área' : subAreasForAreaFilter.length === 0 ? 'Sem subáreas' : 'Todas as Subáreas'}
+                    </option>
+                    {subAreasForAreaFilter.map(sa => <option key={sa} value={sa}>{sa}</option>)}
+                  </select>
+                  <CheckboxMultiSelect
+                    label="Tema"
+                    options={themesForAreaFilter.map(t => ({ id: t.id, label: t.name }))}
+                    selectedIds={themeFilterIds}
+                    onChange={setThemeFilterIds}
+                    emptyLabel={areaFilter ? 'Todos os Temas' : 'Selecione uma área'}
+                    disabled={!areaFilter}
+                  />
 
-            <div className="relative" ref={sourceDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setSourceDropdownOpen(prev => !prev)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 flex items-center justify-between gap-2"
-              >
-                <span className="truncate">
-                  {selectedSourceExams.length === 0
-                    ? 'Todas as Fontes'
-                    : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {sourceDropdownOpen && (
-                <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
-                  {selectedSourceExams.length > 0 && (
+                  <div className="relative" ref={sourceDropdownRef}>
                     <button
                       type="button"
-                      onClick={() => setSelectedSourceExams([])}
-                      className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
+                      onClick={() => setSourceDropdownOpen(prev => !prev)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 flex items-center justify-between gap-2"
                     >
-                      Limpar seleção
+                      <span className="truncate">
+                        {selectedSourceExams.length === 0
+                          ? 'Todas as Fontes'
+                          : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
-                  )}
-                  {SOURCE_EXAM_OPTIONS.map(opt => (
-                    <label
-                      key={opt}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedSourceExams.includes(opt)}
-                        onChange={() => toggleSourceExam(opt)}
-                        className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
-                      />
-                      <span className="truncate">{opt}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <p className="text-[11px] text-slate-400">
-              <strong className="text-cyan-400 font-bold">{filteredQuestions.length}</strong> questõe{filteredQuestions.length === 1 ? '' : 's'} encontrada{filteredQuestions.length === 1 ? '' : 's'} para os filtros atuais.
-            </p>
-            {(searchQuery || areaFilter || themeFilterIds.length > 0 || subAreaFilter || selectedSourceExams.length > 0 || showOnlySelected) && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setAreaFilter('');
-                  setThemeFilterIds([]);
-                  setSubAreaFilter('');
-                  setSelectedSourceExams([]);
-                  setShowOnlySelected(false);
-                }}
-                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#050f41] text-[11px] font-semibold"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Limpar Filtros</span>
-              </button>
-            )}
-          </div>
-          </div>
-
-          <div className="max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
-            {filteredQuestions.map(q => {
-              const isSelected = selectedQuestions.some(sq => sq.id === q.id);
-              const answer = answersById[q.id];
-              return (
-                <div
-                  key={q.id}
-                  onClick={() => handleToggleQuestionSelect(q)}
-                  className={`p-3 lg:p-4 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
-                    isSelected
-                      ? 'bg-cyan-500/15 border-cyan-500/50 text-[#050f41] shadow-sm'
-                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => {}}
-                    className="mt-1 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
-                  />
-                  {q.imageUrl && (
-                    <img
-                      src={q.imageUrl}
-                      alt="Miniatura da imagem da questão"
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <p className="font-semibold text-sm leading-relaxed line-clamp-2">{q.statement}</p>
-                    {answer ? (
-                      <p className="text-xs text-emerald-400 flex items-center gap-1.5 min-w-0">
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        <span className="flex items-baseline gap-1 min-w-0">
-                          <strong className="font-bold shrink-0">{answer.correctAlternative})</strong>
-                          <span className="truncate">{q.alternatives[answer.correctAlternative]}</span>
-                        </span>
-                      </p>
-                    ) : (
-                      q.imageUrl && <ImageIcon className="w-3.5 h-3.5 text-teal-400" />
+                    {sourceDropdownOpen && (
+                      <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
+                        {selectedSourceExams.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSourceExams([])}
+                            className="w-full text-left text-[10px] font-semibold uppercase text-cyan-400 hover:text-cyan-300 px-2 py-1.5"
+                          >
+                            Limpar seleção
+                          </button>
+                        )}
+                        {SOURCE_EXAM_OPTIONS.map(opt => (
+                          <label
+                            key={opt}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSourceExams.includes(opt)}
+                              onChange={() => toggleSourceExam(opt)}
+                              className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                            />
+                            <span className="truncate">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setViewingQuestion(q); }}
-                    title="Visualizar questão completa"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-[#050f41] hover:bg-slate-700 shrink-0"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
                 </div>
-              );
-            })}
+
+                <div className="flex flex-col gap-2">
+                  <p className="text-[11px] text-slate-400">
+                    <strong className="text-cyan-400 font-bold">{filteredQuestions.length}</strong> questõe{filteredQuestions.length === 1 ? '' : 's'} encontrada{filteredQuestions.length === 1 ? '' : 's'} para os filtros atuais.
+                  </p>
+                  {(searchQuery || areaFilter || themeFilterIds.length > 0 || subAreaFilter || selectedSourceExams.length > 0 || showOnlySelected) && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setAreaFilter('');
+                        setThemeFilterIds([]);
+                        setSubAreaFilter('');
+                        setSelectedSourceExams([]);
+                        setShowOnlySelected(false);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#050f41] text-[11px] font-semibold"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Limpar Filtros</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Coluna única (não dupla) para a lista de questões */}
+            <div className="flex-1 min-w-0 max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
+              {filteredQuestions.map(q => {
+                const isSelected = selectedQuestions.some(sq => sq.id === q.id);
+                const answer = answersById[q.id];
+                return (
+                  <div
+                    key={q.id}
+                    onClick={() => handleToggleQuestionSelect(q)}
+                    className={`p-3 lg:p-4 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
+                      isSelected
+                        ? 'bg-cyan-500/15 border-cyan-500/50 text-[#050f41] shadow-sm'
+                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {}}
+                      className="mt-1 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                    />
+                    {q.imageUrl && (
+                      <img
+                        src={q.imageUrl}
+                        alt="Miniatura da imagem da questão"
+                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-slate-700 bg-slate-950 shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <p className="font-semibold text-sm leading-relaxed line-clamp-2">{q.statement}</p>
+                      {answer ? (
+                        <p className="text-xs text-emerald-400 flex items-center gap-1.5 min-w-0">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span className="flex items-baseline gap-1 min-w-0">
+                            <strong className="font-bold shrink-0">{answer.correctAlternative})</strong>
+                            <span className="truncate">{q.alternatives[answer.correctAlternative]}</span>
+                          </span>
+                        </p>
+                      ) : (
+                        q.imageUrl && <ImageIcon className="w-3.5 h-3.5 text-teal-400" />
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingQuestion(q); }}
+                      title="Visualizar questão completa"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#050f41] hover:bg-slate-700 shrink-0"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex justify-between pt-4">
