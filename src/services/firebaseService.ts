@@ -1196,7 +1196,7 @@ export function subscribeViewedMaterialIds(userId: string, callback: (ids: Set<s
 export async function getSabatinas(): Promise<Sabatina[]> {
   const snapshot = await getDocs(collection(db, 'sabatinas'));
   const items: Sabatina[] = [];
-  snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as Sabatina));
+  snapshot.forEach(d => items.push(normalizeThemeIds<Sabatina>({ id: d.id, ...d.data() })));
   return items;
 }
 
@@ -1205,7 +1205,7 @@ export async function getSabatinas(): Promise<Sabatina[]> {
 export function subscribeSabatinas(callback: (items: Sabatina[]) => void): () => void {
   return onSnapshot(collection(db, 'sabatinas'), (snapshot) => {
     const items: Sabatina[] = [];
-    snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as Sabatina));
+    snapshot.forEach(d => items.push(normalizeThemeIds<Sabatina>({ id: d.id, ...d.data() })));
     callback(items);
   });
 }
