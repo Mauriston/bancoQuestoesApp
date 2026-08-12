@@ -179,6 +179,27 @@ export const CreateExamPage: React.FC = () => {
   // sempre aplicado abaixo).
   const filterBarHidden = useHideOnScroll();
 
+  // Faz a lista de questões (coluna à direita) crescer até a mesma altura
+  // do quadro lateral (filtros + tabela de temas) no desktop, em vez de usar
+  // um max-height fixo que sobrava espaço em branco abaixo do card sempre
+  // que o quadro lateral ficava mais alto (ex.: tabela de temas paginada).
+  const sidebarColRef = useRef<HTMLDivElement>(null);
+  const [sidebarColHeight, setSidebarColHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = sidebarColRef.current;
+    if (!el) return;
+    const updateHeight = () => setSidebarColHeight(window.innerWidth >= 1024 ? el.offsetHeight : null);
+    updateHeight();
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(el);
+    window.addEventListener('resize', updateHeight);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [step]);
+
   const toggleSourceExam = (value: string) => {
     setSelectedSourceExams(prev =>
       prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
@@ -410,6 +431,7 @@ export const CreateExamPage: React.FC = () => {
               são absolutamente posicionados dentro dele. */}
           <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-6">
             <div
+              ref={sidebarColRef}
               className={`lg:w-72 xl:w-80 shrink-0 sticky top-16 lg:top-20 z-20 transition-transform duration-300 ease-in-out lg:self-start ${
                 filterBarHidden ? '-translate-y-[calc(100%+1rem)]' : 'translate-y-0'
               } lg:translate-y-0`}
@@ -597,8 +619,16 @@ export const CreateExamPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Coluna única (não dupla) para a lista de questões */}
-            <div className="flex-1 min-w-0 max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950">
+            {/* Coluna única (não dupla) para a lista de questões — altura
+                acompanha a do quadro lateral (filtros + tabela de temas),
+                medida via ResizeObserver em sidebarColRef, para que a borda
+                inferior dos dois cards fique alinhada em vez de sobrar
+                espaço em branco abaixo da lista. lg:max-h-[36rem] é só o
+                fallback usado antes da primeira medição. */}
+            <div
+              className="flex-1 min-w-0 max-h-[28rem] lg:max-h-[36rem] overflow-y-auto grid grid-cols-1 gap-3 pr-1 border border-slate-800 rounded-xl p-2 bg-slate-950"
+              style={sidebarColHeight != null ? { maxHeight: sidebarColHeight } : undefined}
+            >
               {filteredQuestions.map(q => {
                 const isSelected = selectedQuestions.some(sq => sq.id === q.id);
                 const answer = answersById[q.id];
