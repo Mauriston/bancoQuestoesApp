@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, CalendarDays, Sparkles, GraduationCap
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, CalendarDays, Sparkles, GraduationCap, Home
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -101,13 +101,13 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {currentUser && (
                 <>
-                  <div className="sm:hidden shrink-0" title={currentUser.name}>
+                  <Link to="/app/settings" className="sm:hidden shrink-0" title={currentUser.name}>
                     <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
+                  </Link>
+                  <Link to="/app/settings" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-xs transition-colors">
                     <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
                     <span className="font-medium text-white max-w-[120px] truncate">{currentUser.name}</span>
-                  </div>
+                  </Link>
                 </>
               )}
 
@@ -253,7 +253,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       </footer>
 
       <MobileBottomNav
-        home={{ path: '/app/home', icon: Trophy, label: 'Home' }}
+        home={{ path: '/app/home', icon: Home, label: 'Home' }}
         left={{ path: '/app/history', icon: History, label: 'Histórico' }}
         right={{ path: '/app/performance', icon: BarChart3, label: 'Desempenho' }}
       />

@@ -109,18 +109,19 @@ export const ExamStatsPage: React.FC = () => {
   }, [examTypeFilter, yearFilter, areaFilterIds, areas]);
 
   // Distribuição por ano, separada em série TEOT e TARO — base do gráfico
-  // de barras agrupadas no topo da página (não é afetada pelo filtro de
-  // ano, só pelo de tipo, para servir de visão geral histórica).
+  // no topo da página. Respeita o filtro de tipo e o de área; não é afetada
+  // pelo filtro de ano (senão não haveria o que comparar entre anos).
   const yearDistribution = useMemo(() => {
     const map: Record<number, { year: number; TEOT: number; TARO: number }> = {};
     teotTaroQuestions.forEach(q => {
       if (!q.year) return;
       if (examTypeFilter !== 'TODOS' && q.type !== examTypeFilter) return;
+      if (areaFilterIds.length > 0 && !areaFilterIds.includes(q.areaId)) return;
       if (!map[q.year]) map[q.year] = { year: q.year, TEOT: 0, TARO: 0 };
       map[q.year][q.type as 'TEOT' | 'TARO'] += 1;
     });
     return Object.values(map).sort((a, b) => a.year - b.year);
-  }, [teotTaroQuestions, examTypeFilter]);
+  }, [teotTaroQuestions, examTypeFilter, areaFilterIds]);
 
   // Distribuição por área, respeitando os dois filtros ativos.
   const areaDistribution = useMemo(() => {
@@ -148,13 +149,7 @@ export const ExamStatsPage: React.FC = () => {
     return Object.entries(map)
       .map(([themeId, count]) => {
         const theme = themes.find(t => t.id === themeId);
-        return {
-          themeId,
-          name: theme?.name || themeId,
-          areaName: areas.find(a => a.id === theme?.areaId)?.name,
-          subArea: theme?.subArea,
-          count
-        };
+        return { themeId, name: theme?.name || themeId, count };
       })
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
@@ -259,9 +254,8 @@ export const ExamStatsPage: React.FC = () => {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
                 <ListOrdered className="w-4 h-4 text-teal-400" />
-                Questões Cadastradas por Ano
+                Questões por Ano
               </h2>
-              <p className="text-xs text-slate-400 mb-2">Quantidade de questões do banco, por ano de prova.</p>
               <div className="h-56 sm:h-72 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={yearDistribution} margin={{ top: 4, right: 8, bottom: 4, left: -12 }}>
@@ -352,11 +346,6 @@ export const ExamStatsPage: React.FC = () => {
                       <span className="flex items-center gap-2 text-slate-300 min-w-0">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
                         <span className="truncate">{t.name}</span>
-                        {(t.areaName || t.subArea) && (
-                          <span className="text-slate-500 font-normal text-xs truncate">
-                            · {[t.areaName, t.subArea].filter(Boolean).join(' · ')}
-                          </span>
-                        )}
                       </span>
                       <span className="font-bold text-slate-200 shrink-0">{t.count}</span>
                     </div>

@@ -114,27 +114,29 @@ export const ExtrasPage: React.FC = () => {
       </div>
 
       {/* Filtros + botão de inserir (admin) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center gap-3">
-        <CheckboxMultiSelect
-          label="Área"
-          options={areas.map(a => ({ id: a.id, label: a.name }))}
-          selectedIds={areaFilterIds}
-          onChange={(ids) => { setAreaFilterIds(ids); setThemeFilterIds([]); }}
-          emptyLabel="Todas as Áreas"
-          className="w-48"
-        />
-        <CheckboxMultiSelect
-          label="Tema"
-          options={themesForFilter.map(t => ({ id: t.id, label: t.name }))}
-          selectedIds={themeFilterIds}
-          onChange={setThemeFilterIds}
-          emptyLabel="Todos os Temas"
-          className="w-48"
-        />
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
+          <CheckboxMultiSelect
+            label="Área"
+            options={areas.map(a => ({ id: a.id, label: a.name }))}
+            selectedIds={areaFilterIds}
+            onChange={(ids) => { setAreaFilterIds(ids); setThemeFilterIds([]); }}
+            emptyLabel="Todas as Áreas"
+            className="w-full sm:w-48"
+          />
+          <CheckboxMultiSelect
+            label="Tema"
+            options={themesForFilter.map(t => ({ id: t.id, label: t.name }))}
+            selectedIds={themeFilterIds}
+            onChange={setThemeFilterIds}
+            emptyLabel="Todos os Temas"
+            className="w-full sm:w-48"
+          />
+        </div>
         {isAdmin && (
           <button
             onClick={() => setCreateOpen(true)}
-            className="ml-auto inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg shadow-cyan-500/20"
+            className="sm:ml-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg shadow-cyan-500/20"
           >
             <Plus className="w-4 h-4" />
             {tab === 'videoteca' ? 'Inserir Vídeo' : 'Inserir Aula'}

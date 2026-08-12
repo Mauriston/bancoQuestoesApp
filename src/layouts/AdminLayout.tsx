@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, Trophy, Menu, X, GraduationCap, Sparkles
+  LogOut, Trophy, Menu, X, GraduationCap, Sparkles, Home
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -155,7 +155,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
       </div>
 
       <MobileBottomNav
-        home={{ path: '/admin/home', icon: Trophy, label: 'Home' }}
+        home={{ path: '/admin/home', icon: Home, label: 'Home' }}
         left={{ path: '/admin/questions', icon: BookOpen, label: 'Questões' }}
         right={{ path: '/admin/exams', icon: FileCheck, label: 'Provas' }}
       />
