@@ -9,6 +9,11 @@ export interface AppUser {
   // Foto de perfil (Firebase Storage, path user-avatars/{userId}/...). Sem
   // isso, o avatar mostra a inicial do nome (ver componente Avatar).
   photoUrl?: string;
+  // Celular/WhatsApp do usuário, em qualquer formato digitado pelo admin
+  // (ver formatPhoneForWhatsApp em utils/helpers.ts, que limpa e completa o
+  // DDI na hora de montar o link de convite). Usado para o botão "Enviar
+  // Convite" de cada prova em ExamViewPage.
+  phone?: string;
   createdAt?: any;
   updatedAt?: any;
   authUid?: string;

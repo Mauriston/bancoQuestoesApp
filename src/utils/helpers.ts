@@ -18,6 +18,22 @@ export function generateId(prefix = 'id'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+// Limpa o telefone digitado pelo admin (qualquer formatação: espaços,
+// parênteses, hífen, "+") e completa o DDI 55 (Brasil) quando o número tem
+// só DDD + número (até 11 dígitos) — caso mais comum de cadastro. Números já
+// digitados com DDI (mais de 11 dígitos) são mantidos como estão.
+export function formatPhoneForWhatsApp(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.length <= 11 ? `55${digits}` : digits;
+}
+
+// Monta o link de mensagem direta do WhatsApp (wa.me) usado pelo botão
+// "Enviar Convite" de cada candidato em ExamViewPage.
+export function buildWhatsAppLink(phone: string, message: string): string {
+  return `https://wa.me/${formatPhoneForWhatsApp(phone)}?text=${encodeURIComponent(message)}`;
+}
+
 // Fisher-Yates shuffle for arrays
 export function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];

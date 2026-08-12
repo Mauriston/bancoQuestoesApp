@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, BookOpen, CheckCircle2, Award, ChevronRight, Trash2, Camera
+  ArrowLeft, BookOpen, CheckCircle2, Award, ChevronRight, Trash2, Camera, Phone, Check
 } from 'lucide-react';
-import { getUserById, getUserStats, getUserAttempts, getAreas, deleteAttempt, uploadUserAvatar } from '../../services/firebaseService';
+import { getUserById, getUserStats, getUserAttempts, getAreas, deleteAttempt, uploadUserAvatar, updateUserPhone } from '../../services/firebaseService';
 import { AppUser, UserStats, Attempt, Area } from '../../types';
 import { formatDate, scoreColorClass } from '../../utils/helpers';
 import { Avatar } from '../../components/Avatar';
@@ -18,6 +18,11 @@ export const UserDetailPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  // Telefone/WhatsApp editável inline (ver handleSavePhone) — usado pelo
+  // botão "Enviar Convite" de cada prova em ExamViewPage.
+  const [phoneInput, setPhoneInput] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneSaved, setPhoneSaved] = useState(false);
 
   const loadUser = useCallback(async () => {
     if (!userId) return;
@@ -30,6 +35,7 @@ export const UserDetailPage: React.FC = () => {
         getAreas()
       ]);
       setUser(u);
+      setPhoneInput(u?.phone || '');
       setStats(uStats);
       setAttempts(uAttempts.sort((a, b) => {
         const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
@@ -58,6 +64,21 @@ export const UserDetailPage: React.FC = () => {
       alert("Erro ao excluir tentativa: " + (err?.message || "erro desconhecido."));
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleSavePhone = async () => {
+    if (!userId || phoneInput === (user?.phone || '')) return;
+    setSavingPhone(true);
+    try {
+      await updateUserPhone(userId, phoneInput);
+      setUser(prev => (prev ? { ...prev, phone: phoneInput.trim() || undefined } : prev));
+      setPhoneSaved(true);
+      setTimeout(() => setPhoneSaved(false), 2000);
+    } catch (err) {
+      alert("Erro ao salvar telefone.");
+    } finally {
+      setSavingPhone(false);
     }
   };
 
@@ -136,6 +157,24 @@ export const UserDetailPage: React.FC = () => {
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold text-[#050f41] truncate">{user.name}</h1>
           <p className="text-xs text-slate-400 truncate">{user.email}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Phone className="w-3 h-3 text-slate-500 shrink-0" />
+            <input
+              type="tel"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onBlur={handleSavePhone}
+              placeholder="WhatsApp (ex: 11 91234-5678)"
+              title="Usado para enviar convites de prova por WhatsApp"
+              className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-cyan-500 text-xs text-slate-300 placeholder-slate-600 focus:outline-none py-0.5 min-w-0 flex-1 transition-colors"
+            />
+            {savingPhone && <span className="text-[10px] text-slate-500 shrink-0">salvando...</span>}
+            {!savingPhone && phoneSaved && (
+              <span className="text-[10px] text-emerald-400 flex items-center gap-0.5 shrink-0">
+                <Check className="w-3 h-3" /> salvo
+              </span>
+            )}
+          </div>
         </div>
         <span className={`ml-auto shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
           user.active ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'
