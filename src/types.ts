@@ -70,6 +70,13 @@ export interface Question {
   groupId?: string;
   groupName?: string;
   sourceExam: string; // e.g. "TEOT 2023", "SBOT"
+  // Derivados de sourceExam (ver scripts/split-source-exam.mjs) para
+  // facilitar estatísticas por prova de origem sem parsing de string.
+  // sourceExam continua sendo o campo usado por filtros/chip/CSV — estes
+  // são só aditivos, ausentes em questões que ainda não passaram pela
+  // migração.
+  sourceExamName?: string; // e.g. "TEOT", "TARO", "BANCO PRÓPRIO"
+  sourceExamYear?: number | null; // e.g. 2023, ou null quando não há ano (ex.: "BANCO PRÓPRIO")
   statement: string;
   alternatives: QuestionAlternatives;
   imageUrl?: string;
