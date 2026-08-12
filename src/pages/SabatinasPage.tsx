@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessageSquare, Plus, X, Presentation, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAreas, getThemes, getSabatinas, createSabatina } from '../services/firebaseService';
+import { getAreas, getThemes, subscribeSabatinas, createSabatina } from '../services/firebaseService';
 import { Area, Theme, Sabatina } from '../types';
 import { toPresentEmbedUrl, googleSlidesPdfExportUrl } from '../utils/mediaUrls';
 
@@ -23,21 +23,23 @@ export const SabatinasPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState<Sabatina | null>(null);
 
-  const loadAll = async () => {
-    setLoading(true);
-    try {
-      const [arList, thList, sList] = await Promise.all([getAreas(), getThemes(), getSabatinas()]);
-      setAreas(arList);
-      setThemes(thList);
-      setSabatinas(sList);
-    } catch (err) {
-      console.error("Erro ao carregar Sabatinas:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Área/Tema são cadastro de referência (mudam raramente) — busca única.
+  useEffect(() => {
+    Promise.all([getAreas(), getThemes()])
+      .then(([arList, thList]) => { setAreas(arList); setThemes(thList); })
+      .catch(err => console.error("Erro ao carregar áreas/temas:", err));
+  }, []);
 
-  useEffect(() => { loadAll(); }, []);
+  // Sabatinas ao vivo — uma recém-cadastrada pelo admin aparece na hora,
+  // já na seção de data correta, sem precisar recarregar a página.
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = subscribeSabatinas((data) => {
+      setSabatinas(data);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   // Agrupadas por data (ordem cronológica crescente) — cada data vira o
   // título de uma seção da página.
@@ -128,7 +130,7 @@ export const SabatinasPage: React.FC = () => {
         <CreateSabatinaModal
           areas={areas}
           onClose={() => setModalOpen(false)}
-          onCreated={async () => { setModalOpen(false); await loadAll(); }}
+          onCreated={() => setModalOpen(false)}
         />
       )}
 
