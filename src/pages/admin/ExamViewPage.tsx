@@ -20,6 +20,24 @@ const PIE_COLORS = ['#050f41', '#06b6d4', '#FAB932', '#079551', '#a855f7', '#f47
 // Tabelas "Áreas da Prova" e "Temas da Prova" paginadas, 5 linhas por página.
 const ROWS_PER_PAGE = 5;
 
+// Marcador (nome + quantidade + %) fora de cada fatia do gráfico de
+// distribuição, ligado por uma linha — mesmo estilo dos rótulos usados em
+// gráficos de pizza de referência do produto.
+const RADIAN = Math.PI / 180;
+const renderPieSliceLabel = (props: any) => {
+  const { cx, cy, midAngle, outerRadius, percent, name, value } = props;
+  const radius = outerRadius + 22;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const anchor = x > cx ? 'start' : 'end';
+  return (
+    <text x={x} y={y} textAnchor={anchor} dominantBaseline="central" fill="#050f41" fontSize={11}>
+      <tspan x={x} dy="-0.35em" fontWeight={700}>{name}: {value}</tspan>
+      <tspan x={x} dy="1.3em" fontWeight={600} fillOpacity={0.75}>{(percent * 100).toFixed(1)}%</tspan>
+    </text>
+  );
+};
+
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const { currentUser } = useAuth();
@@ -99,6 +117,18 @@ export const ExamViewPage: React.FC = () => {
   const pieData = useMemo(() => (
     selectedThemeId ? themeDistribution.filter(t => t.themeId === selectedThemeId) : themeDistribution
   ), [themeDistribution, selectedThemeId]);
+
+  // Gráfico: só os 5 maiores temas viram fatia própria — o resto é somado
+  // numa fatia "Outros" para o gráfico não ficar poluído com muitas fatias
+  // finas (pieData já vem ordenado do maior para o menor).
+  const chartData = useMemo(() => {
+    const top = pieData.slice(0, 5);
+    const rest = pieData.slice(5);
+    if (rest.length === 0) return top;
+    const othersCount = rest.reduce((sum, t) => sum + t.count, 0);
+    return [...top, { themeId: '__others__', areaId: '', name: 'Outros', count: othersCount }];
+  }, [pieData]);
+  const chartTotal = useMemo(() => chartData.reduce((sum, t) => sum + t.count, 0), [chartData]);
 
   // Questões exibidas abaixo, restritas pelos mesmos filtros cruzados.
   const filteredQuestions = useMemo(() => questions.filter(q => (
@@ -509,19 +539,22 @@ export const ExamViewPage: React.FC = () => {
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
                 Distribuição por Tema
               </h2>
-              <div className="h-64 w-full">
+              <div className="relative h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  <PieChart margin={{ top: 24, right: 64, bottom: 24, left: 64 }}>
                     <Pie
-                      data={pieData}
+                      data={chartData}
                       dataKey="count"
                       nameKey="name"
                       innerRadius="45%"
-                      outerRadius="90%"
+                      outerRadius="72%"
                       paddingAngle={2}
+                      label={renderPieSliceLabel}
+                      labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                      isAnimationActive
                     >
-                      {pieData.map((t) => (
-                        <Cell key={t.themeId} fill={PIE_COLORS[themeDistributionAll.indexOf(t) % PIE_COLORS.length]} />
+                      {chartData.map((t, i) => (
+                        <Cell key={t.themeId} fill={t.themeId === '__others__' ? '#64748b' : PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -530,6 +563,9 @@ export const ExamViewPage: React.FC = () => {
                     />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-2xl sm:text-3xl font-black text-[#050f41]">{chartTotal}</span>
+                </div>
               </div>
             </section>
           </div>
