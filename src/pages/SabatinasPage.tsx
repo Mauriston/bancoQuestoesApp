@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MessageSquare, Plus, X, Presentation, Download } from 'lucide-react';
+import { MessageSquare, Plus, X, Presentation, Download, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAreas, getThemes, subscribeSabatinas, createSabatina } from '../services/firebaseService';
+import { getAreas, getThemes, subscribeSabatinas, createSabatina, updateSabatina, deleteSabatina } from '../services/firebaseService';
 import { Area, Theme, Sabatina } from '../types';
 import { toPresentEmbedUrl, googleSlidesPdfExportUrl } from '../utils/mediaUrls';
+import { shareOrDownloadFile, toSafeFileName } from '../utils/fileShare';
+import { CheckboxMultiSelect } from '../components/CheckboxMultiSelect';
 
 // 'YYYY-MM-DD' -> 'DD/MM/YYYY', só manipulação de string — sem passar por
 // Date, para não sofrer o deslocamento de fuso horário de "new Date('YYYY-MM-DD')".
@@ -21,7 +23,9 @@ export const SabatinasPage: React.FC = () => {
   const [sabatinas, setSabatinas] = useState<Sabatina[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Sabatina | null>(null);
   const [viewingItem, setViewingItem] = useState<Sabatina | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Área/Tema são cadastro de referência (mudam raramente) — busca única.
   useEffect(() => {
@@ -30,8 +34,8 @@ export const SabatinasPage: React.FC = () => {
       .catch(err => console.error("Erro ao carregar áreas/temas:", err));
   }, []);
 
-  // Sabatinas ao vivo — uma recém-cadastrada pelo admin aparece na hora,
-  // já na seção de data correta, sem precisar recarregar a página.
+  // Sabatinas ao vivo — uma recém-cadastrada/editada/excluída pelo admin
+  // aparece na hora, sem precisar recarregar a página.
   useEffect(() => {
     setLoading(true);
     const unsubscribe = subscribeSabatinas((data) => {
@@ -54,6 +58,36 @@ export const SabatinasPage: React.FC = () => {
       .map(([date, items]) => ({ date, items: items.sort((a, b) => a.title.localeCompare(b.title)) }));
   }, [sabatinas]);
 
+  const handleOpenCreate = () => {
+    setEditingItem(null);
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (item: Sabatina) => {
+    setEditingItem(item);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (item: Sabatina) => {
+    if (!confirm(`Excluir "${item.title}"? Essa ação não pode ser desfeita.`)) return;
+    try {
+      await deleteSabatina(item.id);
+    } catch (err) {
+      alert("Erro ao excluir sabatina.");
+    }
+  };
+
+  const handleDownload = async (item: Sabatina) => {
+    const pdfUrl = googleSlidesPdfExportUrl(item.url);
+    if (!pdfUrl) return;
+    setDownloadingId(item.id);
+    try {
+      await shareOrDownloadFile(pdfUrl, toSafeFileName(item.title, 'pdf'));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -63,7 +97,7 @@ export const SabatinasPage: React.FC = () => {
         </h1>
         {isAdmin && (
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={handleOpenCreate}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
@@ -82,28 +116,55 @@ export const SabatinasPage: React.FC = () => {
             <h2 className="text-sm font-bold text-[#050f41]">{formatIsoDateBr(date)}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {items.map(item => {
-                const themeName = themes.find(t => t.id === item.themeId)?.name || item.themeName;
+                const themeNames = item.themeIds
+                  .map(id => themes.find(t => t.id === id)?.name)
+                  .filter((n): n is string => !!n);
                 const embedUrl = toPresentEmbedUrl(item.url);
                 const pdfUrl = googleSlidesPdfExportUrl(item.url);
+                const isDownloading = downloadingId === item.id;
                 return (
                   <div key={item.id} className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl shadow-xl transition-all group relative">
-                    {pdfUrl && (
-                      <a
-                        href={pdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Baixar apresentação em PDF"
-                        className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#050f41] backdrop-blur-sm"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    )}
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+                      {pdfUrl && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
+                          disabled={isDownloading}
+                          title="Baixar apresentação em PDF"
+                          className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#050f41] backdrop-blur-sm disabled:opacity-50"
+                        >
+                          <Download className={`w-3.5 h-3.5 ${isDownloading ? 'animate-pulse' : ''}`} />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }}
+                            title="Editar sabatina"
+                            className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#050f41] backdrop-blur-sm"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                            title="Excluir sabatina"
+                            className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-red-500/20 text-red-400 hover:text-red-300 backdrop-blur-sm"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                     <button onClick={() => setViewingItem(item)} className="text-left w-full">
                       <div>
-                        <p className="px-3 pt-3 text-sm font-bold text-[#050f41] line-clamp-2 pr-10">{item.title}</p>
-                        {themeName && (
-                          <p className="px-3 mt-1 text-[10px] font-semibold text-teal-300">{item.areaName ? `${item.areaName} · ${themeName}` : themeName}</p>
+                        <p className="px-3 pt-3 text-sm font-bold text-[#050f41] line-clamp-2 pr-24">{item.title}</p>
+                        {themeNames.length > 0 && (
+                          <div className="px-3 mt-1.5 flex flex-wrap gap-1">
+                            {themeNames.map(name => (
+                              <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                                {name}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
@@ -127,10 +188,11 @@ export const SabatinasPage: React.FC = () => {
       )}
 
       {modalOpen && isAdmin && (
-        <CreateSabatinaModal
+        <SabatinaFormModal
           areas={areas}
+          editingItem={editingItem}
           onClose={() => setModalOpen(false)}
-          onCreated={() => setModalOpen(false)}
+          onSaved={() => setModalOpen(false)}
         />
       )}
 
@@ -141,38 +203,47 @@ export const SabatinasPage: React.FC = () => {
   );
 };
 
-const CreateSabatinaModal: React.FC<{
+const SabatinaFormModal: React.FC<{
   areas: Area[];
+  editingItem: Sabatina | null;
   onClose: () => void;
-  onCreated: () => void;
-}> = ({ areas, onClose, onCreated }) => {
+  onSaved: () => void;
+}> = ({ areas, editingItem, onClose, onSaved }) => {
   const { currentUser } = useAuth();
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [areaId, setAreaId] = useState('');
-  const [themeId, setThemeId] = useState('');
+  const [title, setTitle] = useState(editingItem?.title || '');
+  const [date, setDate] = useState(editingItem?.date || '');
+  const [areaId, setAreaId] = useState(editingItem?.areaId || '');
+  const [themeIds, setThemeIds] = useState<string[]>(editingItem?.themeIds || []);
   const [themeOptions, setThemeOptions] = useState<Theme[]>([]);
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(editingItem?.url || '');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (areaId) getThemes(areaId).then(setThemeOptions);
+    else setThemeOptions([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAreaChange = async (v: string) => {
     setAreaId(v);
-    setThemeId('');
+    setThemeIds([]);
     setThemeOptions(v ? await getThemes(v) : []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !date || !areaId || !themeId || !url || !currentUser) return;
+    if (!title || !date || !areaId || themeIds.length === 0 || !url || !currentUser) return;
     setSubmitting(true);
     try {
       const area = areas.find(a => a.id === areaId);
-      const theme = themeOptions.find(t => t.id === themeId);
-      await createSabatina({
-        title, date, areaId, areaName: area?.name, themeId, themeName: theme?.name,
-        url, createdBy: currentUser.id
-      });
-      onCreated();
+      const themeNames = themeIds.map(id => themeOptions.find(t => t.id === id)?.name).filter((n): n is string => !!n);
+      const payload = {
+        title, date, areaId, areaName: area?.name, themeIds, themeNames,
+        url, createdBy: editingItem?.createdBy || currentUser.id
+      };
+      if (editingItem) await updateSabatina(editingItem.id, payload);
+      else await createSabatina(payload);
+      onSaved();
     } catch (err: any) {
       alert("Erro ao salvar sabatina: " + err.message);
     } finally {
@@ -184,7 +255,7 @@ const CreateSabatinaModal: React.FC<{
     <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-sm font-bold text-[#050f41]">Inserir Sabatina</h3>
+          <h3 className="text-sm font-bold text-[#050f41]">{editingItem ? 'Editar' : 'Inserir'} Sabatina</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-[#050f41]"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
@@ -204,11 +275,15 @@ const CreateSabatinaModal: React.FC<{
             </select>
           </div>
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Tema *</label>
-            <select required value={themeId} disabled={!areaId} onChange={e => setThemeId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 disabled:opacity-50">
-              <option value="">{areaId ? 'Selecione o Tema' : 'Selecione a área primeiro'}</option>
-              {themeOptions.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <label className="block text-slate-300 font-medium mb-1">Temas * <span className="font-normal text-slate-500">(pode selecionar mais de um)</span></label>
+            <CheckboxMultiSelect
+              label="Tema"
+              options={themeOptions.map(t => ({ id: t.id, label: t.name }))}
+              selectedIds={themeIds}
+              onChange={setThemeIds}
+              emptyLabel={areaId ? 'Selecione o(s) Tema(s)' : 'Selecione a área primeiro'}
+              disabled={!areaId}
+            />
           </div>
           <div>
             <label className="block text-slate-300 font-medium mb-1">URL da apresentação (Google Apresentações, modo Apresentar) *</label>

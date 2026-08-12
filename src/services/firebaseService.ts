@@ -1214,3 +1214,11 @@ export async function createSabatina(data: Omit<Sabatina, 'id' | 'createdAt'>): 
   await setDoc(doc(db, 'sabatinas', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
   return id;
 }
+
+export async function updateSabatina(id: string, data: Omit<Sabatina, 'id' | 'createdAt'>): Promise<void> {
+  await setDoc(doc(db, 'sabatinas', id), removeUndefined({ ...data, id, updatedAt: serverTimestamp() }), { merge: true });
+}
+
+export async function deleteSabatina(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'sabatinas', id));
+}

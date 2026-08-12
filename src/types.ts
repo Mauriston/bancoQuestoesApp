@@ -248,11 +248,13 @@ export interface Sabatina {
   date: string; // 'YYYY-MM-DD' — string simples para evitar bugs de fuso horário
   areaId: string;
   areaName?: string;
-  themeId: string;
-  themeName?: string;
+  // Uma sabatina pode cobrir mais de um tema da mesma área.
+  themeIds: string[];
+  themeNames?: string[];
   url: string; // apresentação do Google Slides, modo "present"
   createdBy: string;
   createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface QuestionBankJsonRaw {
