@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, History, BarChart3, CalendarDays, GraduationCap, Sparkles, MessageSquare, AlertTriangle } from 'lucide-react';
+import { FileText, History, BarChart3, CalendarDays, GraduationCap, Sparkles, MessageSquare, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { subscribeUserAssignments, isExamActive } from '../../services/firebaseService';
 import { ExamAssignment, Exam } from '../../types';
@@ -49,10 +49,13 @@ export const HomePage: React.FC = () => {
       </div>
 
       {pendingExams.length > 0 && (
-        <PendingExamsCarousel
-          exams={pendingExams}
-          onSelect={(assignmentId) => navigate(`/app/exams/${assignmentId}`)}
-        />
+        <>
+          <PendingExamsCarousel
+            exams={pendingExams}
+            onSelect={(assignmentId) => navigate(`/app/exams/${assignmentId}`)}
+          />
+          <div className="border-t border-slate-800/60" />
+        </>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -113,17 +116,21 @@ const PendingExamsCarousel: React.FC<{
               onClick={() => onSelect(asgn.id)}
               className="w-full shrink-0 snap-center text-left px-1"
             >
-              <div className="bg-[#050f41] border border-[#E20018]/40 rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col gap-2">
+              <div className="bg-white border border-[#E20018]/30 rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col gap-2">
                 {isStarted && (
-                  <span className="self-start text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="self-start text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30">
                     Em Andamento
                   </span>
                 )}
-                <h3 className="text-base font-bold text-white line-clamp-2">
+                <h3 className="text-base font-bold text-[#050f41] line-clamp-2">
                   {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
                 </h3>
-                <span className="text-xs text-white/60 font-medium">
+                <span className="text-xs text-slate-400 font-medium">
                   {asgn.exam?.questionCount || 0} questões
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-bold text-[#E20018] mt-1">
+                  {isStarted ? 'Clique aqui para continuar a prova' : 'Clique aqui para iniciar a prova'}
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </div>
             </button>
