@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   getAreas, getThemes, getVideotecaItems, createVideotecaItem, updateVideotecaItem, deleteVideotecaItem,
   getAulaItems, createAulaItem, updateAulaItem, deleteAulaItem,
-  logMaterialView, getMaterialViewLogs, getViewedMaterialIds
+  logMaterialView, getAllMaterialViewLogs, getViewedMaterialIds
 } from '../services/firebaseService';
 import { Area, Theme, VideotecaItem, AulaItem, MaterialViewLog } from '../types';
 import { CheckboxMultiSelect } from '../components/CheckboxMultiSelect';
@@ -23,6 +23,10 @@ export const ExtrasPage: React.FC = () => {
   const [videos, setVideos] = useState<VideotecaItem[]>([]);
   const [aulas, setAulas] = useState<AulaItem[]>([]);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
+  // Todos os registros de visualização, carregados uma única vez (admin) —
+  // alimenta tanto o badge de contagem em cada card quanto a lista do modal
+  // de detalhes, sem precisar de 1 consulta por material.
+  const [allViewLogs, setAllViewLogs] = useState<MaterialViewLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [areaFilterIds, setAreaFilterIds] = useState<string[]>([]);
@@ -31,7 +35,6 @@ export const ExtrasPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MaterialItem | null>(null);
   const [viewingItem, setViewingItem] = useState<MaterialItem | null>(null);
-  const [viewLogs, setViewLogs] = useState<MaterialViewLog[]>([]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -44,6 +47,7 @@ export const ExtrasPage: React.FC = () => {
       setVideos(vList);
       setAulas(aList);
       if (currentUser) setViewedIds(await getViewedMaterialIds(currentUser.id));
+      if (isAdmin) setAllViewLogs(await getAllMaterialViewLogs());
     } catch (err) {
       console.error("Erro ao carregar Extras:", err);
     } finally {
@@ -78,15 +82,25 @@ export const ExtrasPage: React.FC = () => {
 
   const themesForFilter = areaFilterIds.length > 0 ? themes.filter(t => areaFilterIds.includes(t.areaId)) : themes;
 
+  // Nº de visualizações por material (contagem bruta, sem deduplicar) —
+  // exibido no card para o admin.
+  const viewCountByMaterial = useMemo(() => {
+    const map: Record<string, number> = {};
+    allViewLogs.forEach(log => { map[log.materialId] = (map[log.materialId] || 0) + 1; });
+    return map;
+  }, [allViewLogs]);
+
   const handleOpenItem = async (item: MaterialItem) => {
     setViewingItem(item);
-    setViewLogs([]);
     if (currentUser) {
       await logMaterialView(item.id, item.kind === 'videoteca' ? 'video' : 'aula', currentUser.id, currentUser.name);
       setViewedIds(prev => new Set(prev).add(item.id));
-    }
-    if (isAdmin) {
-      getMaterialViewLogs(item.id).then(setViewLogs).catch(() => {});
+      if (isAdmin) {
+        setAllViewLogs(prev => [
+          { id: `local_${Date.now()}`, materialId: item.id, materialType: item.kind === 'videoteca' ? 'video' : 'aula', userId: currentUser.id, userName: currentUser.name, viewedAt: new Date() },
+          ...prev
+        ]);
+      }
     }
   };
 
@@ -176,11 +190,11 @@ export const ExtrasPage: React.FC = () => {
         Object.entries(groupedByArea).map(([areaName, groupItems]) => (
           <div key={areaName} className="space-y-3">
             <h2 className="text-sm font-bold text-[#050f41]">{areaName}</h2>
-            <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
+            <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
           </div>
         ))
       ) : (
-        <MaterialGrid items={items} themes={themes} viewedIds={viewedIds} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
+        <MaterialGrid items={items} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
       )}
 
       {modalOpen && isAdmin && (
@@ -197,7 +211,12 @@ export const ExtrasPage: React.FC = () => {
         <ViewMaterialModal
           item={viewingItem}
           isAdmin={isAdmin}
-          viewLogs={viewLogs}
+          viewLogs={allViewLogs
+            .filter(l => l.materialId === viewingItem.id)
+            .sort((a, b) => {
+              const toSeconds = (v: any) => v && typeof v === 'object' && 'seconds' in v ? v.seconds : (v instanceof Date ? v.getTime() / 1000 : 0);
+              return toSeconds(b.viewedAt) - toSeconds(a.viewedAt);
+            })}
           onClose={() => setViewingItem(null)}
         />
       )}
@@ -209,11 +228,12 @@ const MaterialGrid: React.FC<{
   items: MaterialItem[];
   themes: Theme[];
   viewedIds: Set<string>;
+  viewCountByMaterial: Record<string, number>;
   isAdmin: boolean;
   onOpen: (item: MaterialItem) => void;
   onEdit: (item: MaterialItem) => void;
   onDelete: (item: MaterialItem) => void;
-}> = ({ items, themes, viewedIds, isAdmin, onOpen, onEdit, onDelete }) => {
+}> = ({ items, themes, viewedIds, viewCountByMaterial, isAdmin, onOpen, onEdit, onDelete }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {items.map(item => {
@@ -221,7 +241,9 @@ const MaterialGrid: React.FC<{
           .map(id => themes.find(t => t.id === id)?.name)
           .filter((n): n is string => !!n);
         const thumbnail = item.kind === 'videoteca' ? youTubeThumbnailUrl(item.url) : null;
+        const aulaEmbedUrl = item.kind === 'aulas' ? toPresentEmbedUrl(item.url) : null;
         const seen = viewedIds.has(item.id);
+        const viewCount = viewCountByMaterial[item.id] || 0;
         return (
           <div
             key={item.id}
@@ -257,10 +279,26 @@ const MaterialGrid: React.FC<{
                     ))}
                   </div>
                 )}
+                {isAdmin && (
+                  <p className="px-3 mt-1.5 text-[10px] text-slate-500 flex items-center gap-1">
+                    <UsersIcon className="w-3 h-3" />
+                    {viewCount} visualizaç{viewCount === 1 ? 'ão' : 'ões'}
+                  </p>
+                )}
               </div>
               <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
                 {thumbnail ? (
                   <img src={thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                ) : aulaEmbedUrl ? (
+                  // pointer-events-none faz o clique "atravessar" o iframe e
+                  // cair no <button> pai, em vez de ser capturado pelos
+                  // controles internos do player do Canva/Slides.
+                  <iframe
+                    src={aulaEmbedUrl}
+                    title={item.title}
+                    loading="lazy"
+                    className="w-full h-full pointer-events-none"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-600">
                     <Presentation className="w-10 h-10" />
@@ -427,6 +465,54 @@ const ViewMaterialModal: React.FC<{
   // deduplicar.
   const uniqueViewers = viewLogs.filter((log, idx) => viewLogs.findIndex(l => l.userId === log.userId) === idx);
 
+  const viewersPanel = isAdmin && (
+    <div className="p-5 space-y-2">
+      <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+        <UsersIcon className="w-3.5 h-3.5 text-cyan-400" />
+        Visualizações ({viewLogs.length})
+      </h4>
+      {viewLogs.length === 0 ? (
+        <p className="text-[11px] text-slate-500 italic">Ninguém visualizou este material ainda.</p>
+      ) : (
+        <ul className="space-y-1 max-h-40 overflow-y-auto text-[11px] text-slate-400">
+          {uniqueViewers.map(log => (
+            <li key={log.id} className="flex items-center justify-between border-b border-slate-800/60 py-1 last:border-0">
+              <span className="flex items-center gap-1.5"><Eye className="w-3 h-3" />{log.userName || log.userId}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  // Aulas abrem em tela cheia (o material em si já é a "capa" mostrada no
+  // card, então aqui só falta a experiência ampliada). Videoteca mantém o
+  // modal centralizado de sempre.
+  if (item.kind === 'aulas') {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-[#050f41] shrink-0">
+          <h3 className="text-sm font-bold text-white truncate pr-4">{item.title}</h3>
+          <button onClick={onClose} className="text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="flex-1 min-h-0">
+          {embedUrl ? (
+            <iframe src={embedUrl} title={item.title} className="w-full h-full" allowFullScreen allow="fullscreen" />
+          ) : (
+            <a href={item.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center text-cyan-400 text-sm underline">
+              Abrir material em nova aba
+            </a>
+          )}
+        </div>
+        {isAdmin && (
+          <div className="shrink-0 max-h-52 overflow-y-auto bg-slate-900 border-t border-slate-800">
+            {viewersPanel}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-[#050f41]/90 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -443,25 +529,7 @@ const ViewMaterialModal: React.FC<{
             </a>
           )}
         </div>
-        {isAdmin && (
-          <div className="p-5 space-y-2">
-            <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <UsersIcon className="w-3.5 h-3.5 text-cyan-400" />
-              Visualizações ({viewLogs.length})
-            </h4>
-            {viewLogs.length === 0 ? (
-              <p className="text-[11px] text-slate-500 italic">Ninguém visualizou este material ainda.</p>
-            ) : (
-              <ul className="space-y-1 max-h-40 overflow-y-auto text-[11px] text-slate-400">
-                {uniqueViewers.map(log => (
-                  <li key={log.id} className="flex items-center justify-between border-b border-slate-800/60 py-1 last:border-0">
-                    <span className="flex items-center gap-1.5"><Eye className="w-3 h-3" />{log.userName || log.userId}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {viewersPanel}
       </div>
     </div>
   );

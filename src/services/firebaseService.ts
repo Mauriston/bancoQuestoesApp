@@ -1060,7 +1060,7 @@ export async function deleteAulaItem(id: string): Promise<void> {
 
 // Registra que um usuário abriu um material — usado tanto para marcar
 // "visto"/"não visto" para o próprio usuário quanto para o admin conferir
-// quem e quando visualizou cada material (ver getMaterialViewLogs).
+// quem e quando visualizou cada material (ver getAllMaterialViewLogs).
 export async function logMaterialView(materialId: string, materialType: 'video' | 'aula', userId: string, userName: string): Promise<void> {
   const id = generateId('view');
   await setDoc(doc(db, 'materialViewLogs', id), {
@@ -1073,16 +1073,14 @@ export async function logMaterialView(materialId: string, materialType: 'video' 
   });
 }
 
-export async function getMaterialViewLogs(materialId: string): Promise<MaterialViewLog[]> {
-  const q = query(collection(db, 'materialViewLogs'), where('materialId', '==', materialId));
-  const snapshot = await getDocs(q);
+// Todos os registros de visualização — usado pela página Extras (admin)
+// para exibir o total de visualizações de cada material direto no card,
+// sem precisar de 1 consulta por material.
+export async function getAllMaterialViewLogs(): Promise<MaterialViewLog[]> {
+  const snapshot = await getDocs(collection(db, 'materialViewLogs'));
   const logs: MaterialViewLog[] = [];
   snapshot.forEach(d => logs.push({ id: d.id, ...d.data() } as MaterialViewLog));
-  return logs.sort((a, b) => {
-    const aT = a.viewedAt && typeof a.viewedAt === 'object' && 'seconds' in a.viewedAt ? a.viewedAt.seconds : 0;
-    const bT = b.viewedAt && typeof b.viewedAt === 'object' && 'seconds' in b.viewedAt ? b.viewedAt.seconds : 0;
-    return bT - aT;
-  });
+  return logs;
 }
 
 // IDs de materiais já vistos pelo usuário (Videoteca + Aulas juntas — o
