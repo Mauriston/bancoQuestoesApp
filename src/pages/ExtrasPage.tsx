@@ -106,6 +106,22 @@ export const ExtrasPage: React.FC = () => {
     return map;
   }, [allViewLogs]);
 
+  // Nomes únicos de quem visualizou cada material, para o tooltip do
+  // contador de visualizações — sem repetir quem já apareceu.
+  const viewerNamesByMaterial = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    const seenByMaterial: Record<string, Set<string>> = {};
+    allViewLogs.forEach(log => {
+      if (!seenByMaterial[log.materialId]) { seenByMaterial[log.materialId] = new Set(); map[log.materialId] = []; }
+      const key = log.userName || log.userId;
+      if (!seenByMaterial[log.materialId].has(key)) {
+        seenByMaterial[log.materialId].add(key);
+        map[log.materialId].push(key);
+      }
+    });
+    return map;
+  }, [allViewLogs]);
+
   const handleOpenItem = async (item: MaterialItem) => {
     setViewingItem(item);
     if (currentUser) {
@@ -206,11 +222,11 @@ export const ExtrasPage: React.FC = () => {
         Object.entries(groupedByArea).map(([areaName, groupItems]) => (
           <div key={areaName} className="space-y-3">
             <h2 className="text-sm font-bold text-[#050f41]">{areaName}</h2>
-            <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
+            <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} viewerNamesByMaterial={viewerNamesByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
           </div>
         ))
       ) : (
-        <MaterialGrid items={items} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
+        <MaterialGrid items={items} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} viewerNamesByMaterial={viewerNamesByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
       )}
 
       {modalOpen && isAdmin && (
@@ -245,11 +261,12 @@ const MaterialGrid: React.FC<{
   themes: Theme[];
   viewedIds: Set<string>;
   viewCountByMaterial: Record<string, number>;
+  viewerNamesByMaterial: Record<string, string[]>;
   isAdmin: boolean;
   onOpen: (item: MaterialItem) => void;
   onEdit: (item: MaterialItem) => void;
   onDelete: (item: MaterialItem) => void;
-}> = ({ items, themes, viewedIds, viewCountByMaterial, isAdmin, onOpen, onEdit, onDelete }) => {
+}> = ({ items, themes, viewedIds, viewCountByMaterial, viewerNamesByMaterial, isAdmin, onOpen, onEdit, onDelete }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {items.map(item => {
@@ -260,10 +277,11 @@ const MaterialGrid: React.FC<{
         const aulaEmbedUrl = item.kind === 'aulas' ? toPresentEmbedUrl(item.url) : null;
         const seen = viewedIds.has(item.id);
         const viewCount = viewCountByMaterial[item.id] || 0;
+        const viewerNames = viewerNamesByMaterial[item.id] || [];
         return (
           <div
             key={item.id}
-            className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden shadow-xl transition-all group relative"
+            className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl shadow-xl transition-all group relative"
           >
             {isAdmin && (
               <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
@@ -294,12 +312,6 @@ const MaterialGrid: React.FC<{
                       </span>
                     ))}
                   </div>
-                )}
-                {isAdmin && (
-                  <p className="px-3 mt-1.5 text-[10px] text-slate-500 flex items-center gap-1">
-                    <UsersIcon className="w-3 h-3" />
-                    {viewCount} visualizaç{viewCount === 1 ? 'ão' : 'ões'}
-                  </p>
                 )}
               </div>
               <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
@@ -334,6 +346,22 @@ const MaterialGrid: React.FC<{
                   </span>
                 )}
               </div>
+              {isAdmin && (
+                <div className="relative px-3 py-2 group/viewcount w-fit">
+                  <p
+                    title={viewerNames.length > 0 ? viewerNames.join(', ') : undefined}
+                    className="text-[10px] text-slate-500 flex items-center gap-1 cursor-default"
+                  >
+                    <UsersIcon className="w-3 h-3" />
+                    {viewCount} visualizaç{viewCount === 1 ? 'ão' : 'ões'}
+                  </p>
+                  {viewerNames.length > 0 && (
+                    <div className="absolute left-3 bottom-full mb-1 z-20 hidden group-hover/viewcount:block w-max max-w-[14rem] bg-slate-950 border border-slate-700 rounded-lg shadow-2xl px-2.5 py-1.5">
+                      <p className="text-[10px] text-slate-300 leading-relaxed">{viewerNames.join(', ')}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </button>
           </div>
         );
