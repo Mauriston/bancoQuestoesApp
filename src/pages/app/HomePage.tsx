@@ -1,7 +1,9 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { FileText, History, BarChart3, CalendarDays, GraduationCap, Sparkles, MessageSquare } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FileText, History, BarChart3, CalendarDays, GraduationCap, Sparkles, MessageSquare, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { subscribeUserAssignments, isExamActive } from '../../services/firebaseService';
+import { ExamAssignment, Exam } from '../../types';
 
 const HOME_ITEMS = [
   { label: 'Provas', path: '/app/exams', icon: FileText },
@@ -13,8 +15,29 @@ const HOME_ITEMS = [
   { label: 'Extras', path: '/app/extras', icon: Sparkles },
 ];
 
+function toSeconds(value: any): number {
+  return value && typeof value === 'object' && 'seconds' in value ? value.seconds : 0;
+}
+
 export const HomePage: React.FC = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  const [pendingExams, setPendingExams] = useState<(ExamAssignment & { exam?: Exam })[]>([]);
+
+  // Ao vivo, como em ExamsPage: uma prova recém-atribuída/reativada aparece
+  // aqui sem precisar recarregar.
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsubscribe = subscribeUserAssignments(currentUser.id, (assignments) => {
+      const pending = assignments
+        .filter(a => a.status === 'started' || (a.status === 'available' && isExamActive(a.exam)))
+        // Mais recente primeiro — por quando a prova foi atribuída ao usuário.
+        .sort((a, b) => toSeconds(b.assignedAt) - toSeconds(a.assignedAt));
+      setPendingExams(pending);
+    });
+    return unsubscribe;
+  }, [currentUser]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -24,6 +47,13 @@ export const HomePage: React.FC = () => {
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">O que você quer fazer agora?</p>
       </div>
+
+      {pendingExams.length > 0 && (
+        <PendingExamsCarousel
+          exams={pendingExams}
+          onSelect={(assignmentId) => navigate(`/app/exams/${assignmentId}`)}
+        />
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {HOME_ITEMS.map(item => {
@@ -41,5 +71,80 @@ export const HomePage: React.FC = () => {
         })}
       </div>
     </div>
+  );
+};
+
+const PendingExamsCarousel: React.FC<{
+  exams: (ExamAssignment & { exam?: Exam })[];
+  onSelect: (assignmentId: string) => void;
+}> = ({ exams, onSelect }) => {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleScroll = () => {
+    const el = trackRef.current;
+    if (!el || el.clientWidth === 0) return;
+    setActiveIndex(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  const scrollToIndex = (index: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' });
+  };
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-bold text-[#E20018] flex items-center gap-1.5">
+        <AlertTriangle className="w-4 h-4" />
+        Provas Teóricas Pendentes
+      </h2>
+
+      <div
+        ref={trackRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-1 px-1"
+      >
+        {exams.map((asgn) => {
+          const isStarted = asgn.status === 'started';
+          return (
+            <button
+              key={asgn.id}
+              onClick={() => onSelect(asgn.id)}
+              className="w-full shrink-0 snap-center text-left px-1"
+            >
+              <div className="bg-[#050f41] border border-[#E20018]/40 rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col gap-2">
+                {isStarted && (
+                  <span className="self-start text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Em Andamento
+                  </span>
+                )}
+                <h3 className="text-base font-bold text-white line-clamp-2">
+                  {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
+                </h3>
+                <span className="text-xs text-white/60 font-medium">
+                  {asgn.exam?.questionCount || 0} questões
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {exams.length > 1 && (
+        <div className="flex items-center justify-center gap-1.5">
+          {exams.map((asgn, idx) => (
+            <button
+              key={asgn.id}
+              onClick={() => scrollToIndex(idx)}
+              aria-label={`Ir para prova ${idx + 1}`}
+              className={`h-1.5 rounded-full transition-all ${
+                idx === activeIndex ? 'w-5 bg-[#E20018]' : 'w-1.5 bg-slate-700'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
