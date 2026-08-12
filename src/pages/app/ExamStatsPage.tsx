@@ -140,7 +140,7 @@ export const ExamStatsPage: React.FC = () => {
       .sort((a, b) => b.count - a.count);
   }, [filteredQuestions, areas]);
 
-  // Top 10 temas mais cobrados dentro do recorte de filtros atual.
+  // Top 5 temas mais cobrados dentro do recorte de filtros atual.
   const topThemes = useMemo(() => {
     const map: Record<string, number> = {};
     filteredQuestions.forEach(q => {
@@ -152,7 +152,7 @@ export const ExamStatsPage: React.FC = () => {
         return { themeId, name: theme?.name || themeId, count };
       })
       .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+      .slice(0, 5);
   }, [filteredQuestions, themes, areas]);
 
   if (loading) {
@@ -217,29 +217,6 @@ export const ExamStatsPage: React.FC = () => {
         />
       </div>
 
-      {/* Card em destaque com o total de questões no recorte de filtros ativo */}
-      <div className="bg-slate-900 border border-teal-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
-        <p className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
-          <ClipboardList className="w-3.5 h-3.5 text-teal-400" />
-          Total de Questões
-        </p>
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={filteredQuestions.length}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.25 }}
-            className="text-3xl sm:text-4xl font-black text-teal-400 mt-1"
-          >
-            {filteredQuestions.length}
-          </motion.p>
-        </AnimatePresence>
-        {activeFiltersLabel && (
-          <p className="text-[11px] text-slate-500 mt-1">{activeFiltersLabel}</p>
-        )}
-      </div>
-
       <AnimatePresence mode="wait">
         <motion.div
           key={filterKey}
@@ -249,32 +226,111 @@ export const ExamStatsPage: React.FC = () => {
           transition={{ duration: 0.25 }}
           className="space-y-6 sm:space-y-8"
         >
-          {/* Distribuição histórica por ano — TEOT vs TARO, questões cadastradas no banco */}
-          {yearDistribution.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-              <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-                <ListOrdered className="w-4 h-4 text-teal-400" />
-                Questões por Ano
-              </h2>
-              <div className="h-56 sm:h-72 w-full mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={yearDistribution} margin={{ top: 4, right: 8, bottom: 4, left: -12 }}>
-                    <CartesianGrid stroke="#dbe0f0" vertical={false} />
-                    <XAxis dataKey="year" tick={{ fill: '#4b567f', fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    {(examTypeFilter === 'TODOS' || examTypeFilter === 'TEOT') && (
-                      <Bar dataKey="TEOT" fill={EXAM_TYPE_COLOR.TEOT} radius={[4, 4, 0, 0]} />
-                    )}
-                    {(examTypeFilter === 'TODOS' || examTypeFilter === 'TARO') && (
-                      <Bar dataKey="TARO" fill={EXAM_TYPE_COLOR.TARO} radius={[4, 4, 0, 0]} />
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
+          {/* "Total de Questões" e "Questões por Ano" empilhados na metade
+              esquerda; "Temas Mais Cobrados" ocupa a metade direita, com a
+              mesma altura dos dois cards da esquerda somados (grid do
+              CSS estica os itens da linha por padrão) — só no desktop
+              (lg+); no mobile os três continuam empilhados em coluna única. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            <div className="flex flex-col gap-6 sm:gap-8">
+              {/* Card em destaque com o total de questões no recorte de filtros ativo */}
+              <div className="bg-slate-900 border border-teal-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <ClipboardList className="w-3.5 h-3.5 text-teal-400" />
+                  Total de Questões
+                </p>
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={filteredQuestions.length}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-3xl sm:text-4xl font-black text-teal-400 mt-1"
+                  >
+                    {filteredQuestions.length}
+                  </motion.p>
+                </AnimatePresence>
+                {activeFiltersLabel && (
+                  <p className="text-[11px] text-slate-500 mt-1">{activeFiltersLabel}</p>
+                )}
               </div>
+
+              {/* Distribuição histórica por ano — TEOT vs TARO, questões cadastradas no banco */}
+              {yearDistribution.length > 0 && (
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+                  <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+                    <ListOrdered className="w-4 h-4 text-teal-400" />
+                    Questões por Ano
+                  </h2>
+                  <div className="h-56 sm:h-72 w-full mt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={yearDistribution} margin={{ top: 4, right: 8, bottom: 4, left: -12 }}>
+                        <CartesianGrid stroke="#dbe0f0" vertical={false} />
+                        <XAxis dataKey="year" tick={{ fill: '#4b567f', fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }} />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        {(examTypeFilter === 'TODOS' || examTypeFilter === 'TEOT') && (
+                          <Bar dataKey="TEOT" fill={EXAM_TYPE_COLOR.TEOT} radius={[4, 4, 0, 0]} />
+                        )}
+                        {(examTypeFilter === 'TODOS' || examTypeFilter === 'TARO') && (
+                          <Bar dataKey="TARO" fill={EXAM_TYPE_COLOR.TARO} radius={[4, 4, 0, 0]} />
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Top 5 temas mais cobrados, dentro do recorte ativo — pizza */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col">
+              <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-teal-400" />
+                Temas Mais Cobrados
+              </h2>
+              {topThemes.length === 0 ? (
+                <p className="text-sm text-slate-500 italic py-4">Nenhuma questão encontrada para este recorte.</p>
+              ) : (
+                <div className="flex-1 flex flex-col sm:flex-row items-center gap-4 mt-2">
+                  <div className="h-64 w-64 shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={topThemes}
+                          dataKey="count"
+                          nameKey="name"
+                          innerRadius="45%"
+                          outerRadius="90%"
+                          paddingAngle={2}
+                        >
+                          {topThemes.map((t, i) => (
+                            <Cell key={t.themeId} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                          formatter={(value: number, name: string) => [`${value} questões`, name]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex-1 w-full space-y-2">
+                    {topThemes.map((t, idx) => (
+                      <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
+                        <span className="flex items-center gap-2 text-slate-300 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                          <span className="truncate">{t.name}</span>
+                        </span>
+                        <span className="font-bold text-slate-200 shrink-0">{t.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Distribuição por área, dentro do recorte de filtros ativo */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
@@ -303,54 +359,6 @@ export const ExamStatsPage: React.FC = () => {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          {/* Top 10 temas mais cobrados, dentro do recorte ativo — pizza */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-            <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-teal-400" />
-              Temas Mais Cobrados
-            </h2>
-            <p className="text-xs text-slate-400 mb-3">Top 10 temas com mais questões, no recorte selecionado acima.</p>
-            {topThemes.length === 0 ? (
-              <p className="text-sm text-slate-500 italic py-4">Nenhuma questão encontrada para este recorte.</p>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="h-64 w-64 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={topThemes}
-                        dataKey="count"
-                        nameKey="name"
-                        innerRadius="45%"
-                        outerRadius="90%"
-                        paddingAngle={2}
-                      >
-                        {topThemes.map((t, i) => (
-                          <Cell key={t.themeId} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
-                        formatter={(value: number, name: string) => [`${value} questões`, name]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex-1 w-full space-y-2">
-                  {topThemes.map((t, idx) => (
-                    <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
-                      <span className="flex items-center gap-2 text-slate-300 min-w-0">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                        <span className="truncate">{t.name}</span>
-                      </span>
-                      <span className="font-bold text-slate-200 shrink-0">{t.count}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>
