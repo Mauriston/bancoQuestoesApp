@@ -8,7 +8,7 @@ import { db, storage } from '../firebase/config';
 import {
    AppUser, Area, Theme, Question, QuestionAnswer, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
-   VideotecaItem, AulaItem, MaterialViewLog, Sabatina
+   VideotecaItem, AulaItem, MaterialViewLog, Sabatina, AppNotification, NotificationAudience
  } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
 
@@ -1221,4 +1221,65 @@ export async function updateSabatina(id: string, data: Omit<Sabatina, 'id' | 'cr
 
 export async function deleteSabatina(id: string): Promise<void> {
   await deleteDoc(doc(db, 'sabatinas', id));
+}
+
+// --- NOTIFICAÇÕES ---
+
+export async function createNotification(data: {
+  type: AppNotification['type'];
+  message: string;
+  audience: NotificationAudience;
+  actorId: string;
+  actorName: string;
+}): Promise<void> {
+  const id = generateId('notif');
+  await setDoc(doc(db, 'notifications', id), { ...data, id, createdAt: serverTimestamp() });
+}
+
+// Lista ao vivo (limitada às mais recentes) — a filtragem por audiência
+// (admin só vê 'all'; user vê 'all' + 'users_only') é feita no cliente para
+// não depender de um índice composto (where('audience','in',...) +
+// orderBy('createdAt')) que precisaria ser criado manualmente no console.
+export function subscribeNotifications(callback: (items: AppNotification[]) => void): () => void {
+  const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(150));
+  return onSnapshot(q, (snapshot) => {
+    const items: AppNotification[] = [];
+    snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as AppNotification));
+    callback(items);
+  });
+}
+
+// Só as notificações criadas depois de `sinceDate` (o momento em que a
+// sessão/aba foi aberta) — usado para os pop-ups em tempo real, sem
+// disparar um pop-up para cada notificação antiga já existente.
+export function subscribeNewNotifications(sinceDate: Date, callback: (item: AppNotification) => void): () => void {
+  const q = query(collection(db, 'notifications'), where('createdAt', '>', sinceDate), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'added') {
+        callback({ id: change.doc.id, ...change.doc.data() } as AppNotification);
+      }
+    });
+  });
+}
+
+// "Lido até" por usuário — usado para calcular o badge de não lidas sem
+// precisar de 1 documento de leitura por notificação por usuário.
+export async function getNotificationReadState(userId: string): Promise<Date | null> {
+  const snap = await getDoc(doc(db, 'notificationReads', userId));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return data.lastReadAt?.toDate ? data.lastReadAt.toDate() : null;
+}
+
+export function subscribeNotificationReadState(userId: string, callback: (lastReadAt: Date | null) => void): () => void {
+  return onSnapshot(doc(db, 'notificationReads', userId), (snap) => {
+    if (!snap.exists()) { callback(null); return; }
+    const data = snap.data();
+    callback(data.lastReadAt?.toDate ? data.lastReadAt.toDate() : null);
+  });
+}
+
+export async function markNotificationsRead(userId: string): Promise<void> {
+  await setDoc(doc(db, 'notificationReads', userId), { userId, lastReadAt: serverTimestamp() }, { merge: true });
 }

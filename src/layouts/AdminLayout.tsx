@@ -6,13 +6,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
-import { Avatar } from '../components/Avatar';
+import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
+import { NotificationToastHost } from '../components/NotificationToastHost';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { currentUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { unreadCount } = useUnreadNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -59,16 +62,30 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             <div className="flex-1 flex items-center justify-end gap-3">
               {currentUser && (
                 <>
-                  <div className="sm:hidden shrink-0" title={currentUser.name}>
-                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs">
-                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
-                    <div className="text-left">
-                      <p className="font-semibold text-white leading-none">{currentUser.name}</p>
-                      <p className="text-[10px] text-white/60 leading-none mt-0.5">{currentUser.email}</p>
-                    </div>
-                  </div>
+                  <AvatarAccountMenu
+                    name={currentUser.name}
+                    photoUrl={currentUser.photoUrl}
+                    role={currentUser.role}
+                    unreadCount={unreadCount}
+                    settingsPath="/admin/settings"
+                    notificationsPath="/admin/notifications"
+                    triggerClassName="sm:hidden shrink-0"
+                  />
+                  <AvatarAccountMenu
+                    name={currentUser.name}
+                    photoUrl={currentUser.photoUrl}
+                    role={currentUser.role}
+                    unreadCount={unreadCount}
+                    settingsPath="/admin/settings"
+                    notificationsPath="/admin/notifications"
+                    triggerClassName="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-xs transition-colors"
+                    nameSlot={
+                      <div className="text-left">
+                        <p className="font-semibold text-white leading-none">{currentUser.name}</p>
+                        <p className="text-[10px] text-white/60 leading-none mt-0.5">{currentUser.email}</p>
+                      </div>
+                    }
+                  />
                 </>
               )}
 
@@ -133,6 +150,28 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             );
           })}
         </nav>
+
+        {/* Avatar + nome do admin fica fixo no rodapé do menu lateral,
+            dando acesso ao menu de Notificações/Perfil — mesmo padrão do
+            acesso User. */}
+        {currentUser && (
+          <AvatarAccountMenu
+            name={currentUser.name}
+            photoUrl={currentUser.photoUrl}
+            role={currentUser.role}
+            unreadCount={unreadCount}
+            settingsPath="/admin/settings"
+            notificationsPath="/admin/notifications"
+            dropUp
+            align="left"
+            triggerClassName={`flex items-center gap-3 lg:justify-center lg:group-hover/sidebar:justify-start px-3.5 lg:px-0 lg:group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 w-full ${
+              location.pathname.startsWith('/admin/settings') || location.pathname.startsWith('/admin/notifications')
+                ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+            nameSlot={<span className="lg:hidden lg:group-hover/sidebar:inline truncate">{currentUser.name}</span>}
+          />
+        )}
       </aside>
 
       {/* Backdrop do menu mobile */}
@@ -160,6 +199,8 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
         left={{ path: '/admin/questions', icon: BookOpen, label: 'Questões' }}
         right={{ path: '/admin/exams', icon: FileCheck, label: 'Provas' }}
       />
+
+      <NotificationToastHost />
 
     </div>
   );

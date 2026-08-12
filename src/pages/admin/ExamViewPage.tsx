@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ClipboardList } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas } from '../../services/firebaseService';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, createNotification } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { getSourceExamChipClass } from '../../constants';
@@ -15,6 +16,7 @@ interface SubmittedRow {
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
+  const { currentUser } = useAuth();
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
@@ -126,6 +128,15 @@ export const ExamViewPage: React.FC = () => {
       const nextActive = !isExamActive(exam);
       await updateExamActiveStatus(exam.id, nextActive);
       setExam({ ...exam, active: nextActive });
+      if (nextActive && currentUser) {
+        createNotification({
+          type: 'exam_activated',
+          message: `${currentUser.name} ativou a prova ${exam.name} para realização`,
+          audience: 'users_only',
+          actorId: currentUser.id,
+          actorName: currentUser.name
+        }).catch(err => console.error('Erro ao criar notificação de ativação de prova:', err));
+      }
     } catch (err: any) {
       alert("Erro ao alterar status da prova: " + (err?.message || "erro desconhecido."));
     } finally {

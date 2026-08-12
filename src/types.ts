@@ -257,6 +257,28 @@ export interface Sabatina {
   updatedAt?: any;
 }
 
+// --- NOTIFICAÇÕES ---
+
+export type NotificationType =
+  | 'exam_started' | 'exam_completed'
+  | 'exam_activated' | 'sabatina_created' | 'video_created' | 'aula_created';
+
+// 'all' = todos (users + admin) — eventos gerados por ações de usuários,
+// que os colegas e o admin acompanham em tempo real (ex.: provas feitas
+// juntas ao mesmo tempo). 'users_only' = eventos de ações do admin,
+// avisando só os residentes (o próprio admin já sabe o que fez).
+export type NotificationAudience = 'all' | 'users_only';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  audience: NotificationAudience;
+  actorId: string;
+  actorName: string;
+  createdAt?: any;
+}
+
 export interface QuestionBankJsonRaw {
   _metadados?: {
     sistema?: string;

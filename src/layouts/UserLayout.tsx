@@ -5,13 +5,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
-import { Avatar } from '../components/Avatar';
+import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
+import { NotificationToastHost } from '../components/NotificationToastHost';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { currentUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { unreadCount } = useUnreadNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -102,13 +105,25 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {currentUser && (
                 <>
-                  <Link to="/app/settings" className="sm:hidden shrink-0" title={currentUser.name}>
-                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
-                  </Link>
-                  <Link to="/app/settings" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-xs transition-colors">
-                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
-                    <span className="font-medium text-white max-w-[120px] truncate">{currentUser.name}</span>
-                  </Link>
+                  <AvatarAccountMenu
+                    name={currentUser.name}
+                    photoUrl={currentUser.photoUrl}
+                    role={currentUser.role}
+                    unreadCount={unreadCount}
+                    settingsPath="/app/settings"
+                    notificationsPath="/app/notifications"
+                    triggerClassName="sm:hidden shrink-0"
+                  />
+                  <AvatarAccountMenu
+                    name={currentUser.name}
+                    photoUrl={currentUser.photoUrl}
+                    role={currentUser.role}
+                    unreadCount={unreadCount}
+                    settingsPath="/app/settings"
+                    notificationsPath="/app/notifications"
+                    triggerClassName="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-xs transition-colors"
+                    nameSlot={<span className="font-medium text-white max-w-[120px] truncate">{currentUser.name}</span>}
+                  />
                 </>
               )}
 
@@ -176,19 +191,25 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         })}
 
         {/* Avatar + nome do usuário fica fixo no rodapé do menu lateral,
-            dando acesso à tela de Ajustes (troca de e-mail/senha). */}
-        <Link
-          to="/app/settings"
-          onClick={() => setMobileMenuOpen(false)}
-          className={`mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors ${
-            location.pathname.startsWith('/app/settings')
-              ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
-              : 'text-white/80 hover:bg-white/10 hover:text-white'
-          }`}
-        >
-          {currentUser && <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />}
-          <span className="truncate">{currentUser?.name}</span>
-        </Link>
+            dando acesso ao menu de Notificações/Perfil. */}
+        {currentUser && (
+          <AvatarAccountMenu
+            name={currentUser.name}
+            photoUrl={currentUser.photoUrl}
+            role={currentUser.role}
+            unreadCount={unreadCount}
+            settingsPath="/app/settings"
+            notificationsPath="/app/notifications"
+            dropUp
+            align="left"
+            triggerClassName={`mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors w-full ${
+              location.pathname.startsWith('/app/settings') || location.pathname.startsWith('/app/notifications')
+                ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
+            }`}
+            nameSlot={<span className="truncate">{currentUser.name}</span>}
+          />
+        )}
       </nav>
 
       {/* Desktop Sidebar — mesmo padrão da AdminLayout: fixa, colada na
@@ -228,19 +249,25 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         </nav>
 
         {/* Avatar + nome do usuário fica fixo no rodapé do menu lateral,
-            dando acesso à tela de Ajustes (troca de e-mail/senha). */}
-        <Link
-          to="/app/settings"
-          title={currentUser?.name}
-          className={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
-            location.pathname.startsWith('/app/settings')
-              ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
-              : 'text-white/70 hover:bg-white/10 hover:text-white'
-          }`}
-        >
-          {currentUser && <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />}
-          <span className="hidden group-hover/sidebar:inline truncate">{currentUser?.name}</span>
-        </Link>
+            dando acesso ao menu de Notificações/Perfil. */}
+        {currentUser && (
+          <AvatarAccountMenu
+            name={currentUser.name}
+            photoUrl={currentUser.photoUrl}
+            role={currentUser.role}
+            unreadCount={unreadCount}
+            settingsPath="/app/settings"
+            notificationsPath="/app/notifications"
+            dropUp
+            align="left"
+            triggerClassName={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 w-full ${
+              location.pathname.startsWith('/app/settings') || location.pathname.startsWith('/app/notifications')
+                ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+            nameSlot={<span className="hidden group-hover/sidebar:inline truncate">{currentUser.name}</span>}
+          />
+        )}
       </aside>
 
       {/* Main Body */}
@@ -258,6 +285,8 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         left={{ path: '/app/history', icon: History, label: 'Histórico' }}
         right={{ path: '/app/performance', icon: BarChart3, label: 'Desempenho' }}
       />
+
+      <NotificationToastHost />
     </div>
   );
 };
