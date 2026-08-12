@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, ExternalLink, ZoomIn } from 'lucide-react';
 import { extractYouTubeId } from '../utils/mediaUrls';
 
 interface CommentMediaProps {
@@ -12,6 +12,8 @@ interface CommentMediaProps {
 // ExamResultPage e ExamViewPage.
 export const CommentMedia: React.FC<CommentMediaProps> = ({ url }) => {
   const [imageError, setImageError] = useState(false);
+  // Modal de ampliação ao clicar na imagem — mesmo padrão de QuestionImage.
+  const [isZoomed, setIsZoomed] = useState(false);
   const youTubeId = extractYouTubeId(url);
 
   if (youTubeId) {
@@ -49,13 +51,37 @@ export const CommentMedia: React.FC<CommentMediaProps> = ({ url }) => {
   }
 
   return (
-    <div className="mt-3 p-2 rounded-xl bg-slate-950 border border-slate-800 block w-fit mx-auto max-w-full">
-      <img
-        src={url}
-        alt="Mídia do comentário do gabarito"
-        className="max-h-72 w-auto object-contain rounded-lg mx-auto"
-        onError={() => setImageError(true)}
-      />
-    </div>
+    <>
+      <div className="mt-3 p-2 rounded-xl bg-slate-950 border border-slate-800 block w-fit mx-auto max-w-full">
+        <div className="relative group cursor-pointer" onClick={() => setIsZoomed(true)}>
+          <img
+            src={url}
+            alt="Mídia do comentário do gabarito"
+            className="max-h-72 w-auto object-contain rounded-lg mx-auto"
+            onError={() => setImageError(true)}
+          />
+          <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+            <ZoomIn className="w-4 h-4" />
+            <span>Clique para ampliar</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de ampliação de imagem */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-50 bg-[#050f41]/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center">
+            <img
+              src={url}
+              alt="Mídia do comentário do gabarito"
+              className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain"
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 };
