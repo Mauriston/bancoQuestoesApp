@@ -22,6 +22,34 @@ export const SOURCE_EXAM_OPTIONS: string[] = [
   'BANCO PRÓPRIO'
 ];
 
+// Filtro rápido (segmented control) exibido acima do menu suspenso de fontes
+// em QuestionsPage e CreateExamPage — agrupa SOURCE_EXAM_OPTIONS em blocos
+// grandes (TEOT, TARO, Banco Próprio) antes de refinar por prova/ano no
+// dropdown de caixas de seleção.
+export type SourceExamGroup = 'TODAS' | 'TEOT' | 'TARO' | 'BANCO_PROPRIO';
+
+export const SOURCE_EXAM_GROUPS: { value: SourceExamGroup; label: string }[] = [
+  { value: 'TODAS', label: 'Todas as fontes' },
+  { value: 'TEOT', label: 'TEOT' },
+  { value: 'TARO', label: 'TARO' },
+  { value: 'BANCO_PROPRIO', label: 'Banco Próprio' }
+];
+
+// Opções do dropdown de fontes restritas ao grupo selecionado no segmented
+// control acima. 'TODAS' devolve a lista completa, sem restrição.
+export function getSourceExamOptionsForGroup(group: SourceExamGroup): string[] {
+  switch (group) {
+    case 'TEOT':
+      return SOURCE_EXAM_OPTIONS.filter(o => o.startsWith('TEOT'));
+    case 'TARO':
+      return SOURCE_EXAM_OPTIONS.filter(o => o.startsWith('TARO'));
+    case 'BANCO_PROPRIO':
+      return SOURCE_EXAM_OPTIONS.filter(o => o.startsWith('BANCO'));
+    default:
+      return SOURCE_EXAM_OPTIONS;
+  }
+}
+
 // Classifica o campo `sourceExam` de uma questão para colorir o chip de
 // origem mostrado ao lado de "Questão X" (relatório do candidato, provas
 // elaboradas pelo admin, banco de questões): vermelho para Banco Próprio,
