@@ -3,9 +3,9 @@ import {
   UploadCloud, FileJson, CheckCircle2, AlertCircle, RefreshCw, Sparkles, BookOpen, GitBranch
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { importQuestionBankJson, ImportProgress, applyThemeSubAreas, SubAreaMigrationResult } from '../../services/importService';
+import { importQuestionBankJson, ImportProgress, applyThemeGroups, GroupMigrationResult } from '../../services/importService';
 import arvoreLocalJson from '../../../arvore_temas.json';
-import subAreaTreeJson from '../../../reference/arvore_temas_subareas.json';
+import groupTreeJson from '../../../reference/areas_grupos_temas.json';
 import { BulkImagesSection } from './BulkImagesPage';
 import { CsvBulkImportSection } from '../../components/CsvBulkImportSection';
 
@@ -18,15 +18,16 @@ export const ImportPage: React.FC = () => {
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
 
-  // Atualização de Subáreas dos Temas — reaproveita o mesmo fluxo de
-  // upload/prévia acima, mas grava só o campo `subArea` em temas já
-  // existentes (não cria áreas/temas/questões novas).
-  const [subAreaFile, setSubAreaFile] = useState<File | null>(null);
-  const [subAreaPreview, setSubAreaPreview] = useState<any>(null);
-  const [applyingSubAreas, setApplyingSubAreas] = useState(false);
-  const [subAreaProgress, setSubAreaProgress] = useState<{ phase: 'temas' | 'questoes'; processedCount: number; totalCount: number } | null>(null);
-  const [subAreaResult, setSubAreaResult] = useState<SubAreaMigrationResult | null>(null);
-  const [subAreaError, setSubAreaError] = useState<string | null>(null);
+  // Atualização de Grupos (TEOT) dos Temas — reaproveita o mesmo fluxo de
+  // upload/prévia acima, mas grava só `groupId`/`groupName` em temas já
+  // existentes (não cria áreas/temas/questões novas, nem grupos novos — os 7
+  // grupos oficiais já existem na coleção `groups`).
+  const [groupFile, setGroupFile] = useState<File | null>(null);
+  const [groupPreview, setGroupPreview] = useState<any>(null);
+  const [applyingGroups, setApplyingGroups] = useState(false);
+  const [groupProgress, setGroupProgress] = useState<{ phase: 'temas' | 'questoes'; processedCount: number; totalCount: number } | null>(null);
+  const [groupResult, setGroupResult] = useState<GroupMigrationResult | null>(null);
+  const [groupError, setGroupError] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,49 +55,49 @@ export const ImportPage: React.FC = () => {
     setResultMessage(null);
   };
 
-  const handleSubAreaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGroupFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setSubAreaFile(file);
-    setSubAreaResult(null);
-    setSubAreaError(null);
+    setGroupFile(file);
+    setGroupResult(null);
+    setGroupError(null);
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        setSubAreaPreview(parsed);
+        setGroupPreview(parsed);
       } catch (err) {
         alert("Arquivo JSON inválido.");
-        setSubAreaPreview(null);
+        setGroupPreview(null);
       }
     };
     reader.readAsText(file);
   };
 
-  const handleLoadBundledSubAreaTree = () => {
-    setSubAreaFile(null);
-    setSubAreaPreview(subAreaTreeJson);
-    setSubAreaResult(null);
-    setSubAreaError(null);
+  const handleLoadBundledGroupTree = () => {
+    setGroupFile(null);
+    setGroupPreview(groupTreeJson);
+    setGroupResult(null);
+    setGroupError(null);
   };
 
-  const handleApplySubAreas = async () => {
-    if (!subAreaPreview) return;
+  const handleApplyGroups = async () => {
+    if (!groupPreview) return;
 
-    setApplyingSubAreas(true);
-    setSubAreaResult(null);
-    setSubAreaError(null);
+    setApplyingGroups(true);
+    setGroupResult(null);
+    setGroupError(null);
 
     try {
-      const res = await applyThemeSubAreas(subAreaPreview, (p) => setSubAreaProgress(p));
-      setSubAreaResult(res);
+      const res = await applyThemeGroups(groupPreview, (p) => setGroupProgress(p));
+      setGroupResult(res);
     } catch (err: any) {
-      setSubAreaError(err.message || "Erro desconhecido ao atualizar subáreas.");
+      setGroupError(err.message || "Erro desconhecido ao atualizar grupos.");
     } finally {
-      setApplyingSubAreas(false);
-      setSubAreaProgress(null);
+      setApplyingGroups(false);
+      setGroupProgress(null);
     }
   };
 
@@ -225,17 +226,20 @@ export const ImportPage: React.FC = () => {
         </div>
       )}
 
-      {/* Atualização de Subáreas dos Temas — grava o campo `subArea` (ex.:
-          "Ortopedia"/"Traumatologia") em temas já cadastrados, a partir de
-          uma árvore Área → Subárea → Temas. Não cria áreas/temas/questões
-          novas; só atualiza temas cujo ID já existe no Firestore. */}
+      {/* Atualização de Grupos (TEOT) dos Temas — grava `groupId`/`groupName`
+          (Anatomia, Ciência Básica, Ortopedia Adulto, Ortopedia Infantil,
+          Trauma Adulto, Trauma Infantil, Oncologia Ortopédica) em temas já
+          cadastrados, a partir de uma árvore Área → Grupo → Temas. Não cria
+          áreas/temas/questões/grupos novos; só atualiza temas cujo ID já
+          existe no Firestore. Usado só para estatísticas de desempenho — a
+          Área continua sendo o filtro de questões no banco e nas provas. */}
       <div className="pt-4 border-t border-slate-800 space-y-4">
         <h2 className="text-lg font-bold text-[#050f41] flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-cyan-400" />
-          Atualizar Subáreas dos Temas
+          Atualizar Grupos (TEOT) dos Temas
         </h2>
         <p className="text-xs text-slate-400 -mt-2">
-          Grava o agrupamento por subárea (ex.: Ortopedia/Traumatologia) nos temas já cadastrados, sem criar nada novo.
+          Grava o agrupamento oficial do TEOT (Anatomia, Ciência Básica, Ortopedia Adulto, Ortopedia Infantil, Trauma Adulto, Trauma Infantil, Oncologia Ortopédica) nos temas já cadastrados, para uso exclusivo nas estatísticas de desempenho. Não afeta os filtros de Área no banco de questões nem na elaboração de provas.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -243,15 +247,15 @@ export const ImportPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2 mb-2">
                 <FileJson className="w-4 h-4 text-cyan-400" />
-                Upload de Árvore de Subáreas (JSON)
+                Upload de Árvore de Grupos (JSON)
               </h3>
               <p className="text-xs text-slate-400 mb-4">
-                Selecione um arquivo `.json` no formato Área → Subárea → Temas.
+                Selecione um arquivo `.json` no formato Área → Grupo → Temas.
               </p>
               <input
                 type="file"
                 accept=".json"
-                onChange={handleSubAreaFileChange}
+                onChange={handleGroupFileChange}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300"
               />
             </div>
@@ -261,13 +265,13 @@ export const ImportPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2 mb-2">
                 <Sparkles className="w-4 h-4 text-teal-400" />
-                Usar Árvore Padrão de Subáreas
+                Usar Árvore Padrão de Grupos
               </h3>
               <p className="text-xs text-slate-400 mb-4">
-                Carregar a estrutura oficial de subáreas inclusa (Ortopedia/Traumatologia, exceto Anatomia, Ciência Básica e Oncologia).
+                Carregar a estrutura oficial de grupos TEOT inclusa.
               </p>
               <button
-                onClick={handleLoadBundledSubAreaTree}
+                onClick={handleLoadBundledGroupTree}
                 className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-xs font-semibold"
               >
                 Carregar Árvore Integrada
@@ -276,58 +280,58 @@ export const ImportPage: React.FC = () => {
           </div>
         </div>
 
-        {subAreaPreview && (
+        {groupPreview && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-[#050f41]">Pré-visualização</h3>
               <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {Array.isArray(subAreaPreview) ? `${subAreaPreview.length} áreas carregadas` : 'JSON carregado'}
+                {Array.isArray(groupPreview) ? `${groupPreview.length} entradas carregadas` : 'JSON carregado'}
               </span>
             </div>
 
-            {subAreaProgress && (
+            {groupProgress && (
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-slate-300">
-                  <span>{subAreaProgress.phase === 'temas' ? 'Atualizando temas...' : 'Atualizando questões do banco...'}</span>
-                  <span className="font-bold text-cyan-400">{subAreaProgress.processedCount} / {subAreaProgress.totalCount}</span>
+                  <span>{groupProgress.phase === 'temas' ? 'Atualizando temas...' : 'Atualizando questões do banco...'}</span>
+                  <span className="font-bold text-cyan-400">{groupProgress.processedCount} / {groupProgress.totalCount}</span>
                 </div>
                 <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
                   <div
                     className="bg-cyan-500 h-full transition-all duration-200"
-                    style={{ width: `${Math.round((subAreaProgress.processedCount / (subAreaProgress.totalCount || 1)) * 100)}%` }}
+                    style={{ width: `${Math.round((groupProgress.processedCount / (groupProgress.totalCount || 1)) * 100)}%` }}
                   />
                 </div>
               </div>
             )}
 
-            {subAreaError && (
+            {groupError && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-semibold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                <span>{subAreaError}</span>
+                <span>{groupError}</span>
               </div>
             )}
 
-            {subAreaResult && (
+            {groupResult && (
               <div className="space-y-3">
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{subAreaResult.matched} tema(s) e {subAreaResult.matchedQuestions} questão(ões) atualizados com sucesso.</span>
+                  <span>{groupResult.matched} tema(s) e {groupResult.matchedQuestions} questão(ões) atualizados com sucesso.</span>
                 </div>
 
-                {subAreaResult.skippedAreas.length > 0 && (
-                  <p className="text-[11px] text-slate-500">
-                    Áreas sem subárea (ignoradas de propósito): {subAreaResult.skippedAreas.join(', ')}.
+                {groupResult.unknownGroups.length > 0 && (
+                  <p className="text-[11px] text-amber-400">
+                    Nome(s) de grupo sem correspondência na coleção `groups`: {groupResult.unknownGroups.join(', ')}.
                   </p>
                 )}
 
-                {subAreaResult.unmatched.length > 0 && (
+                {groupResult.unmatched.length > 0 && (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs">
                     <p className="font-bold text-amber-400 mb-1.5 flex items-center gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5" />
-                      {subAreaResult.unmatched.length} tema(s) sem correspondência no banco:
+                      {groupResult.unmatched.length} tema(s) sem correspondência no banco:
                     </p>
                     <ul className="text-amber-300/90 space-y-0.5 max-h-40 overflow-y-auto">
-                      {subAreaResult.unmatched.map((name, i) => <li key={i}>• {name}</li>)}
+                      {groupResult.unmatched.map((name, i) => <li key={i}>• {name}</li>)}
                     </ul>
                   </div>
                 )}
@@ -336,12 +340,12 @@ export const ImportPage: React.FC = () => {
 
             <div className="flex justify-end pt-2">
               <button
-                onClick={handleApplySubAreas}
-                disabled={applyingSubAreas}
+                onClick={handleApplyGroups}
+                disabled={applyingGroups}
                 className="flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 disabled:opacity-50"
               >
-                {applyingSubAreas ? <RefreshCw className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
-                <span>{applyingSubAreas ? 'Atualizando...' : 'Aplicar Subáreas no Firestore'}</span>
+                {applyingGroups ? <RefreshCw className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
+                <span>{applyingGroups ? 'Atualizando...' : 'Aplicar Grupos no Firestore'}</span>
               </button>
             </div>
           </div>

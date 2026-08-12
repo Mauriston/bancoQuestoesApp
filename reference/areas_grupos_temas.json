@@ -1,0 +1,518 @@
+[
+  {
+    "areaId": "area_anatomia",
+    "areaName": "Anatomia",
+    "groupName": "Anatomia",
+    "themeName": [
+      "Anatomia da bacia",
+      "Anatomia da coluna cervical",
+      "Anatomia da coluna lombar",
+      "Anatomia da coluna torácica",
+      "Anatomia da coxa",
+      "Anatomia da mão",
+      "Anatomia da medula",
+      "Anatomia da perna",
+      "Anatomia do antebraço",
+      "Anatomia do braço",
+      "Anatomia do cotovelo",
+      "Anatomia do joelho",
+      "Anatomia do ombro",
+      "Anatomia do pé",
+      "Anatomia do plexo braquial",
+      "Anatomia do plexo lombossacro",
+      "Anatomia do punho",
+      "Anatomia do quadril",
+      "Anatomia do tornozelo",
+      "Anatomia do túnel do carpo",
+      "Anatomia dos compartimentos extensores do punho",
+      "Anatomia dos dedos da mão",
+      "Neuroanatomia dos membros inferiores",
+      "Neuroanatomia dos membros superiores",
+      "Vias de acesso da coluna",
+      "Vias de acesso da mão e do punho",
+      "Vias de acesso do antebraço",
+      "Vias de acesso do cotovelo",
+      "Vias de acesso do ombro",
+      "Vias de acesso do Pé e Tornozelo",
+      "Vias de acesso do quadril"
+    ]
+  },
+  {
+    "areaId": "area_ciencia_basica",
+    "areaName": "Ciência Básica",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Amputações",
+      "Anemia falciforme",
+      "Artrite reumatoide",
+      "Artropatia de Charcot",
+      "Atendimento ao Politraumatizado",
+      "Consolidação de Fraturas",
+      "Embriologia óssea e tipos de ossificação",
+      "Espondilite anquilosante",
+      "Exames de imagem",
+      "Farmacologia",
+      "Fisiopatologia da dor",
+      "Fraturas Expostas ",
+      "Fraturas por estresse",
+      "Gota",
+      "Hemofilia",
+      "Hemostasia e Trombofilias",
+      "Histologia",
+      "Infecções",
+      "Infecções pós-artroplastias",
+      "Infecções pós-osteossíntese",
+      "Lesões musculares",
+      "Osteometabolismo",
+      "Osteomielites",
+      "Osteoporose",
+      "Outras artropatias soronegativas",
+      "Outras doenças hematológicas",
+      "Pioartrites",
+      "Princípios de fixação externa e alongamento ósseo",
+      "Principios de fixação externa na emergência",
+      "Princípios de osteossíntese",
+      "Pseudoartroses",
+      "Síndrome compartimental",
+      "Tétano",
+      "Tromboembolismo"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_coluna",
+    "areaName": "Coluna",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Biomecânica da Coluna ",
+      "Exame Físico da Coluna"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_coluna",
+    "areaName": "Coluna",
+    "groupName": "Ortopedia Adulto",
+    "themeName": [
+      "Cervicobraquialgias",
+      "Cifose (Scheuermann e Congênitas)",
+      "Deformidade de Sprengel",
+      "Doença do disco intervertebral",
+      "Espondilodiscites",
+      "Espondilolistese",
+      "Estenose do canal medular",
+      "Hérnias discais",
+      "Lombalgias mecânicas",
+      "Psoíte",
+      "Seringomielia e diastematomielia",
+      "Síndrome de Grisel",
+      "Síndrome de Klippel-Feil",
+      "Síndrome do desfiladeiro torácico",
+      "Traumatismo Raquimedular e síndrome da cauda equina"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_coluna",
+    "areaName": "Coluna",
+    "groupName": "Ortopedia Infantil",
+    "themeName": [
+      "Anomalias congênitas da coluna",
+      "Escoliose Congênita e neuromuscular",
+      "Escoliose Idiopática"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_coluna",
+    "areaName": "Coluna",
+    "groupName": "Trauma Adulto",
+    "themeName": [
+      "Fratura vertebral por insuficiência",
+      "Fraturas da coluna cervical alta",
+      "Fraturas da coluna cervical baixa",
+      "Fraturas da coluna na criança",
+      "Fraturas da coluna toracolombar"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_mao",
+    "areaName": "Mão",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Biomecânica da mão e do punho",
+      "Exame físico da mão e do punho"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_mao",
+    "areaName": "Mão",
+    "groupName": "Ortopedia Adulto",
+    "themeName": [
+      "Artroscopia do punho",
+      "Dedo em gatilho",
+      "Dupuytren",
+      "Kienböck",
+      "Lesões dos Nervos Periféricos e do plexo braquial",
+      "Mão reumatoide",
+      "Mão torta radial e ulnar",
+      "Outras síndromes compressivas dos membros superiores",
+      "Princípios de microcirurgia, retalhos microcirúrgicos e reimplantes",
+      "Rizartrose",
+      "Sindactilia e polidactilia",
+      "Síndrome do túnel do carpo ",
+      "Tenossinovite de De Quervain"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_da_mao",
+    "areaName": "Mão",
+    "groupName": "Trauma Adulto",
+    "themeName": [
+      "Fratura de Bennet",
+      "Fratura do escafoide",
+      "Fraturas de falanges",
+      "Fraturas de metacarpianos",
+      "Fraturas do antebraço",
+      "Fraturas do rádio distal",
+      "Instabilidade radio-ulnar distal",
+      "Instabilidades cárpicas",
+      "Lesão de tendões extensores da mão e punho",
+      "Lesão de tendões flexores da mão e punho",
+      "Lesões de ponta de dedo",
+      "Pseudoartrose do escafoide"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_joelho",
+    "areaName": "Joelho",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Biomecânica do Joelho",
+      "Exame Físico do Joelho"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_joelho",
+    "areaName": "Joelho",
+    "groupName": "Ortopedia Adulto",
+    "themeName": [
+      "Artroplastias do joelho",
+      "Artroscopia de joelho",
+      "Artroscopia do joelho",
+      "Instabilidade fêmoro-patelar",
+      "Lesões do canto póstero-lateral e lesões condrais do joelho",
+      "Lesões Meniscais, menisco discoide e reparos meniscais",
+      "Osteoartrose do joelho e osteotomias do joelho",
+      "Osteocondrite dissecante do joelho",
+      "Osteonecrose do joelho"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_joelho",
+    "areaName": "Joelho",
+    "groupName": "Trauma Adulto",
+    "themeName": [
+      "Fraturas Distal do Fêmur e da Patela",
+      "Fraturas do planalto tibial",
+      "Fraturas dos ossos da perna",
+      "Lesões do LCA",
+      "Lesões do LCP",
+      "Lesões do tendão patelar",
+      "Lesões do tendão quadricipital",
+      "Luxações do Joelho",
+      "Vias de acesso do joelho"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_ombro_e_cotovelo",
+    "areaName": "Ombro e Cotovelo",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Biomecânica do Cotovelo",
+      "Biomecânica do Ombro",
+      "Exame Físico Cotovelo",
+      "Exame Físico do Ombro"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_ombro_e_cotovelo",
+    "areaName": "Ombro e Cotovelo",
+    "groupName": "Ortopedia Adulto",
+    "themeName": [
+      "Artrodese de cotovelo",
+      "Artrodese do ombro",
+      "Artropatia do Manguito Rotador",
+      "Artroplastias do cotovelo",
+      "Artroplastias do ombro",
+      "Artroscopia de cotovelo",
+      "Artroscopia do ombro",
+      "Artrose do cotovelo",
+      "Artrose do ombro",
+      "Capsulite adesiva",
+      "Cotovelo reumatoide",
+      "Doenças da escápula",
+      "Infiltrações do cotovelo",
+      "Infiltrações do ombro",
+      "Lesão do músculo peitoral maior",
+      "Lesão SLAP",
+      "Lesões dos tendões do bíceps proximal e distal",
+      "Luxação esternoclavicular",
+      "Patologias esternoclaviculares",
+      "Síndrome do impacto do ombro",
+      "Síndrome do manguito rotador ",
+      "Síndromes compressivas do cotovelo",
+      "Tendinite Calcárea do Ombro"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_ombro_e_cotovelo",
+    "areaName": "Ombro e Cotovelo",
+    "groupName": "Trauma Adulto",
+    "themeName": [
+      "Epicondilites",
+      "Fraturas Capítulo",
+      "Fraturas da Cabeça do Rádio",
+      "Fraturas da Clavícula",
+      "Fraturas da Escápula",
+      "Fraturas Diafisárias do Úmero",
+      "Fraturas Distais do Úmero",
+      "Fraturas do Olécrano",
+      "Fraturas do processo coronoide",
+      "Fraturas Proximais do Úmero",
+      "Luxação Acrômioclavicular ",
+      "Luxação do cotovelo",
+      "Luxação glenoumeral e Instabilidade Glenoumeral",
+      "Ombro flutuante",
+      "Rigidez do cotovelo",
+      "Tríade Terrível do Cotovelo"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_pe_e_tornozelo",
+    "areaName": "Pé e Tornozelo",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Biomecânica da marcha",
+      "Biomecânica do Pé e Tornozelo",
+      "Exame Físico do Pé e Tornozelo"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_pe_e_tornozelo",
+    "areaName": "Pé e Tornozelo",
+    "groupName": "Ortopedia Adulto",
+    "themeName": [
+      "Artropatia de Charchot no Pé e Tornozelo",
+      "Artroscopia de tornozelo",
+      "Artroplastias do tornozelo",
+      "Artrose do Tornozelo",
+      "Deformidade dos dedos menores dos pés",
+      "Doença de Haglund",
+      "Hallux Rigidus",
+      "Hallux Valgus",
+      "Insuficiência do tibial posterior e pé plano flexível",
+      "Lesões osteocondrais do tornozelo",
+      "Metatarsalgias",
+      "Neuroma de Morton",
+      "Pé calcâneo valgo",
+      "Pé Cavo",
+      "Pé diabético",
+      "Pé Metatarso varo",
+      "Pé Neuropático",
+      "Pé reumatóide",
+      "Pé Talus Vertical",
+      "Princípios de cirurgia percutânea do pé",
+      "Síndrome do túnel do tarso",
+      "Talalgias",
+      "Tendinite dos fibulares "
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_pe_e_tornozelo",
+    "areaName": "Pé e Tornozelo",
+    "groupName": "Trauma Adulto",
+    "themeName": [
+      "Entorses do Tornozelo e fascíte plantar",
+      "Fratura-luxação de Lisfranc ",
+      "Fraturas do Calcâneo",
+      "Fraturas do pilão tibial",
+      "Fraturas do Tálus e Outros Ossos do Tarso",
+      "Fraturas do tornozelo",
+      "Lesões do tendão aquileu",
+      "Síndrome do estresse tibial medial"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_quadril",
+    "areaName": "Quadril",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Biomecânica do Quadril",
+      "Exame Físico do Quadril"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_quadril",
+    "areaName": "Quadril",
+    "groupName": "Ortopedia Adulto",
+    "themeName": [
+      "Artroscopia de quadril",
+      "Coxa saltans",
+      "Coxartrose",
+      "Impacto fêmoro-acetabular",
+      "Meralgia parestésica",
+      "Osteonecrose da cabeça femoral",
+      "Pubalgia",
+      "Sacroileíte",
+      "Síndrome do piriforme",
+      "Síndrome trocantérica"
+    ]
+  },
+  {
+    "areaId": "area_cirurgia_do_quadril",
+    "areaName": "Quadril",
+    "groupName": "Trauma Adulto",
+    "themeName": [
+      "Artroplastias do quadril",
+      "Fratura diafisária do fêmur",
+      "Fraturas da Cabeça do Fêmur",
+      "Fraturas do acetábulo",
+      "Fraturas do anel pélvico",
+      "Fraturas do Colo do Fêmur ",
+      "Fraturas peri-implantes",
+      "Fraturas periprotéticas do quadril",
+      "Fraturas Subtrocanterianas",
+      "Fraturas Transtrocanterianas",
+      "Luxações do Quadril"
+    ]
+  },
+  {
+    "areaId": "area_metologia_cientifica",
+    "areaName": "Metologia Científica",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Níveis de evidências científicas",
+      "Tipos de estudos clínicos"
+    ]
+  },
+  {
+    "areaId": "area_oncologia_ortopedica",
+    "areaName": "Oncologia Ortopédica",
+    "groupName": "Oncologia Ortopédica",
+    "themeName": [
+      "Adamantinoma",
+      "Avaliação por imagem dos tumores musculoesqueléticos",
+      "Biópsias",
+      "Cisto ósseo aneurismático",
+      "Cisto ósseo simples",
+      "Condroblastoma",
+      "Condromatose sinovial",
+      "Condrossarcomas",
+      "Cordoma",
+      "Displasia fibrosa",
+      "Displasia osteofibrosa",
+      "Doença de Paget",
+      "Encondroma",
+      "Estadiamento AJCC",
+      "Estadiamento de Enneking",
+      "Fibroma condromixoide",
+      "Fibroma não ossificante",
+      "Hemangioma",
+      "Hiperparatireoidismo",
+      "Histiocitose de células de langerhans / Granuloma eosinofílico",
+      "Lesões ósseas pseudotumorais",
+      "Linfomas",
+      "Margens cirúrgicas",
+      "Metástases ósseas",
+      "Mieloma múltiplo",
+      "Neurofibromatose",
+      "Osteoblastoma",
+      "Osteocondroma",
+      "Osteoma",
+      "Osteoma osteoide",
+      "Osteossarcomas",
+      "Outros tumores de partes moles benignos",
+      "Sarcoma de Ewing",
+      "Sarcomas de partes moles",
+      "Sinovite vilonodular pigmentada",
+      "Técnicas cirúrgicas preservadoras de membros",
+      "Técnicas de amputações em oncologia",
+      "Tumor de células gigantes",
+      "Tumores da Coluna",
+      "Tumores da mão"
+    ]
+  },
+  {
+    "areaId": "area_ortopedia_pediatrica",
+    "areaName": "Ortopedia Pediátrica",
+    "groupName": "Ciência Básica",
+    "themeName": [
+      "Marcha Normal e Patológica"
+    ]
+  },
+  {
+    "areaId": "area_ortopedia_pediatrica",
+    "areaName": "Ortopedia Pediátrica",
+    "groupName": "Ortopedia Infantil",
+    "themeName": [
+      "Acondroplasias",
+      "Artrogripose",
+      "Coalizão tarsal na criança",
+      "Coxa vara do desenvolvimento",
+      "Deformidades congênitas dos membros inferiores",
+      "Deformidades congênitas dos membros superiores",
+      "Displasia de desenvolvimento do quadril",
+      "Doença de Legg-Calvè-Perthes",
+      "Doença de Osgood Schalatter",
+      "Epifisiolistese do fêmur proximal",
+      "Fêmur curto congênito",
+      "Luxação congênita da cabeça do rádio",
+      "Marcos do desenvolvimento",
+      "Metabolismo de cálcio e da vitamina D; Raquitismo",
+      "Mielomeningocele",
+      "Mucopolissacaridoses",
+      "Osteocondrites de criança",
+      "Osteogenesis Imperfecta",
+      "Osteomielites na criança",
+      "Paralisia Cerebral",
+      "Paralisia obstétrica",
+      "Pé cavo na criança",
+      "Pé metatarso varo na criança",
+      "Pé plano flexível na criança",
+      "Pé torto congênito e técnica de Ponseti",
+      "Pioartrites na criança",
+      "Pseudoartrose congênita de clavícula",
+      "Pseudoartrose congênita de tíbia",
+      "Semiologia Ortopédica Pediátrica",
+      "Sinovite transitória do quadril",
+      "Tíbia vara de Blount",
+      "Torcicolo congênito"
+    ]
+  },
+  {
+    "areaId": "area_ortopedia_pediatrica",
+    "areaName": "Ortopedia Pediátrica",
+    "groupName": "Trauma Infantil",
+    "themeName": [
+      "Fratura de clavícula na criança ",
+      "Fraturas da diáfise do fêmur na criança",
+      "Fraturas da mão e do punho na criança",
+      "Fraturas da tuberosidade anterior da tíbia na criança",
+      "Fraturas das espinhas tibiais na criança",
+      "Fraturas de anel pélvico e acetábulo na criança",
+      "Fraturas de Galeazzi na criança",
+      "Fraturas de Monteggia na Criança",
+      "Fraturas diafisárias da tíbia na crianca",
+      "Fraturas diafisárias do úmero na criança",
+      "Fraturas do antebraço na criança",
+      "Fraturas do cotovelo na criança (EM, EL e CR)",
+      "Fraturas do fêmur distal na criança",
+      "Fraturas do fêmur proximal na criança",
+      "Fraturas do punho na criança",
+      "Fraturas do tornozelo na crianca",
+      "Fraturas do úmero proximal na criança",
+      "Fraturas supracondileanas do úmero na criança",
+      "Lesões fisárias",
+      "Maus tratos",
+      "Princípios de fraturas pediátricas",
+      "Pronação dolorosa"
+    ]
+  }
+]

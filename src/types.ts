@@ -20,17 +20,34 @@ export interface Area {
   questionCount?: number;
 }
 
+// Agrupamento oficial do TEOT (Anatomia, Ciência Básica, Ortopedia Adulto,
+// Ortopedia Infantil, Trauma Adulto, Trauma Infantil, Oncologia Ortopédica),
+// coleção própria `groups` no Firestore. Independente da hierarquia de Área
+// (região anatômica/especialidade, ex.: Mão, Joelho, Quadril) — um mesmo
+// Grupo reúne temas de várias Áreas diferentes (ex.: "Trauma Adulto" cruza
+// Mão, Joelho, Ombro e Cotovelo etc.), por isso não é um nível acima/abaixo
+// de Área, e sim um agrupamento paralelo, usado só para estatísticas de
+// desempenho — nunca para filtrar questões no banco ou na elaboração de
+// provas (isso continua sendo papel exclusivo da Área).
+export interface Group {
+  id: string;
+  name: string;
+  questionCount?: number;
+  active?: boolean;
+}
+
 export interface Theme {
   id: string;
   areaId: string;
   areaName?: string;
   name: string;
   questionCount?: number;
-  // Agrupamento intermediário opcional entre área e tema (ex.: "Ortopedia" /
-  // "Traumatologia", ou nomes específicos como em Oncologia Ortopédica).
-  // Ausente para áreas sem subagrupamento (Anatomia, Ciência Básica) — ver
-  // reference/arvore_temas_subareas.json e scripts/migrate-theme-subareas.mjs.
-  subArea?: string;
+  // Grupo TEOT do tema (ver Group acima) — denormalizado a partir de
+  // `groups/{id}` para permitir montar estatísticas por grupo sem precisar
+  // cruzar com essa coleção a cada leitura. Ver
+  // reference/areas_grupos_temas.json para a árvore Área → Grupo → Temas.
+  groupId?: string;
+  groupName?: string;
 }
 
 export interface QuestionAlternatives {
@@ -46,11 +63,12 @@ export interface Question {
   areaName?: string;
   themeId: string;
   themeName?: string;
-  // Denormalizado do tema (ver Theme.subArea) para permitir filtrar e
-  // analisar desempenho por subárea sem precisar cruzar com a coleção
-  // `themes` a cada leitura. Ausente para áreas sem esse agrupamento
-  // (Anatomia, Ciência Básica) ou para questões ainda não migradas.
-  subArea?: string;
+  // Denormalizado do tema (ver Theme.groupId/groupName) para análises futuras
+  // sem precisar cruzar com a coleção `themes`. As telas de estatística hoje
+  // resolvem o grupo por themeId → `themes` (mesmo padrão usado para
+  // areaName), então este par pode ficar ausente sem quebrar nada.
+  groupId?: string;
+  groupName?: string;
   sourceExam: string; // e.g. "TEOT 2023", "SBOT"
   statement: string;
   alternatives: QuestionAlternatives;

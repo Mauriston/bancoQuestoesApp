@@ -6,7 +6,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import {
-   AppUser, Area, Theme, Question, QuestionAnswer, Exam, ExamQuestion,
+   AppUser, Area, Group, Theme, Question, QuestionAnswer, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
    VideotecaItem, AulaItem, MaterialViewLog, Sabatina, AppNotification, NotificationAudience
  } from '../types';
@@ -144,20 +144,21 @@ export async function getThemes(areaId?: string): Promise<Theme[]> {
   return themes.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Distintas subáreas presentes entre os temas de uma área, na ordem em que
-// aparecem nos documentos (deduplicado). Áreas sem subagrupamento (Anatomia,
-// Ciência Básica) simplesmente retornam lista vazia — filtro client-side
-// sobre uma lista de temas já carregada, coerente com o resto do arquivo.
-export function getSubAreasForThemes(themesOfArea: Theme[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  themesOfArea.forEach(t => {
-    if (t.subArea && !seen.has(t.subArea)) {
-      seen.add(t.subArea);
-      result.push(t.subArea);
-    }
+// --- GROUPS (agrupamento TEOT: Anatomia, Ciência Básica, Ortopedia Adulto,
+// Ortopedia Infantil, Trauma Adulto, Trauma Infantil, Oncologia Ortopédica)
+// ---
+//
+// Usado só para estatísticas de desempenho (dashboards e "Meu Desempenho") —
+// nunca como filtro de questões no banco ou na elaboração de provas, papel
+// que continua exclusivo da Área. Ver Group em types.ts.
+
+export async function getGroups(): Promise<Group[]> {
+  const snapshot = await getDocs(collection(db, 'groups'));
+  const groups: Group[] = [];
+  snapshot.forEach(doc => {
+    groups.push({ id: doc.id, ...doc.data() } as Group);
   });
-  return result;
+  return groups.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // --- QUESTIONS ---
