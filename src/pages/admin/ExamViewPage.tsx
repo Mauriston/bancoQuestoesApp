@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ClipboardList } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas } from '../../services/firebaseService';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area } from '../../types';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
@@ -68,25 +68,6 @@ export const ExamViewPage: React.FC = () => {
         const areaIdsInExam = new Set(examQs.map(q => q.areaId));
         setExamAreas(allAreas.filter(a => areaIdsInExam.has(a.id)));
 
-        const completedAttempts = attempts.filter(a => a.status === 'completed');
-        const rows = await Promise.all(completedAttempts.map(async (attempt) => {
-          const answers = await getAttemptAnswers(attempt.id);
-          const byArea: Record<string, { correct: number; total: number }> = {};
-          answers.forEach(ans => {
-            if (!byArea[ans.areaId]) byArea[ans.areaId] = { correct: 0, total: 0 };
-            byArea[ans.areaId].total += 1;
-            if (ans.isCorrect) byArea[ans.areaId].correct += 1;
-          });
-          const areaScores: Record<string, number | null> = {};
-          Array.from(areaIdsInExam).forEach(areaId => {
-            const data = byArea[areaId];
-            areaScores[areaId] = data && data.total > 0 ? Math.round((data.correct / data.total) * 100) : null;
-          });
-          return { attempt, areaScores };
-        }));
-        rows.sort((a, b) => (b.attempt.scorePercentage || 0) - (a.attempt.scorePercentage || 0));
-        setSubmittedRows(rows);
-
         const keysMap: Record<string, QuestionAnswer> = {};
         await Promise.all(examQs.map(async (q) => {
           const key = await getQuestionAnswer(q.originalQuestionId);
@@ -107,6 +88,36 @@ export const ExamViewPage: React.FC = () => {
     }
     loadExam();
   }, [examId]);
+
+  // Tabela "Respostas Enviadas" ao vivo — uma nova tentativa concluída
+  // aparece nela sozinha, sem precisar recarregar a página.
+  useEffect(() => {
+    if (!examId || questions.length === 0) return;
+    const areaIdsInExam = new Set(questions.map(q => q.areaId));
+
+    const unsubscribe = subscribeAttemptsForExam(examId, async (attempts) => {
+      const completedAttempts = attempts.filter(a => a.status === 'completed');
+      const rows = await Promise.all(completedAttempts.map(async (attempt) => {
+        const answers = await getAttemptAnswers(attempt.id);
+        const byArea: Record<string, { correct: number; total: number }> = {};
+        answers.forEach(ans => {
+          if (!byArea[ans.areaId]) byArea[ans.areaId] = { correct: 0, total: 0 };
+          byArea[ans.areaId].total += 1;
+          if (ans.isCorrect) byArea[ans.areaId].correct += 1;
+        });
+        const areaScores: Record<string, number | null> = {};
+        Array.from(areaIdsInExam).forEach(areaId => {
+          const data = byArea[areaId];
+          areaScores[areaId] = data && data.total > 0 ? Math.round((data.correct / data.total) * 100) : null;
+        });
+        return { attempt, areaScores };
+      }));
+      rows.sort((a, b) => (b.attempt.scorePercentage || 0) - (a.attempt.scorePercentage || 0));
+      setSubmittedRows(rows);
+    });
+
+    return unsubscribe;
+  }, [examId, questions]);
 
   const handleToggleActive = async () => {
     if (!exam) return;

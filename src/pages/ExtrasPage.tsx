@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Video, Presentation, Eye, CheckCircle2, Users as UsersIcon, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  getAreas, getThemes, getVideotecaItems, createVideotecaItem, updateVideotecaItem, deleteVideotecaItem,
-  getAulaItems, createAulaItem, updateAulaItem, deleteAulaItem,
-  logMaterialView, getAllMaterialViewLogs, getViewedMaterialIds
+  getAreas, getThemes, subscribeVideotecaItems, createVideotecaItem, updateVideotecaItem, deleteVideotecaItem,
+  subscribeAulaItems, createAulaItem, updateAulaItem, deleteAulaItem,
+  logMaterialView, subscribeAllMaterialViewLogs, subscribeViewedMaterialIds
 } from '../services/firebaseService';
 import { Area, Theme, VideotecaItem, AulaItem, MaterialViewLog } from '../types';
 import { CheckboxMultiSelect } from '../components/CheckboxMultiSelect';
@@ -36,26 +36,36 @@ export const ExtrasPage: React.FC = () => {
   const [editingItem, setEditingItem] = useState<MaterialItem | null>(null);
   const [viewingItem, setViewingItem] = useState<MaterialItem | null>(null);
 
-  const loadAll = async () => {
-    setLoading(true);
-    try {
-      const [arList, thList, vList, aList] = await Promise.all([
-        getAreas(), getThemes(), getVideotecaItems(), getAulaItems()
-      ]);
-      setAreas(arList);
-      setThemes(thList);
-      setVideos(vList);
-      setAulas(aList);
-      if (currentUser) setViewedIds(await getViewedMaterialIds(currentUser.id));
-      if (isAdmin) setAllViewLogs(await getAllMaterialViewLogs());
-    } catch (err) {
-      console.error("Erro ao carregar Extras:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Área/Tema são cadastro de referência (mudam raramente) — busca única.
+  useEffect(() => {
+    Promise.all([getAreas(), getThemes()])
+      .then(([arList, thList]) => { setAreas(arList); setThemes(thList); })
+      .catch(err => console.error("Erro ao carregar áreas/temas:", err));
+  }, []);
 
-  useEffect(() => { loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentUser?.id]);
+  // Materiais e visualizações ao vivo — um vídeo/aula inserido, editado ou
+  // excluído pelo admin, e cada nova visualização registrada, aparecem na
+  // hora para quem estiver com a página aberta.
+  useEffect(() => {
+    setLoading(true);
+    let videosLoaded = false;
+    let aulasLoaded = false;
+    const maybeStopLoading = () => {
+      if (videosLoaded && aulasLoaded) setLoading(false);
+    };
+
+    const unsubVideos = subscribeVideotecaItems((data) => { setVideos(data); videosLoaded = true; maybeStopLoading(); });
+    const unsubAulas = subscribeAulaItems((data) => { setAulas(data); aulasLoaded = true; maybeStopLoading(); });
+    const unsubViewed = currentUser ? subscribeViewedMaterialIds(currentUser.id, setViewedIds) : null;
+    const unsubAllLogs = isAdmin ? subscribeAllMaterialViewLogs(setAllViewLogs) : null;
+
+    return () => {
+      unsubVideos();
+      unsubAulas();
+      unsubViewed?.();
+      unsubAllLogs?.();
+    };
+  }, [currentUser, isAdmin]);
 
   // Materiais da tab atual, sem os filtros de Área/Tema aplicados — base
   // tanto para a listagem filtrada abaixo quanto para restringir as opções
@@ -136,15 +146,11 @@ export const ExtrasPage: React.FC = () => {
 
   const handleOpenItem = async (item: MaterialItem) => {
     setViewingItem(item);
+    // viewedIds e allViewLogs são assinaturas ao vivo — o novo registro
+    // reflete sozinho assim que o Firestore confirma a escrita, sem precisar
+    // atualizar o estado local otimisticamente aqui.
     if (currentUser) {
       await logMaterialView(item.id, item.kind === 'videoteca' ? 'video' : 'aula', currentUser.id, currentUser.name);
-      setViewedIds(prev => new Set(prev).add(item.id));
-      if (isAdmin) {
-        setAllViewLogs(prev => [
-          { id: `local_${Date.now()}`, materialId: item.id, materialType: item.kind === 'videoteca' ? 'video' : 'aula', userId: currentUser.id, userName: currentUser.name, viewedAt: new Date() },
-          ...prev
-        ]);
-      }
     }
   };
 
@@ -161,9 +167,10 @@ export const ExtrasPage: React.FC = () => {
   const handleDelete = async (item: MaterialItem) => {
     if (!confirm(`Excluir "${item.title}"? Essa ação não pode ser desfeita.`)) return;
     try {
+      // Não precisa recarregar manualmente — a assinatura ao vivo já
+      // remove o card assim que o Firestore confirma a exclusão.
       if (item.kind === 'videoteca') await deleteVideotecaItem(item.id);
       else await deleteAulaItem(item.id);
-      await loadAll();
     } catch (err) {
       alert("Erro ao excluir material.");
     }
@@ -251,7 +258,7 @@ export const ExtrasPage: React.FC = () => {
           areas={areas}
           editingItem={editingItem}
           onClose={() => setModalOpen(false)}
-          onSaved={async () => { setModalOpen(false); await loadAll(); }}
+          onSaved={() => setModalOpen(false)}
         />
       )}
 

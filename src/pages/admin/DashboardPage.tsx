@@ -6,7 +6,7 @@ import {
   AreaChart, Area as RechartsArea, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
   BarChart, Bar, Legend
 } from 'recharts';
-import { getActiveUsers, getUsers, getExams, getAllAttempts, getAreas, getAllUserStats, getThemes } from '../../services/firebaseService';
+import { getActiveUsers, getUsers, getExams, getAreas, getThemes, subscribeAllAttempts, subscribeAllUserStats } from '../../services/firebaseService';
 import { AppUser, Exam, Attempt, Area, UserStats, Theme } from '../../types';
 import { exportToCSV, scoreColorClass, scoreColorHex } from '../../utils/helpers';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
@@ -28,36 +28,61 @@ export const DashboardPage: React.FC = () => {
   // Usuário selecionado no ranking (Gráfico 1) — filtra os 2 gráficos abaixo.
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Dados de referência (usuários, provas, áreas/temas) mudam raramente
+  // enquanto o Dashboard está aberto — busca única. Tentativas e estatísticas
+  // dos usuários, que são o que realmente muda ao vivo conforme provas são
+  // corrigidas, usam assinatura contínua (onSnapshot) abaixo.
   useEffect(() => {
-    async function loadDashboard() {
+    async function loadReferenceData() {
       try {
-        setLoading(true);
-        const [uList, allUsers, eList, aList, arList, thList, statsList] = await Promise.all([
+        const [uList, allUsers, eList, arList, thList] = await Promise.all([
           getActiveUsers(),
           getUsers(),
           getExams(),
-          getAllAttempts(),
           getAreas(),
-          getThemes(),
-          getAllUserStats()
+          getThemes()
         ]);
         setActiveUsers(uList);
         setExams(eList);
-        setAttempts(aList);
         setAreas(arList);
         setThemes(thList);
-        setUserStatsList(statsList);
         // Tentativas antigas podem ter sido gravadas antes do userName ser
         // desnormalizado no documento — esse mapa cobre esses registros.
         setUserNameById(Object.fromEntries(allUsers.map(u => [u.id, u.name])));
       } catch (err) {
-        console.error("Erro ao carregar dashboard admin:", err);
-      } finally {
-        setLoading(false);
+        console.error("Erro ao carregar dados de referência do dashboard:", err);
       }
     }
 
-    loadDashboard();
+    loadReferenceData();
+  }, []);
+
+  // Tentativas e estatísticas de desempenho ao vivo — os dois gráficos e a
+  // tabela de últimas tentativas atualizam sozinhos, sem precisar recarregar
+  // a página, assim que um residente termina uma prova.
+  useEffect(() => {
+    setLoading(true);
+    let attemptsLoaded = false;
+    let statsLoaded = false;
+    const maybeStopLoading = () => {
+      if (attemptsLoaded && statsLoaded) setLoading(false);
+    };
+
+    const unsubAttempts = subscribeAllAttempts((data) => {
+      setAttempts(data);
+      attemptsLoaded = true;
+      maybeStopLoading();
+    });
+    const unsubStats = subscribeAllUserStats((data) => {
+      setUserStatsList(data);
+      statsLoaded = true;
+      maybeStopLoading();
+    });
+
+    return () => {
+      unsubAttempts();
+      unsubStats();
+    };
   }, []);
 
   // Ranking geral (Gráfico 1): um ponto por usuário com pelo menos 1 questão

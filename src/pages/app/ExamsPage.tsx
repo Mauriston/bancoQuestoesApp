@@ -4,7 +4,7 @@ import {
   CheckCircle2, MoreVertical
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserAssignments, isExamActive } from '../../services/firebaseService';
+import { subscribeUserAssignments, isExamActive } from '../../services/firebaseService';
 import { ExamAssignment, Exam } from '../../types';
 
 export const ExamsPage: React.FC = () => {
@@ -14,15 +14,19 @@ export const ExamsPage: React.FC = () => {
   const [assignments, setAssignments] = useState<(ExamAssignment & { exam?: Exam })[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Assinatura ao vivo: uma prova recém-publicada/atribuída pelo admin
+  // aparece aqui automaticamente, sem precisar recarregar a página.
   useEffect(() => {
-    if (currentUser) {
-      getUserAssignments(currentUser.id)
-        .then(res => setAssignments(res))
-        .catch(err => console.error("Erro ao carregar provas:", err))
-        .finally(() => setLoading(false));
-    } else {
+    if (!currentUser) {
       setLoading(false);
+      return;
     }
+    setLoading(true);
+    const unsubscribe = subscribeUserAssignments(currentUser.id, (res) => {
+      setAssignments(res);
+      setLoading(false);
+    });
+    return unsubscribe;
   }, [currentUser]);
 
   if (loading) {

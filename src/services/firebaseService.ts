@@ -1,7 +1,7 @@
 import {
    collection, collectionGroup, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
    query, where, orderBy, limit, serverTimestamp, writeBatch, runTransaction, Timestamp, addDoc,
-   documentId, Query, DocumentData
+   documentId, Query, DocumentData, onSnapshot
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
@@ -822,6 +822,27 @@ export async function getUserAssignments(userId: string): Promise<(ExamAssignmen
   return result;
 }
 
+// Versão "ao vivo" de getUserAssignments() — usada em ExamsPage para que uma
+// prova recém-atribuída (ou reativada) pelo admin apareça na hora, sem o
+// residente precisar recarregar a página. Retorna a função de unsubscribe.
+export function subscribeUserAssignments(
+  userId: string,
+  callback: (assignments: (ExamAssignment & { exam?: Exam })[]) => void
+): () => void {
+  const q = query(collection(db, 'examAssignments'), where('userId', '==', userId));
+  return onSnapshot(q, async (snapshot) => {
+    const assignments: ExamAssignment[] = [];
+    snapshot.forEach(doc => assignments.push({ id: doc.id, ...doc.data() } as ExamAssignment));
+    const result = await Promise.all(
+      assignments.map(async (asgn) => {
+        const exam = await getExamById(asgn.examId);
+        return { ...asgn, exam: exam || undefined };
+      })
+    );
+    callback(result);
+  });
+}
+
 export async function startExamAttempt(assignmentId: string, userId: string, examId: string): Promise<{ attemptId: string; examQuestions: ExamQuestion[] }> {
   const exam = await getExamById(examId);
   if (!exam) throw new Error("Prova não encontrada");
@@ -937,6 +958,17 @@ export async function getAllAttempts(): Promise<Attempt[]> {
   return attempts;
 }
 
+// Versão "ao vivo" de getAllAttempts() — usada no Dashboard admin para que
+// os KPIs e a tabela de últimas tentativas atualizem sozinhos conforme os
+// residentes concluem provas.
+export function subscribeAllAttempts(callback: (attempts: Attempt[]) => void): () => void {
+  return onSnapshot(collection(db, 'attempts'), (snapshot) => {
+    const attempts: Attempt[] = [];
+    snapshot.forEach(doc => attempts.push({ id: doc.id, ...doc.data() } as Attempt));
+    callback(attempts);
+  });
+}
+
 export async function getAttemptsForExam(examId: string): Promise<Attempt[]> {
   const q = query(collection(db, 'attempts'), where('examId', '==', examId));
   const snapshot = await getDocs(q);
@@ -945,6 +977,18 @@ export async function getAttemptsForExam(examId: string): Promise<Attempt[]> {
     attempts.push({ id: doc.id, ...doc.data() } as Attempt);
   });
   return attempts;
+}
+
+// Versão "ao vivo" de getAttemptsForExam() — usada em ExamViewPage para que
+// a tabela "Respostas Enviadas" atualize sozinha assim que um residente
+// termina a prova.
+export function subscribeAttemptsForExam(examId: string, callback: (attempts: Attempt[]) => void): () => void {
+  const q = query(collection(db, 'attempts'), where('examId', '==', examId));
+  return onSnapshot(q, (snapshot) => {
+    const attempts: Attempt[] = [];
+    snapshot.forEach(doc => attempts.push({ id: doc.id, ...doc.data() } as Attempt));
+    callback(attempts);
+  });
 }
 
 // Per-question accuracy across every completed attempt of a given prova —
@@ -990,6 +1034,16 @@ export async function getAllUserStats(): Promise<UserStats[]> {
   return stats;
 }
 
+// Versão "ao vivo" de getAllUserStats() — mantém o ranking geral do
+// Dashboard admin atualizado assim que uma prova é corrigida.
+export function subscribeAllUserStats(callback: (stats: UserStats[]) => void): () => void {
+  return onSnapshot(collection(db, 'userStats'), (snapshot) => {
+    const stats: UserStats[] = [];
+    snapshot.forEach(doc => stats.push(doc.data() as UserStats));
+    callback(stats);
+  });
+}
+
 export async function addAdminLog(adminId: string, adminName: string, action: string, details: string): Promise<void> {
   const logId = generateId('log');
   await setDoc(doc(db, 'adminLogs', logId), {
@@ -1023,6 +1077,17 @@ export async function getVideotecaItems(): Promise<VideotecaItem[]> {
   return items.sort((a, b) => a.title.localeCompare(b.title));
 }
 
+// Versão "ao vivo" de getVideotecaItems() — um material inserido/editado/
+// excluído pelo admin aparece na hora para quem estiver com a página Extras
+// aberta, sem precisar recarregar.
+export function subscribeVideotecaItems(callback: (items: VideotecaItem[]) => void): () => void {
+  return onSnapshot(collection(db, 'videotecaItems'), (snapshot) => {
+    const items: VideotecaItem[] = [];
+    snapshot.forEach(d => items.push(normalizeThemeIds<VideotecaItem>({ id: d.id, ...d.data() })));
+    callback(items.sort((a, b) => a.title.localeCompare(b.title)));
+  });
+}
+
 export async function createVideotecaItem(data: Omit<VideotecaItem, 'id' | 'createdAt'>): Promise<string> {
   const id = generateId('vid');
   await setDoc(doc(db, 'videotecaItems', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
@@ -1042,6 +1107,15 @@ export async function getAulaItems(): Promise<AulaItem[]> {
   const items: AulaItem[] = [];
   snapshot.forEach(d => items.push(normalizeThemeIds<AulaItem>({ id: d.id, ...d.data() })));
   return items.sort((a, b) => a.title.localeCompare(b.title));
+}
+
+// Versão "ao vivo" de getAulaItems() — mesmo motivo de subscribeVideotecaItems.
+export function subscribeAulaItems(callback: (items: AulaItem[]) => void): () => void {
+  return onSnapshot(collection(db, 'aulaItems'), (snapshot) => {
+    const items: AulaItem[] = [];
+    snapshot.forEach(d => items.push(normalizeThemeIds<AulaItem>({ id: d.id, ...d.data() })));
+    callback(items.sort((a, b) => a.title.localeCompare(b.title)));
+  });
 }
 
 export async function createAulaItem(data: Omit<AulaItem, 'id' | 'createdAt'>): Promise<string> {
@@ -1083,6 +1157,17 @@ export async function getAllMaterialViewLogs(): Promise<MaterialViewLog[]> {
   return logs;
 }
 
+// Versão "ao vivo" de getAllMaterialViewLogs() — o contador/tooltip de
+// visualizações de cada material, no card do admin, atualiza sozinho assim
+// que alguém abre o material.
+export function subscribeAllMaterialViewLogs(callback: (logs: MaterialViewLog[]) => void): () => void {
+  return onSnapshot(collection(db, 'materialViewLogs'), (snapshot) => {
+    const logs: MaterialViewLog[] = [];
+    snapshot.forEach(d => logs.push({ id: d.id, ...d.data() } as MaterialViewLog));
+    callback(logs);
+  });
+}
+
 // IDs de materiais já vistos pelo usuário (Videoteca + Aulas juntas — o
 // materialId já é suficiente para identificar unicamente o item de qualquer
 // um dos dois tipos, já que são gerados com prefixos diferentes: vid_/aula_).
@@ -1094,6 +1179,17 @@ export async function getViewedMaterialIds(userId: string): Promise<Set<string>>
   return ids;
 }
 
+// Versão "ao vivo" de getViewedMaterialIds() — o badge "Visto" e o contador
+// de materiais não vistos nas abas atualizam sozinhos.
+export function subscribeViewedMaterialIds(userId: string, callback: (ids: Set<string>) => void): () => void {
+  const q = query(collection(db, 'materialViewLogs'), where('userId', '==', userId));
+  return onSnapshot(q, (snapshot) => {
+    const ids = new Set<string>();
+    snapshot.forEach(d => ids.add((d.data() as MaterialViewLog).materialId));
+    callback(ids);
+  });
+}
+
 // --- SABATINAS ---
 
 export async function getSabatinas(): Promise<Sabatina[]> {
@@ -1101,6 +1197,16 @@ export async function getSabatinas(): Promise<Sabatina[]> {
   const items: Sabatina[] = [];
   snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as Sabatina));
   return items;
+}
+
+// Versão "ao vivo" de getSabatinas() — uma sabatina recém-cadastrada pelo
+// admin aparece na hora para quem estiver com a página aberta.
+export function subscribeSabatinas(callback: (items: Sabatina[]) => void): () => void {
+  return onSnapshot(collection(db, 'sabatinas'), (snapshot) => {
+    const items: Sabatina[] = [];
+    snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as Sabatina));
+    callback(items);
+  });
 }
 
 export async function createSabatina(data: Omit<Sabatina, 'id' | 'createdAt'>): Promise<string> {
