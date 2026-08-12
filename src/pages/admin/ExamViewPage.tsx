@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, createNotification } from '../../services/firebaseService';
-import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area } from '../../types';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification } from '../../services/firebaseService';
+import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
+import { ReferenceSource } from '../../components/ReferenceSource';
 import { getSourceExamChipClass } from '../../constants';
 import { scoreColorClass } from '../../utils/helpers';
 
@@ -52,6 +53,7 @@ export const ExamViewPage: React.FC = () => {
   // remoção de uma questão (ver handleDeleteQuestion).
   const [originalQuestionsById, setOriginalQuestionsById] = useState<Record<string, Question>>({});
   const [stats, setStats] = useState<Record<string, { totalAnswered: number; totalCorrect: number }>>({});
+  const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   // Se a prova tem alguma tentativa registrada — não muda depois do
@@ -186,18 +188,20 @@ export const ExamViewPage: React.FC = () => {
       if (!examId) return;
       try {
         setLoading(true);
-        const [examData, examQs, questionStats, attempts, allAreas, allThemes] = await Promise.all([
+        const [examData, examQs, questionStats, attempts, allAreas, allThemes, refList] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
           getExamQuestionStats(examId),
           getAttemptsForExam(examId),
           getAreas(),
-          getThemes()
+          getThemes(),
+          getReferences()
         ]);
         setExam(examData);
         setQuestions(examQs);
         setStats(questionStats);
         setHasAttempts(attempts.length > 0);
+        setReferences(refList);
 
         // Áreas presentes nesta prova (colunas da tabela de respostas
         // enviadas), na mesma ordem de getAreas() (alfabética).
@@ -718,6 +722,7 @@ export const ExamViewPage: React.FC = () => {
                         <p className="text-slate-300 leading-relaxed mt-4">{key.comments}</p>
                       )}
                       {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
+                      <ReferenceSource reference={references.find(r => r.id === key.referenceId)} />
                     </div>
                   )}
                 </div>
