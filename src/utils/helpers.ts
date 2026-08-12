@@ -34,6 +34,18 @@ export function buildWhatsAppLink(phone: string, message: string): string {
   return `https://wa.me/${formatPhoneForWhatsApp(phone)}?text=${encodeURIComponent(message)}`;
 }
 
+// Máscara aplicada ao digitar o telefone/WhatsApp em SettingsPage: aceita
+// qualquer entrada (colar com pontuação, etc.), descarta o que não for
+// dígito e formata progressivamente como "(00) 00000-0000", limitado a 11
+// dígitos (DDD + celular de 9 dígitos).
+export function maskPhoneInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
 // Fisher-Yates shuffle for arrays
 export function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
