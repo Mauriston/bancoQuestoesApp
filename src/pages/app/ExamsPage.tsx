@@ -50,7 +50,9 @@ export const ExamsPage: React.FC = () => {
 
       {currentUser && (
         <div className="flex items-center">
-          <span className="text-sm font-bold text-slate-300 truncate">{currentUser.name}</span>
+          <h1 className="text-base sm:text-lg font-bold text-slate-300">
+            {currentUser.name}, essas são as suas provas pendentes de realização:
+          </h1>
         </div>
       )}
 
