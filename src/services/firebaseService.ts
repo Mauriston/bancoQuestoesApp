@@ -6,7 +6,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import {
-   AppUser, Area, Group, Theme, Question, QuestionAnswer, Exam, ExamQuestion,
+   AppUser, Area, Group, Theme, Question, QuestionAnswer, Reference, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
    VideotecaItem, AulaItem, MaterialViewLog, Sabatina, AppNotification, NotificationAudience
  } from '../types';
@@ -161,6 +161,17 @@ export async function getGroups(): Promise<Group[]> {
   return groups.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// --- REFERENCES (livros de referência bibliográfica dos gabaritos) ---
+
+export async function getReferences(): Promise<Reference[]> {
+  const snapshot = await getDocs(collection(db, 'reference'));
+  const refs: Reference[] = [];
+  snapshot.forEach(doc => {
+    refs.push({ id: doc.id, ...doc.data() } as Reference);
+  });
+  return refs.sort((a, b) => a.referenceId.localeCompare(b.referenceId));
+}
+
 // --- QUESTIONS ---
 
 export async function getQuestions(filters?: {
@@ -303,7 +314,7 @@ export async function getExamsContainingQuestion(originalQuestionId: string): Pr
 
 export async function saveQuestion(
   questionData: Omit<Question, 'id'> & { id?: string },
-  answerData: { correctAlternative: "A" | "B" | "C" | "D"; solutionText?: string; comments: string; commentMediaUrl?: string }
+  answerData: { correctAlternative: "A" | "B" | "C" | "D"; solutionText?: string; comments: string; commentMediaUrl?: string; referenceId?: string }
 ): Promise<string> {
   const qId = questionData.id || generateId('q');
 
@@ -322,11 +333,19 @@ export async function saveQuestion(
 
   // Protected answer key
   const ansRef = doc(db, 'questionAnswers', qId);
-  await setDoc(ansRef, removeUndefined({
+  // referenceId tratado à parte: removeUndefined() descartaria um valor
+  // `undefined` sem tocar no campo já gravado no Firestore (merge:true), o
+  // que impediria o admin de desvincular uma referência já escolhida antes
+  // — por isso usa deleteField() nesse caso, mesmo padrão de
+  // deleteQuestionImage() para imageUrl.
+  const { referenceId, ...restAnswerData } = answerData;
+  const ansPayload: Record<string, any> = removeUndefined({
     questionId: qId,
-    ...answerData,
+    ...restAnswerData,
     updatedAt: serverTimestamp()
-  }), { merge: true });
+  });
+  ansPayload.referenceId = referenceId ? referenceId : deleteField();
+  await setDoc(ansRef, ansPayload, { merge: true });
 
   return qId;
 }

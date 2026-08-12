@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { X, FileCheck, CheckCircle2, Copy, Check, ChevronDown } from 'lucide-react';
-import { Question, ExamQuestion, QuestionAnswer } from '../types';
+import { Question, ExamQuestion, QuestionAnswer, Reference } from '../types';
 import { QuestionImage } from './QuestionImage';
 import { CommentMedia } from './CommentMedia';
-import { getExamsContainingQuestion, getQuestionAnswer } from '../services/firebaseService';
+import { ReferenceSource } from './ReferenceSource';
+import { getExamsContainingQuestion, getQuestionAnswer, getReferences } from '../services/firebaseService';
 
 interface QuestionPreviewModalProps {
   question: Question | ExamQuestion;
@@ -24,6 +25,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
   const [answer, setAnswer] = useState<QuestionAnswer | null>(null);
   const [copied, setCopied] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [references, setReferences] = useState<Reference[]>([]);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(originalQuestionId)
@@ -42,6 +44,9 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
     getQuestionAnswer(originalQuestionId)
       .then(res => { if (!cancelled) setAnswer(res); })
       .catch(err => console.error("Erro ao buscar gabarito da questão:", err));
+    getReferences()
+      .then(res => { if (!cancelled) setReferences(res); })
+      .catch(err => console.error("Erro ao buscar referências:", err));
     return () => { cancelled = true; };
   }, [originalQuestionId]);
 
@@ -151,6 +156,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
                     <p className="text-slate-300 leading-relaxed mt-4">{answer.comments}</p>
                   )}
                   {answer.commentMediaUrl && <CommentMedia url={answer.commentMediaUrl} />}
+                  <ReferenceSource reference={references.find(r => r.id === answer.referenceId)} />
                 </div>
               )}
             </div>

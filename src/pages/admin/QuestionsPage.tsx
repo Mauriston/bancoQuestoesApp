@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
-import { Question, Area, Theme, QuestionAnswer } from '../../types';
+import { getQuestions, getAreas, getThemes, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { Question, Area, Theme, QuestionAnswer, Reference } from '../../types';
 import { SOURCE_EXAM_OPTIONS, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
@@ -54,6 +54,10 @@ export const QuestionsPage: React.FC = () => {
   const [correctAlt, setCorrectAlt] = useState<"A"|"B"|"C"|"D">('A');
   const [comments, setComments] = useState('');
   const [commentMediaUrl, setCommentMediaUrl] = useState('');
+  // Referência bibliográfica do gabarito (ver Reference/coleção `reference`)
+  // — '' = nenhuma. Lista carregada uma vez (coleção pequena, muda raro).
+  const [referenceId, setReferenceId] = useState('');
+  const [references, setReferences] = useState<Reference[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   // Imagem que a questão tinha ao abrir o modal de edição — usado para saber
@@ -97,6 +101,10 @@ export const QuestionsPage: React.FC = () => {
   }, [selectedAreaId, selectedThemeIds, selectedSourceExams, searchQuery]);
 
   useEffect(() => {
+    getReferences().then(setReferences).catch(err => console.error("Erro ao carregar referências:", err));
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(e.target as Node)) {
         setSourceDropdownOpen(false);
@@ -131,6 +139,7 @@ export const QuestionsPage: React.FC = () => {
     setCorrectAlt('A');
     setComments('');
     setCommentMediaUrl('');
+    setReferenceId('');
     setImageUrl(null);
     setImageFile(null);
     setOriginalImageUrl(null);
@@ -159,6 +168,9 @@ export const QuestionsPage: React.FC = () => {
       setCorrectAlt(ansKey.correctAlternative);
       setComments(ansKey.comments || '');
       setCommentMediaUrl(ansKey.commentMediaUrl || '');
+      setReferenceId(ansKey.referenceId || '');
+    } else {
+      setReferenceId('');
     }
 
     setModalOpen(true);
@@ -212,7 +224,8 @@ export const QuestionsPage: React.FC = () => {
         {
           correctAlternative: correctAlt,
           comments,
-          commentMediaUrl: commentMediaUrl || undefined
+          commentMediaUrl: commentMediaUrl || undefined,
+          referenceId: referenceId || undefined
         }
       );
 
@@ -568,6 +581,18 @@ export const QuestionsPage: React.FC = () => {
                   onChange={(e) => setComments(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]"
                 />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Referência Bibliográfica</label>
+                <select
+                  value={referenceId}
+                  onChange={(e) => setReferenceId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
+                >
+                  <option value="">Nenhuma</option>
+                  {references.map(r => <option key={r.id} value={r.id}>{r.referenceId}</option>)}
+                </select>
               </div>
 
               <div>

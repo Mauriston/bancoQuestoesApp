@@ -96,7 +96,27 @@ export interface QuestionAnswer {
   // gabarito (relatório do candidato, banco de questões, visualização de
   // provas do admin) — ver componente CommentMedia.
   commentMediaUrl?: string;
+  // Livro de referência do gabarito/comentário (ver Reference e coleção
+  // `reference`) — id do doc em `reference/{id}`. Ausente quando a questão
+  // não tem referência vinculada. Renderizado como "Fonte: {referenceName}"
+  // (hiperlink para referenceUrlDownload) logo após o comentário, separado
+  // por uma linha em branco — ver componente ReferenceSource.
+  referenceId?: string;
   updatedAt?: any;
+}
+
+// Livro/fonte bibliográfica citável no gabarito de uma questão (coleção
+// `reference`, raiz do Firestore — ver scripts/import-references.mjs e
+// reference/livros_referencia.csv). O menu suspenso de seleção no formulário
+// de questão mostra só `referenceId` (o código curto, ex.: "NETTER'S");
+// `referenceName` é a citação completa (ABNT), usada como texto do
+// hiperlink "Fonte: ..." que aponta para `referenceUrlDownload`.
+export interface Reference {
+  id: string;
+  referenceId: string;
+  referenceName: string;
+  referenceUrlDownload: string;
+  active?: boolean;
 }
 
 export interface Exam {

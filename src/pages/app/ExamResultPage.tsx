@@ -4,10 +4,11 @@ import {
   CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds } from '../../services/firebaseService';
-import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme } from '../../types';
+import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
+import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme, Reference } from '../../types';
 import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
+import { ReferenceSource } from '../../components/ReferenceSource';
 import { scoreColorClass, scoreColorHex } from '../../utils/helpers';
 
 export const ExamResultPage: React.FC = () => {
@@ -23,6 +24,7 @@ export const ExamResultPage: React.FC = () => {
   const [sourceExamById, setSourceExamById] = useState<Record<string, string>>({});
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
+  const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
 
@@ -69,8 +71,9 @@ export const ExamResultPage: React.FC = () => {
           });
 
           await Promise.all(keysPromises);
-          
+
           setAnswerKeys(keysMap);
+          setReferences(await getReferences());
         }
       } catch (err) {
         console.error("Erro ao carregar resultados:", err);
@@ -395,6 +398,7 @@ export const ExamResultPage: React.FC = () => {
                             <p className="text-slate-300 leading-relaxed mt-4">{key.comments}</p>
                           )}
                           {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
+                          <ReferenceSource reference={references.find(r => r.id === key.referenceId)} />
                         </div>
                       )}
                     </div>
