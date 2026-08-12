@@ -363,6 +363,15 @@ export async function uploadQuestionImage(questionId: string, file: File): Promi
   return await getDownloadURL(storageRef);
 }
 
+// Atalho usado pelo icon button "Adicionar imagem" da listagem: faz upload e
+// já grava o imageUrl na questão, sem precisar abrir o modal completo de
+// edição (que exige reenviar área/tema/enunciado etc via saveQuestion).
+export async function addQuestionImage(questionId: string, file: File): Promise<string> {
+  const url = await uploadQuestionImage(questionId, file);
+  await updateDoc(doc(db, 'questions', questionId), { imageUrl: url, updatedAt: serverTimestamp() });
+  return url;
+}
+
 // Remove a imagem de uma questão: apaga o objeto no Storage (a partir da
 // própria download URL salva em imageUrl — funciona tanto para
 // question-images/ quanto para imagens_questoes/, os dois caminhos usados
