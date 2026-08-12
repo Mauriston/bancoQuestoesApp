@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ClipboardList } from 'lucide-react';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, createNotification } from '../../services/firebaseService';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ClipboardList, Layers } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, createNotification } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { QuestionImage } from '../../components/QuestionImage';
@@ -13,6 +14,8 @@ interface SubmittedRow {
   attempt: Attempt;
   areaScores: Record<string, number | null>; // areaId -> percentage (null = sem questões dessa área nessa tentativa)
 }
+
+const PIE_COLORS = ['#050f41', '#06b6d4', '#FAB932', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -39,6 +42,9 @@ export const ExamViewPage: React.FC = () => {
   // concluída, com o desempenho por área derivado das respostas individuais.
   const [submittedRows, setSubmittedRows] = useState<SubmittedRow[]>([]);
   const [examAreas, setExamAreas] = useState<Area[]>([]);
+  // Nome de cada tema, usado só para rotular a tabela/gráfico de distribuição
+  // de temas da prova (ver themeDistribution abaixo).
+  const [themeNameById, setThemeNameById] = useState<Record<string, string>>({});
   // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
   // mexer nas questões de uma prova inativa e sem tentativas registradas.
   // Derivado a cada render (em vez de um estado próprio) para não ficar
@@ -48,17 +54,31 @@ export const ExamViewPage: React.FC = () => {
   // possível editar provas inativas." ao clicar.
   const canEdit = !!exam && !isExamActive(exam) && !hasAttempts;
 
+  // Quantidade de questões por tema nesta prova, para a tabela e o gráfico
+  // de pizza exibidos acima da lista de questões — ordenado do tema mais
+  // presente para o menos presente.
+  const themeDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    questions.forEach(q => {
+      counts[q.themeId] = (counts[q.themeId] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([themeId, count]) => ({ themeId, name: themeNameById[themeId] || 'Tema desconhecido', count }))
+      .sort((a, b) => b.count - a.count);
+  }, [questions, themeNameById]);
+
   useEffect(() => {
     async function loadExam() {
       if (!examId) return;
       try {
         setLoading(true);
-        const [examData, examQs, questionStats, attempts, allAreas] = await Promise.all([
+        const [examData, examQs, questionStats, attempts, allAreas, allThemes] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
           getExamQuestionStats(examId),
           getAttemptsForExam(examId),
-          getAreas()
+          getAreas(),
+          getThemes()
         ]);
         setExam(examData);
         setQuestions(examQs);
@@ -69,6 +89,10 @@ export const ExamViewPage: React.FC = () => {
         // enviadas), na mesma ordem de getAreas() (alfabética).
         const areaIdsInExam = new Set(examQs.map(q => q.areaId));
         setExamAreas(allAreas.filter(a => areaIdsInExam.has(a.id)));
+
+        const themeNames: Record<string, string> = {};
+        allThemes.forEach(t => { themeNames[t.id] = t.name; });
+        setThemeNameById(themeNames);
 
         const keysMap: Record<string, QuestionAnswer> = {};
         await Promise.all(examQs.map(async (q) => {
@@ -237,6 +261,67 @@ export const ExamViewPage: React.FC = () => {
           <span>{isExamActive(exam) ? 'Desativar Prova' : 'Ativar Prova'}</span>
         </button>
       </div>
+
+      {themeDistribution.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+              <Layers className="w-4 h-4 text-cyan-400" />
+              Temas da Prova
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">Tema</th>
+                    <th className="p-3">Questões</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  {themeDistribution.map((t, idx) => (
+                    <tr key={t.themeId}>
+                      <td className="p-3 font-semibold text-[#050f41] flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                        <span className="truncate">{t.name}</span>
+                      </td>
+                      <td className="p-3 font-bold text-slate-300">{t.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              Distribuição por Tema
+            </h2>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={themeDistribution}
+                    dataKey="count"
+                    nameKey="name"
+                    innerRadius="45%"
+                    outerRadius="90%"
+                    paddingAngle={2}
+                  >
+                    {themeDistribution.map((t, i) => (
+                      <Cell key={t.themeId} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                    formatter={(value: number, name: string) => [`${value} questões`, name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </div>
+      )}
 
       {submittedRows.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
