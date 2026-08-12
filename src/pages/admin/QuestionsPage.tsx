@@ -44,8 +44,9 @@ export const QuestionsPage: React.FC = () => {
       setSelectedSourceExams(getSourceExamOptionsForGroup(group));
       setSourceDropdownOpen(false);
     } else if (group !== 'TODAS') {
-      const allowed = getSourceExamOptionsForGroup(group);
-      setSelectedSourceExams(prev => prev.filter(v => allowed.includes(v)));
+      // TEOT/TARO: marca todas as caixas do grupo de saída, mas o dropdown
+      // continua editável — o admin pode desmarcar provas/anos específicos.
+      setSelectedSourceExams(getSourceExamOptionsForGroup(group));
     }
   };
 
