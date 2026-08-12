@@ -421,6 +421,12 @@ const ViewMaterialModal: React.FC<{
 }> = ({ item, isAdmin, viewLogs, onClose }) => {
   const embedUrl = item.kind === 'videoteca' ? youTubeEmbedUrl(item.url) : toPresentEmbedUrl(item.url);
 
+  // A lista mostra cada usuário uma única vez (mantendo a visualização mais
+  // recente, já que viewLogs vem ordenado desc por viewedAt), mas o total
+  // entre parênteses continua sendo a soma bruta de visualizações, sem
+  // deduplicar.
+  const uniqueViewers = viewLogs.filter((log, idx) => viewLogs.findIndex(l => l.userId === log.userId) === idx);
+
   return (
     <div className="fixed inset-0 z-50 bg-[#050f41]/90 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -447,7 +453,7 @@ const ViewMaterialModal: React.FC<{
               <p className="text-[11px] text-slate-500 italic">Ninguém visualizou este material ainda.</p>
             ) : (
               <ul className="space-y-1 max-h-40 overflow-y-auto text-[11px] text-slate-400">
-                {viewLogs.map(log => (
+                {uniqueViewers.map(log => (
                   <li key={log.id} className="flex items-center justify-between border-b border-slate-800/60 py-1 last:border-0">
                     <span className="flex items-center gap-1.5"><Eye className="w-3 h-3" />{log.userName || log.userId}</span>
                   </li>
