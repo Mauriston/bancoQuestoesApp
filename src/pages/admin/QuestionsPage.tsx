@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  BookOpen, Plus, Search, Filter, Image as ImageIcon, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
+  BookOpen, Plus, Search, Filter, Image as ImageIcon, Camera, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
 } from 'lucide-react';
 import { getQuestions, getAreas, getThemes, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, QuestionAnswer, Reference } from '../../types';
@@ -8,6 +8,7 @@ import { SOURCE_EXAM_OPTIONS, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { QuestionImage } from '../../components/QuestionImage';
+import { AddQuestionImageModal } from '../../components/AddQuestionImageModal';
 import { useHideOnScroll } from '../../hooks/useHideOnScroll';
 
 export const QuestionsPage: React.FC = () => {
@@ -34,6 +35,10 @@ export const QuestionsPage: React.FC = () => {
 
   // Full-question preview modal (exatamente como o candidato vê na prova)
   const [viewingQuestion, setViewingQuestion] = useState<Question | null>(null);
+
+  // Modal exclusivo para anexar imagem a uma questão sem imagem, sem abrir
+  // o modal completo de edição (ver AddQuestionImageModal).
+  const [addingImageQuestion, setAddingImageQuestion] = useState<Question | null>(null);
 
   // Edit/Create Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -410,21 +415,32 @@ export const QuestionsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleOpenEditModal(q); }}
-                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-[#050f41] transition-colors"
-                      title="Editar Questão"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
-                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                      title="Excluir Questão"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <div className="flex flex-col items-end gap-2 shrink-0 self-end sm:self-auto">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenEditModal(q); }}
+                        className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-[#050f41] transition-colors"
+                        title="Editar Questão"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
+                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                        title="Excluir Questão"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {!q.imageUrl && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAddingImageQuestion(q); }}
+                        className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 transition-colors"
+                        title="Adicionar Imagem"
+                      >
+                        <Camera className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 );
@@ -631,6 +647,14 @@ export const QuestionsPage: React.FC = () => {
 
       {viewingQuestion && (
         <QuestionPreviewModal question={viewingQuestion} onClose={() => setViewingQuestion(null)} />
+      )}
+
+      {addingImageQuestion && (
+        <AddQuestionImageModal
+          questionId={addingImageQuestion.id}
+          onClose={() => setAddingImageQuestion(null)}
+          onSaved={() => fetchQuestionsList()}
+        />
       )}
 
     </div>
