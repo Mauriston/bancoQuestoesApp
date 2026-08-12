@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Plus, X, Video, Presentation, Eye, CheckCircle2, Users as UsersIcon } from 'lucide-react';
+import { Sparkles, Plus, X, Video, Presentation, Eye, CheckCircle2, Users as UsersIcon, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  getAreas, getThemes, getVideotecaItems, createVideotecaItem, getAulaItems, createAulaItem,
+  getAreas, getThemes, getVideotecaItems, createVideotecaItem, updateVideotecaItem, deleteVideotecaItem,
+  getAulaItems, createAulaItem, updateAulaItem, deleteAulaItem,
   logMaterialView, getMaterialViewLogs, getViewedMaterialIds
 } from '../services/firebaseService';
 import { Area, Theme, VideotecaItem, AulaItem, MaterialViewLog } from '../types';
@@ -27,7 +28,8 @@ export const ExtrasPage: React.FC = () => {
   const [areaFilterIds, setAreaFilterIds] = useState<string[]>([]);
   const [themeFilterIds, setThemeFilterIds] = useState<string[]>([]);
 
-  const [createOpen, setCreateOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MaterialItem | null>(null);
   const [viewingItem, setViewingItem] = useState<MaterialItem | null>(null);
   const [viewLogs, setViewLogs] = useState<MaterialViewLog[]>([]);
 
@@ -55,7 +57,7 @@ export const ExtrasPage: React.FC = () => {
     const base = tab === 'videoteca' ? videos.map(v => ({ ...v, kind: 'videoteca' as const })) : aulas.map(a => ({ ...a, kind: 'aulas' as const }));
     return base.filter(item => {
       if (areaFilterIds.length > 0 && !areaFilterIds.includes(item.areaId)) return false;
-      if (themeFilterIds.length > 0 && !themeFilterIds.includes(item.themeId)) return false;
+      if (themeFilterIds.length > 0 && !item.themeIds.some(id => themeFilterIds.includes(id))) return false;
       return true;
     });
   }, [tab, videos, aulas, areaFilterIds, themeFilterIds]);
@@ -85,6 +87,27 @@ export const ExtrasPage: React.FC = () => {
     }
     if (isAdmin) {
       getMaterialViewLogs(item.id).then(setViewLogs).catch(() => {});
+    }
+  };
+
+  const handleOpenCreate = () => {
+    setEditingItem(null);
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (item: MaterialItem) => {
+    setEditingItem(item);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (item: MaterialItem) => {
+    if (!confirm(`Excluir "${item.title}"? Essa ação não pode ser desfeita.`)) return;
+    try {
+      if (item.kind === 'videoteca') await deleteVideotecaItem(item.id);
+      else await deleteAulaItem(item.id);
+      await loadAll();
+    } catch (err) {
+      alert("Erro ao excluir material.");
     }
   };
 
@@ -135,7 +158,7 @@ export const ExtrasPage: React.FC = () => {
         </div>
         {isAdmin && (
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={handleOpenCreate}
             className="sm:ml-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg shadow-cyan-500/20"
           >
             <Plus className="w-4 h-4" />
@@ -153,19 +176,20 @@ export const ExtrasPage: React.FC = () => {
         Object.entries(groupedByArea).map(([areaName, groupItems]) => (
           <div key={areaName} className="space-y-3">
             <h2 className="text-sm font-bold text-[#050f41]">{areaName}</h2>
-            <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} isAdmin={isAdmin} onOpen={handleOpenItem} />
+            <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
           </div>
         ))
       ) : (
-        <MaterialGrid items={items} themes={themes} viewedIds={viewedIds} isAdmin={isAdmin} onOpen={handleOpenItem} />
+        <MaterialGrid items={items} themes={themes} viewedIds={viewedIds} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
       )}
 
-      {createOpen && isAdmin && (
-        <CreateMaterialModal
+      {modalOpen && isAdmin && (
+        <MaterialFormModal
           tab={tab}
           areas={areas}
-          onClose={() => setCreateOpen(false)}
-          onCreated={async () => { setCreateOpen(false); await loadAll(); }}
+          editingItem={editingItem}
+          onClose={() => setModalOpen(false)}
+          onSaved={async () => { setModalOpen(false); await loadAll(); }}
         />
       )}
 
@@ -187,80 +211,129 @@ const MaterialGrid: React.FC<{
   viewedIds: Set<string>;
   isAdmin: boolean;
   onOpen: (item: MaterialItem) => void;
-}> = ({ items, themes, viewedIds, isAdmin, onOpen }) => {
+  onEdit: (item: MaterialItem) => void;
+  onDelete: (item: MaterialItem) => void;
+}> = ({ items, themes, viewedIds, isAdmin, onOpen, onEdit, onDelete }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {items.map(item => {
-        const themeName = themes.find(t => t.id === item.themeId)?.name;
+        const themeNames = item.themeIds
+          .map(id => themes.find(t => t.id === id)?.name)
+          .filter((n): n is string => !!n);
         const thumbnail = item.kind === 'videoteca' ? youTubeThumbnailUrl(item.url) : null;
         const seen = viewedIds.has(item.id);
         return (
-          <button
+          <div
             key={item.id}
-            onClick={() => onOpen(item)}
-            className="text-left bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden shadow-xl transition-all group"
+            className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden shadow-xl transition-all group relative"
           >
-            <div>
-              <p className="px-3 pt-3 text-sm font-bold text-[#050f41] line-clamp-2">{item.title}</p>
-              {themeName && <p className="px-3 text-[11px] text-slate-400 mt-0.5">{themeName}</p>}
-            </div>
-            <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
-              {thumbnail ? (
-                <img src={thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-600">
-                  <Presentation className="w-10 h-10" />
-                </div>
-              )}
-              <div className="absolute top-2 left-2">
-                {item.kind === 'videoteca' ? (
-                  <Video className="w-4 h-4 text-white drop-shadow" />
-                ) : (
-                  <Presentation className="w-4 h-4 text-white drop-shadow" />
+            {isAdmin && (
+              <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                  title="Editar material"
+                  className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#050f41] backdrop-blur-sm"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+                  title="Excluir material"
+                  className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-red-500/20 text-red-400 hover:text-red-300 backdrop-blur-sm"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            <button onClick={() => onOpen(item)} className="text-left w-full">
+              <div>
+                <p className="px-3 pt-3 text-sm font-bold text-[#050f41] line-clamp-2 pr-14">{item.title}</p>
+                {themeNames.length > 0 && (
+                  <div className="px-3 mt-1.5 flex flex-wrap gap-1">
+                    {themeNames.map(name => (
+                      <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-              {!isAdmin && seen && (
-                <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/80 text-white">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Visto
-                </span>
-              )}
-            </div>
-          </button>
+              <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
+                {thumbnail ? (
+                  <img src={thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600">
+                    <Presentation className="w-10 h-10" />
+                  </div>
+                )}
+                <div className="absolute top-2 left-2">
+                  {item.kind === 'videoteca' ? (
+                    <Video className="w-4 h-4 text-white drop-shadow" />
+                  ) : (
+                    <Presentation className="w-4 h-4 text-white drop-shadow" />
+                  )}
+                </div>
+                {!isAdmin && seen && (
+                  <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/80 text-white">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Visto
+                  </span>
+                )}
+              </div>
+            </button>
+          </div>
         );
       })}
     </div>
   );
 };
 
-const CreateMaterialModal: React.FC<{
+const MaterialFormModal: React.FC<{
   tab: MaterialTab;
   areas: Area[];
+  editingItem: MaterialItem | null;
   onClose: () => void;
-  onCreated: () => void;
-}> = ({ tab, areas, onClose, onCreated }) => {
+  onSaved: () => void;
+}> = ({ tab, areas, editingItem, onClose, onSaved }) => {
   const { currentUser } = useAuth();
-  const [title, setTitle] = useState('');
-  const [areaId, setAreaId] = useState('');
-  const [themeId, setThemeId] = useState('');
+  const [title, setTitle] = useState(editingItem?.title || '');
+  const [areaId, setAreaId] = useState(editingItem?.areaId || '');
+  const [themeIds, setThemeIds] = useState<string[]>(editingItem?.themeIds || []);
   const [themeOptions, setThemeOptions] = useState<Theme[]>([]);
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(editingItem?.url || '');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (areaId) getThemes(areaId).then(setThemeOptions);
+    else setThemeOptions([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleAreaChange = async (v: string) => {
+    setAreaId(v);
+    setThemeIds([]);
+    setThemeOptions(v ? await getThemes(v) : []);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !areaId || !themeId || !url || !currentUser) return;
+    if (!title || !areaId || themeIds.length === 0 || !url || !currentUser) return;
     setSubmitting(true);
     try {
       const area = areas.find(a => a.id === areaId);
-      const theme = themeOptions.find(t => t.id === themeId);
+      const themeNames = themeIds.map(id => themeOptions.find(t => t.id === id)?.name).filter((n): n is string => !!n);
       const payload = {
-        title, areaId, areaName: area?.name, themeId, themeName: theme?.name,
-        url, createdBy: currentUser.id
+        title, areaId, areaName: area?.name, themeIds, themeNames,
+        url, createdBy: editingItem?.createdBy || currentUser.id
       };
-      if (tab === 'videoteca') await createVideotecaItem(payload);
-      else await createAulaItem(payload);
-      onCreated();
+      if (editingItem) {
+        if (tab === 'videoteca') await updateVideotecaItem(editingItem.id, payload);
+        else await updateAulaItem(editingItem.id, payload);
+      } else {
+        if (tab === 'videoteca') await createVideotecaItem(payload);
+        else await createAulaItem(payload);
+      }
+      onSaved();
     } catch (err: any) {
       alert("Erro ao salvar material: " + err.message);
     } finally {
@@ -273,7 +346,7 @@ const CreateMaterialModal: React.FC<{
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <h3 className="text-sm font-bold text-[#050f41]">
-            {tab === 'videoteca' ? 'Inserir Vídeo' : 'Inserir Aula'}
+            {editingItem ? 'Editar' : 'Inserir'} {tab === 'videoteca' ? 'Vídeo' : 'Aula'}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-[#050f41]"><X className="w-4 h-4" /></button>
         </div>
@@ -286,7 +359,7 @@ const CreateMaterialModal: React.FC<{
             <label className="block text-slate-300 font-medium mb-1">Área *</label>
             <select
               required value={areaId}
-              onChange={async (e) => { const v = e.target.value; setAreaId(v); setThemeId(''); setThemeOptions(v ? await getThemes(v) : []); }}
+              onChange={(e) => handleAreaChange(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
             >
               <option value="">Selecione a Área</option>
@@ -294,11 +367,15 @@ const CreateMaterialModal: React.FC<{
             </select>
           </div>
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Tema *</label>
-            <select required value={themeId} disabled={!areaId} onChange={e => setThemeId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 disabled:opacity-50">
-              <option value="">{areaId ? 'Selecione o Tema' : 'Selecione a área primeiro'}</option>
-              {themeOptions.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <label className="block text-slate-300 font-medium mb-1">Temas * <span className="font-normal text-slate-500">(um material pode pertencer a mais de um tema)</span></label>
+            <CheckboxMultiSelect
+              label="Tema"
+              options={themeOptions.map(t => ({ id: t.id, label: t.name }))}
+              selectedIds={themeIds}
+              onChange={setThemeIds}
+              emptyLabel={areaId ? 'Selecione o(s) Tema(s)' : 'Selecione a área primeiro'}
+              disabled={!areaId}
+            />
           </div>
           <div>
             <label className="block text-slate-300 font-medium mb-1">

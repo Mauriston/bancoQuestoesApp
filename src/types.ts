@@ -208,11 +208,13 @@ export interface VideotecaItem {
   title: string;
   areaId: string;
   areaName?: string;
-  themeId: string;
-  themeName?: string;
+  // Um material pode pertencer a mais de um tema da mesma área.
+  themeIds: string[];
+  themeNames?: string[];
   url: string; // link do YouTube, embedado na Videoteca
   createdBy: string;
   createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface AulaItem {
@@ -220,11 +222,13 @@ export interface AulaItem {
   title: string;
   areaId: string;
   areaName?: string;
-  themeId: string;
-  themeName?: string;
+  // Um material pode pertencer a mais de um tema da mesma área.
+  themeIds: string[];
+  themeNames?: string[];
   url: string; // link de apresentação (Canva ou Google Slides, modo "present")
   createdBy: string;
   createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface MaterialViewLog {

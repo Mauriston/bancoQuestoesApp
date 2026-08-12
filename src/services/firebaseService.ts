@@ -1017,6 +1017,14 @@ export async function createVideotecaItem(data: Omit<VideotecaItem, 'id' | 'crea
   return id;
 }
 
+export async function updateVideotecaItem(id: string, data: Omit<VideotecaItem, 'id' | 'createdAt'>): Promise<void> {
+  await setDoc(doc(db, 'videotecaItems', id), removeUndefined({ ...data, id, updatedAt: serverTimestamp() }), { merge: true });
+}
+
+export async function deleteVideotecaItem(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'videotecaItems', id));
+}
+
 export async function getAulaItems(): Promise<AulaItem[]> {
   const snapshot = await getDocs(collection(db, 'aulaItems'));
   const items: AulaItem[] = [];
@@ -1028,6 +1036,14 @@ export async function createAulaItem(data: Omit<AulaItem, 'id' | 'createdAt'>): 
   const id = generateId('aula');
   await setDoc(doc(db, 'aulaItems', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
   return id;
+}
+
+export async function updateAulaItem(id: string, data: Omit<AulaItem, 'id' | 'createdAt'>): Promise<void> {
+  await setDoc(doc(db, 'aulaItems', id), removeUndefined({ ...data, id, updatedAt: serverTimestamp() }), { merge: true });
+}
+
+export async function deleteAulaItem(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'aulaItems', id));
 }
 
 // Registra que um usuário abriu um material — usado tanto para marcar
