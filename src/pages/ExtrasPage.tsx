@@ -57,14 +57,28 @@ export const ExtrasPage: React.FC = () => {
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentUser?.id]);
 
+  // Materiais da tab atual, sem os filtros de Área/Tema aplicados — base
+  // tanto para a listagem filtrada abaixo quanto para restringir as opções
+  // dos próprios menus de filtro (ver availableAreas/availableThemes).
+  const tabItems: MaterialItem[] = useMemo(() => {
+    return tab === 'videoteca'
+      ? videos.map(v => ({ ...v, kind: 'videoteca' as const }))
+      : aulas.map(a => ({ ...a, kind: 'aulas' as const }));
+  }, [tab, videos, aulas]);
+
   const items: MaterialItem[] = useMemo(() => {
-    const base = tab === 'videoteca' ? videos.map(v => ({ ...v, kind: 'videoteca' as const })) : aulas.map(a => ({ ...a, kind: 'aulas' as const }));
-    return base.filter(item => {
+    return tabItems.filter(item => {
       if (areaFilterIds.length > 0 && !areaFilterIds.includes(item.areaId)) return false;
       if (themeFilterIds.length > 0 && !item.themeIds.some(id => themeFilterIds.includes(id))) return false;
       return true;
     });
-  }, [tab, videos, aulas, areaFilterIds, themeFilterIds]);
+  }, [tabItems, areaFilterIds, themeFilterIds]);
+
+  // Só oferece nos menus suspensos as Áreas/Temas que de fato têm algum
+  // material cadastrado na tab atual (Videoteca ou Aulas).
+  const availableAreaIds = useMemo(() => new Set(tabItems.map(i => i.areaId)), [tabItems]);
+  const availableThemeIds = useMemo(() => new Set(tabItems.flatMap(i => i.themeIds)), [tabItems]);
+  const availableAreas = useMemo(() => areas.filter(a => availableAreaIds.has(a.id)), [areas, availableAreaIds]);
 
   const hasActiveFilter = areaFilterIds.length > 0 || themeFilterIds.length > 0;
 
@@ -80,7 +94,9 @@ export const ExtrasPage: React.FC = () => {
     return groups;
   }, [items, areas, hasActiveFilter]);
 
-  const themesForFilter = areaFilterIds.length > 0 ? themes.filter(t => areaFilterIds.includes(t.areaId)) : themes;
+  const themesForFilter = themes.filter(t =>
+    availableThemeIds.has(t.id) && (areaFilterIds.length === 0 || areaFilterIds.includes(t.areaId))
+  );
 
   // Nº de visualizações por material (contagem bruta, sem deduplicar) —
   // exibido no card para o admin.
@@ -155,7 +171,7 @@ export const ExtrasPage: React.FC = () => {
         <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
           <CheckboxMultiSelect
             label="Área"
-            options={areas.map(a => ({ id: a.id, label: a.name }))}
+            options={availableAreas.map(a => ({ id: a.id, label: a.name }))}
             selectedIds={areaFilterIds}
             onChange={(ids) => { setAreaFilterIds(ids); setThemeFilterIds([]); }}
             emptyLabel="Todas as Áreas"
