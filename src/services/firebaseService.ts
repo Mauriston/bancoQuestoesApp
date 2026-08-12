@@ -1004,10 +1004,22 @@ export async function addAdminLog(adminId: string, adminName: string, action: st
 
 // --- EXTRAS (Videoteca / Aulas) ---
 
+// Normaliza documentos gravados antes da migração de `themeId` (único) para
+// `themeIds`/`themeNames` (array) — sem isso, itens antigos quebram qualquer
+// tela que assuma `themeIds` como array (ver ExtrasPage).
+function normalizeThemeIds<T extends { themeIds?: string[] }>(raw: any): T {
+  if (Array.isArray(raw.themeIds)) return raw as T;
+  return {
+    ...raw,
+    themeIds: raw.themeId ? [raw.themeId] : [],
+    themeNames: raw.themeName ? [raw.themeName] : []
+  } as T;
+}
+
 export async function getVideotecaItems(): Promise<VideotecaItem[]> {
   const snapshot = await getDocs(collection(db, 'videotecaItems'));
   const items: VideotecaItem[] = [];
-  snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as VideotecaItem));
+  snapshot.forEach(d => items.push(normalizeThemeIds<VideotecaItem>({ id: d.id, ...d.data() })));
   return items.sort((a, b) => a.title.localeCompare(b.title));
 }
 
@@ -1028,7 +1040,7 @@ export async function deleteVideotecaItem(id: string): Promise<void> {
 export async function getAulaItems(): Promise<AulaItem[]> {
   const snapshot = await getDocs(collection(db, 'aulaItems'));
   const items: AulaItem[] = [];
-  snapshot.forEach(d => items.push({ id: d.id, ...d.data() } as AulaItem));
+  snapshot.forEach(d => items.push(normalizeThemeIds<AulaItem>({ id: d.id, ...d.data() })));
   return items.sort((a, b) => a.title.localeCompare(b.title));
 }
 
