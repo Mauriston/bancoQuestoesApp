@@ -55,16 +55,21 @@ export const CsvBulkImportSection: React.FC<CsvBulkImportSectionProps> = ({ mate
     const skipped: string[] = [];
     let created = 0;
     try {
-      const [areas, themes] = await Promise.all([getAreas(), getThemes()]);
+      const [areas, allThemes] = await Promise.all([getAreas(), getThemes()]);
       for (const row of rows) {
         const area = areas.find(a => a.name.trim().toLowerCase() === row.area.trim().toLowerCase());
-        const theme = themes.find(t => t.name.trim().toLowerCase() === row.tema.trim().toLowerCase() && (!area || t.areaId === area.id));
-        if (!area || !theme) {
+        // Mais de um tema no mesmo material: separar por ";" na célula do CSV.
+        const temaNames = row.tema.split(';').map(t => t.trim()).filter(Boolean);
+        const matchedThemes = temaNames
+          .map(name => allThemes.find(t => t.name.trim().toLowerCase() === name.toLowerCase() && (!area || t.areaId === area.id)))
+          .filter((t): t is NonNullable<typeof t> => !!t);
+        if (!area || matchedThemes.length === 0) {
           skipped.push(`${row.titulo} (área/tema não encontrado: ${row.area} / ${row.tema})`);
           continue;
         }
         const payload = {
-          title: row.titulo, areaId: area.id, areaName: area.name, themeId: theme.id, themeName: theme.name,
+          title: row.titulo, areaId: area.id, areaName: area.name,
+          themeIds: matchedThemes.map(t => t.id), themeNames: matchedThemes.map(t => t.name),
           url: row.url, createdBy: currentUser.id
         };
         if (materialType === 'video') await createVideotecaItem(payload);
@@ -87,7 +92,10 @@ export const CsvBulkImportSection: React.FC<CsvBulkImportSectionProps> = ({ mate
         <UploadCloud className="w-4 h-4 text-cyan-400" />
         {title}
       </h3>
-      <p className="text-xs text-slate-400">{description} Colunas esperadas: <code className="text-teal-400">titulo, area, tema, url</code>.</p>
+      <p className="text-xs text-slate-400">
+        {description} Colunas esperadas: <code className="text-teal-400">titulo, area, tema, url</code>.
+        Para vincular a mais de um tema, separe os nomes por ";" na célula de tema.
+      </p>
 
       <input
         type="file"
