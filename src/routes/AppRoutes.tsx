@@ -16,6 +16,7 @@ import { ExamStatsPage } from '../pages/app/ExamStatsPage';
 import { SettingsPage } from '../pages/app/SettingsPage';
 import { ExtrasPage } from '../pages/ExtrasPage';
 import { SabatinasPage } from '../pages/SabatinasPage';
+import { NotificationsPage } from '../pages/NotificationsPage';
 import { CronogramaPage } from '../pages/app/CronogramaPage';
 import { HomePage as AppHomePage } from '../pages/app/HomePage';
 import { HomePage as AdminHomePage } from '../pages/admin/HomePage';
@@ -105,6 +106,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="exam-stats" element={<ExamStatsPage />} />
         <Route path="extras" element={<ExtrasPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
       {/* Admin Application Routes */}
@@ -125,6 +127,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="sabatinas" element={<SabatinasPage />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
         <Route path="extras" element={<ExtrasPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
       {/* Fallback 404 */}

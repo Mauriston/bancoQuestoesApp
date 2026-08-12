@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessageSquare, Plus, X, Presentation, Download, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAreas, getThemes, subscribeSabatinas, createSabatina, updateSabatina, deleteSabatina } from '../services/firebaseService';
+import { getAreas, getThemes, subscribeSabatinas, createSabatina, updateSabatina, deleteSabatina, createNotification } from '../services/firebaseService';
 import { Area, Theme, Sabatina } from '../types';
 import { toPresentEmbedUrl, googleSlidesPdfExportUrl } from '../utils/mediaUrls';
 import { shareOrDownloadFile, toSafeFileName } from '../utils/fileShare';
@@ -241,8 +241,18 @@ const SabatinaFormModal: React.FC<{
         title, date, areaId, areaName: area?.name, themeIds, themeNames,
         url, createdBy: editingItem?.createdBy || currentUser.id
       };
-      if (editingItem) await updateSabatina(editingItem.id, payload);
-      else await createSabatina(payload);
+      if (editingItem) {
+        await updateSabatina(editingItem.id, payload);
+      } else {
+        await createSabatina(payload);
+        createNotification({
+          type: 'sabatina_created',
+          message: `${currentUser.name} inseriu uma nova Sabatina - ${title}`,
+          audience: 'users_only',
+          actorId: currentUser.id,
+          actorName: currentUser.name
+        }).catch(err => console.error('Erro ao criar notificação de sabatina:', err));
+      }
       onSaved();
     } catch (err: any) {
       alert("Erro ao salvar sabatina: " + err.message);

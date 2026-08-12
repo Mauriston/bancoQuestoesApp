@@ -6,7 +6,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getExamById, getExamQuestions, startExamAttempt, getAttemptAnswers,
-  saveAttemptAnswer, getUserAssignments, isExamActive
+  saveAttemptAnswer, getUserAssignments, isExamActive, createNotification
 } from '../../services/firebaseService';
 import { finishAndGradeAttempt } from '../../services/gradingService';
 import { Exam, ExamQuestion } from '../../types';
@@ -128,6 +128,19 @@ export const TakeExamPage: React.FC = () => {
         savedAns.forEach(a => { altMap[a.examQuestionId] = a.selectedAlternative; });
         setSavedAlt(altMap);
 
+        // Nenhuma resposta salva ainda == esta é a primeira vez que o
+        // residente abre esta tentativa (não uma retomada) — só nesse caso
+        // dispara a notificação de início.
+        if (savedAns.length === 0) {
+          createNotification({
+            type: 'exam_started',
+            message: `${currentUser.name} iniciou a prova ${examData.name}`,
+            audience: 'all',
+            actorId: currentUser.id,
+            actorName: currentUser.name
+          }).catch(err => console.error('Erro ao criar notificação de início de prova:', err));
+        }
+
         const firstUnanswered = examQuestions.findIndex(q => !altMap[q.id]);
         const resumeIndex = firstUnanswered === -1 ? examQuestions.length - 1 : firstUnanswered;
         setCurrentIndex(resumeIndex);
@@ -216,6 +229,15 @@ export const TakeExamPage: React.FC = () => {
     try {
       await finishAndGradeAttempt(attemptId);
       clearDraft(attemptId);
+      if (currentUser && exam) {
+        createNotification({
+          type: 'exam_completed',
+          message: `${currentUser.name} concluiu a prova ${exam.name}`,
+          audience: 'all',
+          actorId: currentUser.id,
+          actorName: currentUser.name
+        }).catch(err => console.error('Erro ao criar notificação de conclusão de prova:', err));
+      }
       navigate(`/app/attempts/${attemptId}/result`);
     } catch (err) {
       console.error("Erro ao finalizar prova:", err);

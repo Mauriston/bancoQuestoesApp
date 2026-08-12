@@ -116,3 +116,9 @@
   min-width: 44px;
   min-height: 44px;
 }
+
+/* Entrada suave dos pop-ups de notificação (ver NotificationToastHost). */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

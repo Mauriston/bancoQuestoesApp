@@ -3,7 +3,7 @@ import { Plus, X, Video, Presentation, Eye, CheckCircle2, Users as UsersIcon, Pe
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAreas, getThemes, subscribeVideotecaItems, createVideotecaItem, updateVideotecaItem, deleteVideotecaItem,
-  subscribeAulaItems, createAulaItem, updateAulaItem, deleteAulaItem,
+  subscribeAulaItems, createAulaItem, updateAulaItem, deleteAulaItem, createNotification,
   logMaterialView, subscribeAllMaterialViewLogs, subscribeViewedMaterialIds
 } from '../services/firebaseService';
 import { Area, Theme, VideotecaItem, AulaItem, MaterialViewLog } from '../types';
@@ -441,6 +441,15 @@ const MaterialFormModal: React.FC<{
       } else {
         if (tab === 'videoteca') await createVideotecaItem(payload);
         else await createAulaItem(payload);
+        createNotification({
+          type: tab === 'videoteca' ? 'video_created' : 'aula_created',
+          message: tab === 'videoteca'
+            ? `${currentUser.name} inseriu novo material na Videoteca - ${title}`
+            : `${currentUser.name} inseriu novo material em Aulas - ${title}`,
+          audience: 'users_only',
+          actorId: currentUser.id,
+          actorName: currentUser.name
+        }).catch(err => console.error('Erro ao criar notificação de material:', err));
       }
       onSaved();
     } catch (err: any) {
