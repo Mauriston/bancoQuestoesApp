@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification } from '../../services/firebaseService';
-import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference } from '../../types';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers } from '../../services/firebaseService';
+import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { getSourceExamChipClass } from '../../constants';
-import { scoreColorClass } from '../../utils/helpers';
+import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
 
 interface SubmittedRow {
   attempt: Attempt;
@@ -64,6 +64,9 @@ export const ExamViewPage: React.FC = () => {
   // Tabela "Respostas Enviadas" — uma linha completada por tentativa
   // concluída, com o desempenho por área derivado das respostas individuais.
   const [submittedRows, setSubmittedRows] = useState<SubmittedRow[]>([]);
+  // Candidatos atribuídos a esta prova, para a seção "Convidar Candidatos"
+  // (botão de envio de convite por WhatsApp com o link direto do assignment).
+  const [assignments, setAssignments] = useState<(ExamAssignment & { userName: string; userPhone?: string })[]>([]);
   const [examAreas, setExamAreas] = useState<Area[]>([]);
   // Nome de cada tema/área, usado só para rotular as tabelas e o gráfico de
   // distribuição da prova (ver areaDistribution/themeDistribution abaixo).
@@ -188,20 +191,22 @@ export const ExamViewPage: React.FC = () => {
       if (!examId) return;
       try {
         setLoading(true);
-        const [examData, examQs, questionStats, attempts, allAreas, allThemes, refList] = await Promise.all([
+        const [examData, examQs, questionStats, attempts, allAreas, allThemes, refList, assignmentList] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
           getExamQuestionStats(examId),
           getAttemptsForExam(examId),
           getAreas(),
           getThemes(),
-          getReferences()
+          getReferences(),
+          getExamAssignmentsWithUsers(examId)
         ]);
         setExam(examData);
         setQuestions(examQs);
         setStats(questionStats);
         setHasAttempts(attempts.length > 0);
         setReferences(refList);
+        setAssignments(assignmentList);
 
         // Áreas presentes nesta prova (colunas da tabela de respostas
         // enviadas), na mesma ordem de getAreas() (alfabética).
@@ -266,6 +271,17 @@ export const ExamViewPage: React.FC = () => {
 
     return unsubscribe;
   }, [examId, questions]);
+
+  // Abre o WhatsApp Web/app com uma mensagem pré-preenchida (nome do
+  // candidato + nome da prova) e o link direto para o assignment dele
+  // realizar esta prova (/app/exams/:assignmentId) — o admin ainda revisa e
+  // confirma o envio dentro do próprio WhatsApp antes de disparar.
+  const handleSendInvite = (assignment: ExamAssignment & { userName: string; userPhone?: string }) => {
+    if (!exam || !assignment.userPhone) return;
+    const link = `${window.location.origin}/app/exams/${assignment.id}`;
+    const message = `Olá, ${assignment.userName}! A prova *${exam.name}* já está disponível para você. Acesse o link abaixo para realizá-la:\n${link}`;
+    window.open(buildWhatsAppLink(assignment.userPhone, message), '_blank', 'noopener,noreferrer');
+  };
 
   const handleToggleActive = async () => {
     if (!exam) return;
@@ -383,6 +399,67 @@ export const ExamViewPage: React.FC = () => {
           <span>{isExamActive(exam) ? 'Desativar Prova' : 'Ativar Prova'}</span>
         </button>
       </div>
+
+      {assignments.length > 0 && (
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+            <Send className="w-4 h-4 text-cyan-400" />
+            Convidar Candidatos ({assignments.length})
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Candidato</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Convite</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {assignments.map((a) => {
+                  const statusMeta = {
+                    available: { label: 'Disponível', className: 'bg-slate-800 text-slate-300 border-slate-700' },
+                    started: { label: 'Em andamento', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+                    completed: { label: 'Concluída', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' }
+                  }[a.status];
+                  return (
+                    <tr key={a.id}>
+                      <td className="p-3 font-semibold text-[#050f41]">{a.userName}</td>
+                      <td className="p-3">
+                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusMeta.className}`}>
+                          {statusMeta.label}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        {a.userPhone ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSendInvite(a)}
+                            title={`Enviar convite via WhatsApp para ${a.userName}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-colors"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            Enviar Convite
+                          </button>
+                        ) : (
+                          <Link
+                            to={`/admin/users/${a.userId}`}
+                            title="Cadastre o telefone do usuário para enviar convite por WhatsApp"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-500 border border-slate-700 hover:text-slate-300 transition-colors"
+                          >
+                            <PhoneOff className="w-3.5 h-3.5" />
+                            Sem telefone
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {areaDistribution.length > 0 && (
         <div className="space-y-3">

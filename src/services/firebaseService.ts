@@ -102,6 +102,15 @@ export async function updateUserRole(userId: string, role: "user" | "admin"): Pr
   await updateDoc(userRef, { role, updatedAt: serverTimestamp() });
 }
 
+// phone vazio apaga o campo (deleteField()) em vez de gravar string vazia —
+// mesmo padrão de referenceId em saveQuestion(), para permitir o admin
+// desvincular um telefone já cadastrado.
+export async function updateUserPhone(userId: string, phone: string): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  const trimmed = phone.trim();
+  await updateDoc(userRef, { phone: trimmed ? trimmed : deleteField(), updatedAt: serverTimestamp() });
+}
+
 // Apaga o documento do usuário. Não cascateia attempts/userStats/assignments
 // para preservar o histórico agregado (dashboards, ranking) mesmo após a
 // remoção do cadastro — diferente de deleteExam(), que precisa cascatear
@@ -854,6 +863,31 @@ export async function getUserAssignments(userId: string): Promise<(ExamAssignmen
   );
 
   return result;
+}
+
+// Atribuições de uma prova, uma por candidato, já com nome/telefone do
+// usuário anexados — usado em ExamViewPage para montar a lista de "Enviar
+// Convite" (link direto de WhatsApp para o assignmentId de cada um).
+export async function getExamAssignmentsWithUsers(
+  examId: string
+): Promise<(ExamAssignment & { userName: string; userPhone?: string })[]> {
+  const q = query(collection(db, 'examAssignments'), where('examId', '==', examId));
+  const snapshot = await getDocs(q);
+  const assignments: ExamAssignment[] = [];
+  snapshot.forEach(doc => assignments.push({ id: doc.id, ...doc.data() } as ExamAssignment));
+
+  const userIds = Array.from(new Set(assignments.map(a => a.userId)));
+  const users = await Promise.all(userIds.map(id => getUserById(id)));
+  const userById: Record<string, AppUser> = {};
+  users.forEach(u => { if (u) userById[u.id] = u; });
+
+  return assignments
+    .map(a => ({
+      ...a,
+      userName: userById[a.userId]?.name || 'Usuário removido',
+      userPhone: userById[a.userId]?.phone
+    }))
+    .sort((a, b) => a.userName.localeCompare(b.userName));
 }
 
 // Versão "ao vivo" de getUserAssignments() — usada em ExamsPage para que uma
