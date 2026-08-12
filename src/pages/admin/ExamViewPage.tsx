@@ -279,7 +279,7 @@ export const ExamViewPage: React.FC = () => {
   const handleSendInvite = (assignment: ExamAssignment & { userName: string; userPhone?: string }) => {
     if (!exam || !assignment.userPhone) return;
     const link = `${window.location.origin}/app/exams/${assignment.id}`;
-    const message = `Olá, ${assignment.userName}! A prova *${exam.name}* já está disponível para você. Acesse o link abaixo para realizá-la:\n${link}`;
+    const message = `*TEOT HMA 2027:*\n\n${assignment.userName}, a prova ${exam.name} está disponível para você.\n\nAcesse : ${link}`;
     window.open(buildWhatsAppLink(assignment.userPhone, message), '_blank', 'noopener,noreferrer');
   };
 
