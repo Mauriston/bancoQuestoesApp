@@ -591,8 +591,8 @@ export async function updateExamContent(params: {
   let batch = writeBatch(db);
   let opCount = 0;
 
-  const queueSet = async (ref: ReturnType<typeof doc>, data: any) => {
-    batch.set(ref, data);
+  const queueSet = async (ref: ReturnType<typeof doc>, data: any, merge = false) => {
+    batch.set(ref, data, { merge });
     opCount++;
     if (opCount >= 400) {
       await batch.commit();
@@ -635,11 +635,16 @@ export async function updateExamContent(params: {
     await queueSet(eqRef, frozenQuestion);
   }
 
+  // merge:true — preserva campos não reenviados aqui (active, status,
+  // createdBy, createdAt, publishedAt). Sem isso, o set() sobrescrevia o
+  // documento inteiro e apagava o `active: false` da prova, fazendo-a
+  // reaparecer como ativa para os candidatos assim que o admin salvava uma
+  // edição.
   await queueSet(doc(db, 'exams', examId), removeUndefined({
     ...examData,
     questionCount: questions.length,
     updatedAt: serverTimestamp()
-  }));
+  }), true);
 
   if (opCount > 0) {
     await batch.commit();
