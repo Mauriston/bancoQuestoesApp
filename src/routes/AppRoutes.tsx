@@ -15,6 +15,7 @@ import { PerformancePage } from '../pages/app/PerformancePage';
 import { ExamStatsPage } from '../pages/app/ExamStatsPage';
 import { SettingsPage } from '../pages/app/SettingsPage';
 import { ExtrasPage } from '../pages/ExtrasPage';
+import { SabatinasPage } from '../pages/SabatinasPage';
 import { CronogramaPage } from '../pages/app/CronogramaPage';
 import { HomePage as AppHomePage } from '../pages/app/HomePage';
 import { HomePage as AdminHomePage } from '../pages/admin/HomePage';
@@ -99,6 +100,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="attempts/:attemptId/result" element={<ExamResultPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="performance" element={<PerformancePage />} />
+        <Route path="sabatinas" element={<SabatinasPage />} />
         <Route path="cronograma" element={<CronogramaPage />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
         <Route path="extras" element={<ExtrasPage />} />
@@ -120,6 +122,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="exams/:examId/edit" element={<CreateExamPage />} />
         <Route path="exams/:examId" element={<ExamViewPage />} />
         <Route path="attempts" element={<AttemptsPage />} />
+        <Route path="sabatinas" element={<SabatinasPage />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
         <Route path="extras" element={<ExtrasPage />} />
       </Route>

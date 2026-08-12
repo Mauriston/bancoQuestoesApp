@@ -56,3 +56,18 @@ export function toPresentEmbedUrl(url: string): string {
     return url;
   }
 }
+
+// ID da apresentação a partir de qualquer URL do Google Slides
+// (.../presentation/d/{ID}/edit, /present, /pub, /embed...).
+export function extractGoogleSlidesId(url: string): string | null {
+  const match = (url || '').match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+// Endpoint oficial do Google Slides para exportar a apresentação como PDF —
+// abrir/navegar para essa URL já dispara o download no navegador (o próprio
+// Google define o cabeçalho Content-Disposition: attachment).
+export function googleSlidesPdfExportUrl(url: string): string | null {
+  const id = extractGoogleSlidesId(url);
+  return id ? `https://docs.google.com/presentation/d/${id}/export/pdf` : null;
+}

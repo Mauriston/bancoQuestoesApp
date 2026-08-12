@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, CalendarDays, Sparkles, GraduationCap, Home
+  FileText, History, BarChart3, LogOut, Trophy, Menu, X, CalendarDays, Sparkles, GraduationCap, Home, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -22,6 +22,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     { label: 'Provas', path: '/app/exams', icon: FileText },
     { label: 'Histórico', path: '/app/history', icon: History },
     { label: 'Desempenho', path: '/app/performance', icon: BarChart3 },
+    { label: 'Sabatinas', path: '/app/sabatinas', icon: MessageSquare },
     { label: 'Cronograma', path: '/app/cronograma', icon: CalendarDays },
     { label: 'TARO/TEOT', path: '/app/exam-stats', icon: GraduationCap },
     { label: 'Extras', path: '/app/extras', icon: Sparkles }

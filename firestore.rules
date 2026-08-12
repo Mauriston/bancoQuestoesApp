@@ -143,6 +143,11 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    match /sabatinas/{sabatinaId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
     // Nega explicitamente qualquer coleção não listada acima.
     match /{document=**} {
       allow read, write: if false;

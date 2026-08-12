@@ -240,6 +240,21 @@ export interface MaterialViewLog {
   viewedAt?: any;
 }
 
+// --- SABATINAS ---
+
+export interface Sabatina {
+  id: string;
+  title: string;
+  date: string; // 'YYYY-MM-DD' — string simples para evitar bugs de fuso horário
+  areaId: string;
+  areaName?: string;
+  themeId: string;
+  themeName?: string;
+  url: string; // apresentação do Google Slides, modo "present"
+  createdBy: string;
+  createdAt?: any;
+}
+
 export interface QuestionBankJsonRaw {
   _metadados?: {
     sistema?: string;
