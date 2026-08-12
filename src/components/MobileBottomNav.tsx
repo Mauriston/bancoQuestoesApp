@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 
@@ -22,10 +22,38 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ home, left, ri
   const location = useLocation();
   const isActive = (path: string) => location.pathname.startsWith(path);
 
+  // Some ao rolar para baixo (conteúdo sobe na tela) e reaparece ao rolar
+  // para cima — mesmo comportamento de "expressive nav bar" do vídeo de
+  // referência. Fica sempre visível perto do topo da página, para não
+  // sumir/reaparecer sozinha por causa de um scroll mínimo ali.
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(typeof window !== 'undefined' ? window.scrollY : 0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollY.current;
+      if (currentY < 24) {
+        setVisible(true);
+      } else if (delta > 8) {
+        setVisible(false);
+      } else if (delta < -8) {
+        setVisible(true);
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const buttons = [left, home, right];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#050f41] border-t border-white/10 flex items-center justify-around h-14 pb-[env(safe-area-inset-bottom)]">
+    <nav
+      className={`lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#050f41] border-t border-white/10 flex items-center justify-around h-14 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-out ${
+        visible ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
       {buttons.map((btn) => {
         const Icon = btn.icon;
         const active = isActive(btn.path);
