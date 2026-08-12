@@ -38,12 +38,19 @@ export const QuestionsPage: React.FC = () => {
   // leitura (ver handleSourceGroupChange).
   const [sourceExamGroup, setSourceExamGroup] = useState<SourceExamGroup>('TODAS');
 
-  const handleSourceGroupChange = (group: SourceExamGroup) => {
+  const handleSourceGroupChange = (group: Exclude<SourceExamGroup, 'TODAS'>) => {
+    if (group === sourceExamGroup) {
+      // Clicar de novo no grupo já ativo desmarca o filtro rápido — volta a
+      // exibir todas as fontes no dropdown, sem nenhuma pré-selecionada.
+      setSourceExamGroup('TODAS');
+      setSelectedSourceExams([]);
+      return;
+    }
     setSourceExamGroup(group);
     if (group === 'BANCO_PROPRIO') {
       setSelectedSourceExams(getSourceExamOptionsForGroup(group));
       setSourceDropdownOpen(false);
-    } else if (group !== 'TODAS') {
+    } else {
       // TEOT/TARO: marca todas as caixas do grupo de saída, mas o dropdown
       // continua editável — o admin pode desmarcar provas/anos específicos.
       setSelectedSourceExams(getSourceExamOptionsForGroup(group));
@@ -302,7 +309,7 @@ export const QuestionsPage: React.FC = () => {
           } lg:translate-y-0`}
         >
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-1 grid grid-cols-3 gap-1">
               {SOURCE_EXAM_GROUPS.map(g => (
                 <button
                   key={g.value}

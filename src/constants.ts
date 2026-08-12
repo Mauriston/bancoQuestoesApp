@@ -25,11 +25,12 @@ export const SOURCE_EXAM_OPTIONS: string[] = [
 // Filtro rápido (segmented control) exibido acima do menu suspenso de fontes
 // em QuestionsPage e CreateExamPage — agrupa SOURCE_EXAM_OPTIONS em blocos
 // grandes (TEOT, TARO, Banco Próprio) antes de refinar por prova/ano no
-// dropdown de caixas de seleção.
+// dropdown de caixas de seleção. 'TODAS' não tem botão próprio: é o estado
+// resultante de nenhum dos três grupos abaixo estar ativo (clicar de novo no
+// grupo ativo desmarca e volta para 'TODAS' — ver handleSourceGroupChange).
 export type SourceExamGroup = 'TODAS' | 'TEOT' | 'TARO' | 'BANCO_PROPRIO';
 
-export const SOURCE_EXAM_GROUPS: { value: SourceExamGroup; label: string }[] = [
-  { value: 'TODAS', label: 'Todas as fontes' },
+export const SOURCE_EXAM_GROUPS: { value: Exclude<SourceExamGroup, 'TODAS'>; label: string }[] = [
   { value: 'TEOT', label: 'TEOT' },
   { value: 'TARO', label: 'TARO' },
   { value: 'BANCO_PROPRIO', label: 'Banco Próprio' }

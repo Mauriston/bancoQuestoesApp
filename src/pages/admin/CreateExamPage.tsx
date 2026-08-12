@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronRight, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2, ChevronDown
+  ArrowLeft, ChevronRight, ChevronLeft, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2, ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -140,6 +140,30 @@ export const CreateExamPage: React.FC = () => {
     return matchesArea && matchesTheme && matchesSearch && matchesSource && matchesSelected;
   });
 
+  // Contagem de questões selecionadas por tema, para a tabela abaixo do
+  // quadro de filtros (ver THEME_TABLE_PAGE_SIZE / themeTablePage).
+  const selectedThemeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const q of selectedQuestions) {
+      counts[q.themeId] = (counts[q.themeId] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([themeId, count]) => ({ themeId, name: themes.find(t => t.id === themeId)?.name || themeId, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [selectedQuestions, themes]);
+
+  const THEME_TABLE_PAGE_SIZE = 5;
+  const [themeTablePage, setThemeTablePage] = useState(0);
+  const themeTablePageCount = Math.max(1, Math.ceil(selectedThemeCounts.length / THEME_TABLE_PAGE_SIZE));
+  const pagedThemeCounts = selectedThemeCounts.slice(
+    themeTablePage * THEME_TABLE_PAGE_SIZE,
+    themeTablePage * THEME_TABLE_PAGE_SIZE + THEME_TABLE_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (themeTablePage > themeTablePageCount - 1) setThemeTablePage(0);
+  }, [themeTablePageCount, themeTablePage]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(e.target as Node)) {
@@ -161,12 +185,19 @@ export const CreateExamPage: React.FC = () => {
     );
   };
 
-  const handleSourceGroupChange = (group: SourceExamGroup) => {
+  const handleSourceGroupChange = (group: Exclude<SourceExamGroup, 'TODAS'>) => {
+    if (group === sourceExamGroup) {
+      // Clicar de novo no grupo já ativo desmarca o filtro rápido — volta a
+      // exibir todas as fontes no dropdown, sem nenhuma pré-selecionada.
+      setSourceExamGroup('TODAS');
+      setSelectedSourceExams([]);
+      return;
+    }
     setSourceExamGroup(group);
     if (group === 'BANCO_PROPRIO') {
       setSelectedSourceExams(getSourceExamOptionsForGroup(group));
       setSourceDropdownOpen(false);
-    } else if (group !== 'TODAS') {
+    } else {
       // TEOT/TARO: marca todas as caixas do grupo de saída, mas o dropdown
       // continua editável — o admin pode desmarcar provas/anos específicos.
       setSelectedSourceExams(getSourceExamOptionsForGroup(group));
@@ -179,11 +210,6 @@ export const CreateExamPage: React.FC = () => {
     } else {
       setSelectedQuestions(prev => [...prev, q]);
     }
-  };
-
-  const handleSelectAllFiltered = () => {
-    const newItems = filteredQuestions.filter(fq => !selectedQuestions.some(sq => sq.id === fq.id));
-    setSelectedQuestions(prev => [...prev, ...newItems]);
   };
 
   const handlePublish = async () => {
@@ -279,28 +305,29 @@ export const CreateExamPage: React.FC = () => {
         <span>Voltar para Lista de Provas</span>
       </Link>
 
-      <div>
-        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
+      {/* Título + indicador de etapas na mesma linha, para economizar
+          espaço vertical (o indicador tinha uma linha inteira só para si). */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 border-b border-slate-800 pb-4">
+        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2 shrink-0">
           <FileCheck className="w-5 h-5 text-cyan-400" />
           {isEditMode ? 'Editar Prova' : 'Assistente de Criação de Prova'}
         </h1>
-      </div>
 
-      {/* Step Indicator Header — sem a etapa de atribuição de usuários no
-          modo de edição, já que os destinatários já existem e não são
-          mexidos aqui. */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-slate-800 pb-4 text-xs font-semibold">
-        <span className={step >= 1 ? 'text-cyan-400' : 'text-slate-500'}>1. Dados Básicos</span>
-        <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
-        <span className={step >= 2 ? 'text-cyan-400' : 'text-slate-500'}>2. Seleção de Questões ({selectedQuestions.length})</span>
-        <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
-        {!isEditMode && (
-          <>
-            <span className={step >= 3 ? 'text-cyan-400' : 'text-slate-500'}>3. Atribuição de Usuários</span>
-            <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
-          </>
-        )}
-        <span className={step >= 4 ? 'text-cyan-400' : 'text-slate-500'}>{isEditMode ? '3. Revisão e Salvamento' : '4. Revisão e Publicação'}</span>
+        {/* Sem a etapa de atribuição de usuários no modo de edição, já que
+            os destinatários já existem e não são mexidos aqui. */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs font-semibold">
+          <span className={step >= 1 ? 'text-cyan-400' : 'text-slate-500'}>1. Dados Básicos</span>
+          <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+          <span className={step >= 2 ? 'text-cyan-400' : 'text-slate-500'}>2. Seleção de Questões ({selectedQuestions.length})</span>
+          <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+          {!isEditMode && (
+            <>
+              <span className={step >= 3 ? 'text-cyan-400' : 'text-slate-500'}>3. Atribuição de Usuários</span>
+              <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+            </>
+          )}
+          <span className={step >= 4 ? 'text-cyan-400' : 'text-slate-500'}>{isEditMode ? '3. Revisão e Salvamento' : '4. Revisão e Publicação'}</span>
+        </div>
       </div>
 
       {errorMsg && (
@@ -374,25 +401,6 @@ export const CreateExamPage: React.FC = () => {
       {/* STEP 2: Question Selection */}
       {step === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold text-[#050f41]">Etapa 2: Selecionar Questões do Banco</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={showOnlySelected}
-                onChange={setShowOnlySelected}
-                label="Mostrar apenas selecionadas"
-              />
-              <button
-                onClick={handleSelectAllFiltered}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0"
-              >
-                Selecionar Todas as Filtradas
-              </button>
-            </div>
-          </div>
-
           {/* Barra de filtros: sidebar fixa ao lado da lista no desktop
               (lg+); no mobile continua acima da lista, some ao rolar para
               baixo e reaparece ao rolar para cima (useHideOnScroll).
@@ -407,7 +415,7 @@ export const CreateExamPage: React.FC = () => {
               } lg:translate-y-0`}
             >
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 grid grid-cols-3 gap-1">
                   {SOURCE_EXAM_GROUPS.map(g => (
                     <button
                       key={g.value}
@@ -500,6 +508,14 @@ export const CreateExamPage: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="pt-1 border-t border-slate-800">
+                  <Switch
+                    checked={showOnlySelected}
+                    onChange={setShowOnlySelected}
+                    label="Mostrar apenas selecionadas"
+                  />
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <div className="grid grid-cols-2 pt-1">
                     <div className="text-center">
@@ -528,6 +544,56 @@ export const CreateExamPage: React.FC = () => {
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* Card independente do quadro de filtros, mas dentro da
+                  mesma coluna sticky, com os temas das questões já
+                  selecionadas para a prova e a quantidade de cada um. */}
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 mt-4">
+                <h3 className="text-xs font-bold text-[#050f41]">Temas das Questões Selecionadas</h3>
+                {selectedThemeCounts.length === 0 ? (
+                  <p className="text-[11px] text-slate-500">Nenhuma questão selecionada ainda.</p>
+                ) : (
+                  <>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-slate-500 text-[10px] uppercase">
+                          <th className="pb-1.5 font-semibold">Tema</th>
+                          <th className="pb-1.5 font-semibold text-right">Qtd.</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {pagedThemeCounts.map(t => (
+                          <tr key={t.themeId}>
+                            <td className="py-1.5 pr-2 text-slate-300 truncate max-w-[10rem]">{t.name}</td>
+                            <td className="py-1.5 text-right font-bold text-cyan-400">{t.count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {themeTablePageCount > 1 && (
+                      <div className="flex items-center justify-between pt-1">
+                        <button
+                          type="button"
+                          disabled={themeTablePage === 0}
+                          onClick={() => setThemeTablePage(p => Math.max(0, p - 1))}
+                          className="p-1 rounded-lg text-slate-400 hover:text-[#050f41] disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[10px] text-slate-500">Página {themeTablePage + 1} de {themeTablePageCount}</span>
+                        <button
+                          type="button"
+                          disabled={themeTablePage >= themeTablePageCount - 1}
+                          onClick={() => setThemeTablePage(p => Math.min(themeTablePageCount - 1, p + 1))}
+                          className="p-1 rounded-lg text-slate-400 hover:text-[#050f41] disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
