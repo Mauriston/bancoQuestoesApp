@@ -8,6 +8,18 @@ import { MobileBottomNav } from '../components/MobileBottomNav';
 import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
 import { NotificationToastHost } from '../components/NotificationToastHost';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
+import { useUnseenExtrasCount } from '../hooks/useUnseenExtrasCount';
+
+// Badge vermelho de contagem, usado no ícone dos itens de menu (ex.: Extras)
+// — mesmo estilo do badge de não lidas no avatar.
+const NavBadge: React.FC<{ count: number }> = ({ count }) => {
+  if (count <= 0) return null;
+  return (
+    <span className="absolute -top-1 -right-1.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-[#E20018] text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#050f41] leading-none">
+      {count > 9 ? '9+' : count}
+    </span>
+  );
+};
 
 export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { currentUser, logout } = useAuth();
@@ -15,6 +27,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { unreadCount } = useUnreadNotifications();
+  const extrasUnseenCount = useUnseenExtrasCount();
 
   const handleLogout = async () => {
     await logout();
@@ -93,7 +106,10 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                    <span className="relative inline-flex shrink-0">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                      {item.path === '/app/extras' && <NavBadge count={extrasUnseenCount} />}
+                    </span>
                     {item.label}
                   </Link>
                 );
@@ -184,7 +200,10 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+              <span className="relative inline-flex shrink-0">
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                {item.path === '/app/extras' && <NavBadge count={extrasUnseenCount} />}
+              </span>
               {item.label}
             </Link>
           );
@@ -241,7 +260,10 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                <span className="relative inline-flex shrink-0">
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                  {item.path === '/app/extras' && <NavBadge count={extrasUnseenCount} />}
+                </span>
                 <span className="hidden group-hover/sidebar:inline">{item.label}</span>
               </Link>
             );
