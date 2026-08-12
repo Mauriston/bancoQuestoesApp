@@ -327,15 +327,6 @@ const MaterialGrid: React.FC<{
             <button onClick={() => onOpen(item)} className="text-left w-full">
               <div>
                 <p className="px-3 pt-3 text-sm font-bold text-[#050f41] line-clamp-2 pr-14">{item.title}</p>
-                {themeNames.length > 0 && (
-                  <div className="px-3 mt-1.5 flex flex-wrap gap-1">
-                    {themeNames.map(name => (
-                      <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
                 {thumbnail ? (
@@ -369,6 +360,15 @@ const MaterialGrid: React.FC<{
                   </span>
                 )}
               </div>
+              {themeNames.length > 0 && (
+                <div className={`px-3 mt-2 flex flex-wrap gap-1 ${isAdmin ? '' : 'pb-3'}`}>
+                  {themeNames.map(name => (
+                    <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
               {isAdmin && (
                 <div className="relative px-3 py-2 group/viewcount w-fit">
                   <p
