@@ -67,12 +67,17 @@ export const ExtrasPage: React.FC = () => {
   }, [tab, videos, aulas]);
 
   const items: MaterialItem[] = useMemo(() => {
-    return tabItems.filter(item => {
-      if (areaFilterIds.length > 0 && !areaFilterIds.includes(item.areaId)) return false;
-      if (themeFilterIds.length > 0 && !item.themeIds.some(id => themeFilterIds.includes(id))) return false;
-      return true;
-    });
-  }, [tabItems, areaFilterIds, themeFilterIds]);
+    const areaNameOf = (item: MaterialItem) => areas.find(a => a.id === item.areaId)?.name || item.areaName || 'Outros';
+    return tabItems
+      .filter(item => {
+        if (areaFilterIds.length > 0 && !areaFilterIds.includes(item.areaId)) return false;
+        if (themeFilterIds.length > 0 && !item.themeIds.some(id => themeFilterIds.includes(id))) return false;
+        return true;
+      })
+      // Área (A→Z) e, dentro dela, título (A→Z) — vale tanto para a
+      // listagem agrupada por área quanto para a lista simples com filtro.
+      .sort((a, b) => areaNameOf(a).localeCompare(areaNameOf(b)) || a.title.localeCompare(b.title));
+  }, [tabItems, areaFilterIds, themeFilterIds, areas]);
 
   // Só oferece nos menus suspensos as Áreas/Temas que de fato têm algum
   // material cadastrado na tab atual (Videoteca ou Aulas).
