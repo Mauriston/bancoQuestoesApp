@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { getQuestions, getAreas, getThemes, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, QuestionAnswer, Reference } from '../../types';
-import { SOURCE_EXAM_OPTIONS, getSourceExamChipClass } from '../../constants';
+import { SOURCE_EXAM_GROUPS, SourceExamGroup, getSourceExamOptionsForGroup, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { QuestionImage } from '../../components/QuestionImage';
@@ -32,6 +32,22 @@ export const QuestionsPage: React.FC = () => {
   const [selectedSourceExams, setSelectedSourceExams] = useState<string[]>([]);
   const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
   const sourceDropdownRef = useRef<HTMLDivElement>(null);
+  // Filtro rápido acima do dropdown de fontes (Todas/TEOT/TARO/Banco
+  // Próprio) — restringe as opções exibidas no dropdown e, no caso de Banco
+  // Próprio, força a seleção única e trava o dropdown em modo somente
+  // leitura (ver handleSourceGroupChange).
+  const [sourceExamGroup, setSourceExamGroup] = useState<SourceExamGroup>('TODAS');
+
+  const handleSourceGroupChange = (group: SourceExamGroup) => {
+    setSourceExamGroup(group);
+    if (group === 'BANCO_PROPRIO') {
+      setSelectedSourceExams(getSourceExamOptionsForGroup(group));
+      setSourceDropdownOpen(false);
+    } else if (group !== 'TODAS') {
+      const allowed = getSourceExamOptionsForGroup(group);
+      setSelectedSourceExams(prev => prev.filter(v => allowed.includes(v)));
+    }
+  };
 
   // Full-question preview modal (exatamente como o candidato vê na prova)
   const [viewingQuestion, setViewingQuestion] = useState<Question | null>(null);
@@ -285,6 +301,23 @@ export const QuestionsPage: React.FC = () => {
           } lg:translate-y-0`}
         >
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-1 grid grid-cols-2 gap-1">
+              {SOURCE_EXAM_GROUPS.map(g => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => handleSourceGroupChange(g.value)}
+                  className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${
+                    sourceExamGroup === g.value
+                      ? 'bg-[#FAB932] text-[#050f41]'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
@@ -320,18 +353,22 @@ export const QuestionsPage: React.FC = () => {
               <div className="relative" ref={sourceDropdownRef}>
                 <button
                   type="button"
+                  disabled={sourceExamGroup === 'BANCO_PROPRIO'}
                   onClick={() => setSourceDropdownOpen(prev => !prev)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 flex items-center justify-between gap-2"
+                  title={sourceExamGroup === 'BANCO_PROPRIO' ? 'Fonte fixada em Banco Próprio pelo filtro acima' : undefined}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 flex items-center justify-between gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <span className="truncate">
                     {selectedSourceExams.length === 0
                       ? 'Todas as Fontes'
-                      : `${selectedSourceExams.length} fonte${selectedSourceExams.length > 1 ? 's' : ''} selecionada${selectedSourceExams.length > 1 ? 's' : ''}`}
+                      : selectedSourceExams.length === 1
+                        ? selectedSourceExams[0]
+                        : `${selectedSourceExams.length} fontes selecionadas`}
                   </span>
                   <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-500 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {sourceDropdownOpen && (
+                {sourceDropdownOpen && sourceExamGroup !== 'BANCO_PROPRIO' && (
                   <div className="absolute z-20 mt-1.5 w-full min-w-[14rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
                     {selectedSourceExams.length > 0 && (
                       <button
@@ -342,7 +379,7 @@ export const QuestionsPage: React.FC = () => {
                         Limpar seleção
                       </button>
                     )}
-                    {SOURCE_EXAM_OPTIONS.map(opt => (
+                    {getSourceExamOptionsForGroup(sourceExamGroup).map(opt => (
                       <label
                         key={opt}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer text-xs text-slate-200"
@@ -361,9 +398,10 @@ export const QuestionsPage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400">
-              <strong className="text-cyan-400 font-bold">{questions.length}</strong> questõe{questions.length === 1 ? '' : 's'} encontrada{questions.length === 1 ? '' : 's'} para os filtros atuais.
-            </p>
+            <div className="text-center pt-1">
+              <p className="text-4xl font-extrabold text-cyan-400 leading-none">{questions.length}</p>
+              <p className="text-[11px] text-slate-400 mt-1.5">questõe{questions.length === 1 ? '' : 's'} filtrada{questions.length === 1 ? '' : 's'}</p>
+            </div>
           </div>
         </div>
 
