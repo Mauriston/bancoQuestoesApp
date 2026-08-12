@@ -8,7 +8,7 @@ import {
 } from '../services/firebaseService';
 import { Area, Theme, VideotecaItem, AulaItem, MaterialViewLog } from '../types';
 import { CheckboxMultiSelect } from '../components/CheckboxMultiSelect';
-import { youTubeThumbnailUrl, youTubeEmbedUrl, toPresentEmbedUrl } from '../utils/mediaUrls';
+import { youTubeThumbnailUrl, youTubeEmbedUrl, toPresentEmbedUrl, extractEmbedSrc } from '../utils/mediaUrls';
 
 type MaterialTab = 'videoteca' | 'aulas';
 type MaterialItem = (VideotecaItem | AulaItem) & { kind: MaterialTab };
@@ -322,9 +322,13 @@ const MaterialFormModal: React.FC<{
     try {
       const area = areas.find(a => a.id === areaId);
       const themeNames = themeIds.map(id => themeOptions.find(t => t.id === id)?.name).filter((n): n is string => !!n);
+      // Em "Aulas" aceitamos tanto uma URL quanto o código de incorporação em
+      // HTML (<iframe ...>) do Canva/Slides — extrai o src antes de salvar,
+      // já que o restante do app (embed, thumbnail, CSV) trabalha com URL.
+      const finalUrl = tab === 'aulas' ? extractEmbedSrc(url) : url;
       const payload = {
         title, areaId, areaName: area?.name, themeIds, themeNames,
-        url, createdBy: editingItem?.createdBy || currentUser.id
+        url: finalUrl, createdBy: editingItem?.createdBy || currentUser.id
       };
       if (editingItem) {
         if (tab === 'videoteca') await updateVideotecaItem(editingItem.id, payload);
@@ -379,9 +383,23 @@ const MaterialFormModal: React.FC<{
           </div>
           <div>
             <label className="block text-slate-300 font-medium mb-1">
-              {tab === 'videoteca' ? 'URL do vídeo (YouTube) *' : 'URL da apresentação (Canva ou Google Slides, modo Apresentar) *'}
+              {tab === 'videoteca' ? 'URL do vídeo (YouTube) *' : 'Código de incorporação do Canva ou URL do Google Slides *'}
             </label>
-            <input required type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]" />
+            {tab === 'videoteca' ? (
+              <input required type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]" />
+            ) : (
+              <>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder='Cole aqui o <iframe> de "Compartilhar > Incorporar" do Canva, ou a URL de apresentação do Google Slides'
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41] font-mono text-[11px]"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">No Canva: Compartilhar → Mais → Incorporar → copiar código e colar aqui.</p>
+              </>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">Cancelar</button>

@@ -1,29 +1,9 @@
 import React, { useState } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { extractYouTubeId } from '../utils/mediaUrls';
 
 interface CommentMediaProps {
   url: string;
-}
-
-// Aceita links do youtube.com/watch, youtu.be, youtube.com/embed e
-// youtube.com/shorts. Qualquer outra URL é tratada como imagem.
-function extractYouTubeId(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^www\.|^m\./, '');
-
-    if (host === 'youtu.be') {
-      return parsed.pathname.slice(1) || null;
-    }
-    if (host === 'youtube.com') {
-      if (parsed.pathname === '/watch') return parsed.searchParams.get('v');
-      if (parsed.pathname.startsWith('/embed/')) return parsed.pathname.split('/')[2] || null;
-      if (parsed.pathname.startsWith('/shorts/')) return parsed.pathname.split('/')[2] || null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 // Mídia opcional anexada ao comentário do gabarito (campo `commentMediaUrl`
