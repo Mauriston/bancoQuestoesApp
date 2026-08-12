@@ -8,6 +8,7 @@ export const SOURCE_EXAM_OPTIONS: string[] = [
   'TEOT 2023',
   'TEOT 2024',
   'TEOT 2025',
+  'TEOT 2026',
   'TARO 2016',
   'TARO 2017',
   'TARO 2018',
