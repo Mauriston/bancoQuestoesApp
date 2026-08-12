@@ -4,23 +4,19 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area as RechartsArea, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
-  BarChart, Bar, Legend
+  BarChart, Bar, Cell
 } from 'recharts';
-import { getActiveUsers, getUsers, getExams, getAreas, getThemes, subscribeAllAttempts, subscribeAllUserStats } from '../../services/firebaseService';
-import { AppUser, Exam, Attempt, Area, UserStats, Theme } from '../../types';
+import { getActiveUsers, getUsers, getExams, getAreas, getGroups, getThemes, subscribeAllAttempts, subscribeAllUserStats } from '../../services/firebaseService';
+import { AppUser, Exam, Attempt, Area, Group, UserStats, Theme } from '../../types';
 import { exportToCSV, scoreColorClass, scoreColorHex } from '../../utils/helpers';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
-
-// Paleta cíclica para os segmentos de subárea dos gráficos empilhados —
-// distinta das cores semânticas de desempenho (scoreColorHex), já que aqui a
-// cor identifica a subárea, não uma nota.
-const SEGMENT_COLORS = ['#06b6d4', '#FAB932', '#a855f7', '#10b981', '#f472b6', '#6366f1', '#f97316', '#14b8a6'];
 
 export const DashboardPage: React.FC = () => {
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [userStatsList, setUserStatsList] = useState<UserStats[]>([]);
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
@@ -35,16 +31,18 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     async function loadReferenceData() {
       try {
-        const [uList, allUsers, eList, arList, thList] = await Promise.all([
+        const [uList, allUsers, eList, arList, grList, thList] = await Promise.all([
           getActiveUsers(),
           getUsers(),
           getExams(),
           getAreas(),
+          getGroups(),
           getThemes()
         ]);
         setActiveUsers(uList);
         setExams(eList);
         setAreas(arList);
+        setGroups(grList);
         setThemes(thList);
         // Tentativas antigas podem ter sido gravadas antes do userName ser
         // desnormalizado no documento — esse mapa cobre esses registros.
@@ -119,62 +117,66 @@ export const DashboardPage: React.FC = () => {
       .map(e => ({ name: e.name, score: Math.round(e.sum / e.count) }));
   }, [attempts, selectedUserId]);
 
-  // Desempenho médio por área com proporção entre subáreas (Gráfico 3):
-  // altura da barra = desempenho médio da área; cada segmento de subárea usa
-  // sua própria taxa de acerto — como a taxa da área é a média ponderada
-  // (por questões resolvidas) das taxas de subárea, os segmentos somam
-  // exatamente a altura total da barra.
-  const areaChartData = useMemo(() => {
+  // Agregado de solved/correct por tema (todos os usuários, ou só o
+  // selecionado no ranking) — insumo comum dos dois gráficos por área e por
+  // grupo abaixo.
+  const themeAgg = useMemo(() => {
     const sourceStats = selectedUserId
       ? userStatsList.filter(s => s.userId === selectedUserId)
       : userStatsList;
 
-    const themeAgg: Record<string, { solved: number; correct: number }> = {};
+    const agg: Record<string, { solved: number; correct: number }> = {};
     sourceStats.forEach(s => {
       Object.values(s.themes || {}).forEach(t => {
-        if (!themeAgg[t.themeId]) themeAgg[t.themeId] = { solved: 0, correct: 0 };
-        themeAgg[t.themeId].solved += t.solved;
-        themeAgg[t.themeId].correct += t.correct;
+        if (!agg[t.themeId]) agg[t.themeId] = { solved: 0, correct: 0 };
+        agg[t.themeId].solved += t.solved;
+        agg[t.themeId].correct += t.correct;
       });
     });
+    return agg;
+  }, [userStatsList, selectedUserId]);
 
-    const themeById = new Map(themes.map(t => [t.id, t]));
-    const segmentKeysSet = new Set<string>();
-
-    const rows = areas.map(area => {
+  // Desempenho médio por Área (Gráfico 3) — 1 barra por área, sem
+  // subdivisão (a Área é hoje uma unidade "achatada": os temas de uma mesma
+  // área podem pertencer a Grupos TEOT diferentes, ver Gráfico 4 abaixo).
+  const areaChartData = useMemo(() => {
+    return areas.map(area => {
       const themesInArea = themes.filter(t => t.areaId === area.id);
-      const bySubArea: Record<string, { solved: number; correct: number }> = {};
+      let solved = 0, correct = 0;
       themesInArea.forEach(t => {
         const agg = themeAgg[t.id];
-        if (!agg || agg.solved === 0) return;
-        const key = t.subArea || 'Geral';
-        if (!bySubArea[key]) bySubArea[key] = { solved: 0, correct: 0 };
-        bySubArea[key].solved += agg.solved;
-        bySubArea[key].correct += agg.correct;
+        if (!agg) return;
+        solved += agg.solved;
+        correct += agg.correct;
       });
+      return {
+        name: area.name,
+        accuracy: solved > 0 ? Math.round((correct / solved) * 100) : 0,
+        solved
+      };
+    }).filter(r => r.solved > 0);
+  }, [areas, themes, themeAgg]);
 
-      const row: Record<string, any> = { name: area.name };
-      const totalSolved = Object.values(bySubArea).reduce((s, d) => s + d.solved, 0);
-      const totalCorrect = Object.values(bySubArea).reduce((s, d) => s + d.correct, 0);
-      const areaScore = totalSolved > 0 ? (totalCorrect / totalSolved) * 100 : 0;
-
-      Object.entries(bySubArea).forEach(([key, data]) => {
-        segmentKeysSet.add(key);
-        // Altura do segmento = nota da área distribuída proporcionalmente ao
-        // peso (nº de questões respondidas) de cada subárea — os segmentos
-        // somam exatamente a nota total da barra. A nota própria de cada
-        // subárea (não ponderada) fica disponível para o tooltip.
-        const weight = totalSolved > 0 ? data.solved / totalSolved : 0;
-        row[key] = areaScore * weight;
-        row[`${key}__rate`] = data.solved > 0 ? Math.round((data.correct / data.solved) * 100) : 0;
+  // Desempenho médio por Grupo TEOT (Gráfico 4) — cruza Áreas (ex.: "Trauma
+  // Adulto" reúne temas de Mão, Joelho, Ombro e Cotovelo etc.), por isso é
+  // um gráfico independente do de Área, usado só para estatística.
+  const groupChartData = useMemo(() => {
+    return groups.map(group => {
+      const themesInGroup = themes.filter(t => t.groupId === group.id);
+      let solved = 0, correct = 0;
+      themesInGroup.forEach(t => {
+        const agg = themeAgg[t.id];
+        if (!agg) return;
+        solved += agg.solved;
+        correct += agg.correct;
       });
-      row.__total = Math.round(areaScore);
-      row.__hasData = totalSolved > 0;
-      return row;
-    }).filter(r => r.__hasData);
-
-    return { rows, segmentKeys: Array.from(segmentKeysSet), themeById };
-  }, [areas, themes, userStatsList, selectedUserId]);
+      return {
+        name: group.name,
+        accuracy: solved > 0 ? Math.round((correct / solved) * 100) : 0,
+        solved
+      };
+    }).filter(r => r.solved > 0);
+  }, [groups, themes, themeAgg]);
 
   if (loading) {
     return (
@@ -277,32 +279,62 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
 
-        {/* Gráfico 3: Desempenho médio por área, empilhado por subárea */}
+        {/* Gráfico 3: Desempenho médio por Área — continua servindo também
+            de filtro de questões no banco/provas; aqui é só a estatística. */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
           <h2 className="text-sm font-bold text-[#050f41]">
             Desempenho por Área {selectedUserName ? `— ${selectedUserName}` : '(Média Geral)'}
           </h2>
-          {areaChartData.rows.length === 0 ? (
+          {areaChartData.length === 0 ? (
             <p className="text-xs text-slate-500 italic py-6 text-center">Sem questões respondidas suficientes ainda.</p>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={areaChartData.rows} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}>
+              <BarChart data={areaChartData} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={50} />
                 <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} unit="%" />
                 <Tooltip
-                  formatter={(value: any, key: any) => [`${Math.round(value)}%`, key]}
+                  formatter={(value: any) => [`${Math.round(value)}%`, 'Aproveitamento']}
                   contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, fontSize: 12 }}
                   labelStyle={{ color: '#e2e8f0' }}
                 />
-                {areaChartData.segmentKeys.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
-                {areaChartData.segmentKeys.map((key, idx) => (
-                  <Bar key={key} dataKey={key} name={key} stackId="area" fill={SEGMENT_COLORS[idx % SEGMENT_COLORS.length]} radius={idx === areaChartData.segmentKeys.length - 1 ? [4, 4, 0, 0] : undefined} />
-                ))}
+                <Bar dataKey="accuracy" radius={[4, 4, 0, 0]}>
+                  {areaChartData.map(row => <Cell key={row.name} fill={scoreColorHex(row.accuracy)} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      {/* Gráfico 4: Desempenho médio por Grupo (TEOT) — Anatomia, Ciência
+          Básica, Ortopedia Adulto, Ortopedia Infantil, Trauma Adulto, Trauma
+          Infantil, Oncologia Ortopédica. Cruza várias Áreas por grupo, por
+          isso é um gráfico independente do de Área acima; usado só para
+          estatística de desempenho, nunca como filtro de questões. */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+        <h2 className="text-sm font-bold text-[#050f41]">
+          Desempenho por Grupo (TEOT) {selectedUserName ? `— ${selectedUserName}` : '(Média Geral)'}
+        </h2>
+        {groupChartData.length === 0 ? (
+          <p className="text-xs text-slate-500 italic py-6 text-center">Sem questões respondidas suficientes ainda.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={groupChartData} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={50} />
+              <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} unit="%" />
+              <Tooltip
+                formatter={(value: any) => [`${Math.round(value)}%`, 'Aproveitamento']}
+                contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, fontSize: 12 }}
+                labelStyle={{ color: '#e2e8f0' }}
+              />
+              <Bar dataKey="accuracy" radius={[4, 4, 0, 0]}>
+                {groupChartData.map(row => <Cell key={row.name} fill={scoreColorHex(row.accuracy)} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* KPI Cards */}

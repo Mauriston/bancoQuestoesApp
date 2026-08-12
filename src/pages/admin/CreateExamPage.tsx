@@ -41,7 +41,6 @@ export const CreateExamPage: React.FC = () => {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [areaFilter, setAreaFilter] = useState('');
   const [themeFilterIds, setThemeFilterIds] = useState<string[]>([]);
-  const [subAreaFilter, setSubAreaFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   // Switch para restringir a lista às questões já marcadas para a prova.
   const [showOnlySelected, setShowOnlySelected] = useState(false);
@@ -127,25 +126,13 @@ export const CreateExamPage: React.FC = () => {
 
   const themesForAreaFilter = areaFilter ? themes.filter(t => t.areaId === areaFilter) : themes;
 
-  // Subáreas distintas presentes entre os temas da área selecionada — vazio
-  // (e o seletor fica desabilitado) se nenhuma área foi escolhida ou se a
-  // área não tem subagrupamento (ex.: Anatomia, Ciência Básica).
-  const subAreasForAreaFilter = areaFilter
-    ? Array.from(new Set(themesForAreaFilter.map(t => t.subArea).filter((s): s is string => !!s)))
-    : [];
-
-  // Mapa themeId -> subArea, para filtrar questões (que só carregam
-  // themeId) sem precisar de outra ida ao Firestore.
-  const themeSubAreaById = new Map(themes.map(t => [t.id, t.subArea]));
-
   const filteredQuestions = allQuestions.filter(q => {
     const matchesArea = !areaFilter || q.areaId === areaFilter;
     const matchesTheme = themeFilterIds.length === 0 || themeFilterIds.includes(q.themeId);
-    const matchesSubArea = !subAreaFilter || themeSubAreaById.get(q.themeId) === subAreaFilter;
     const matchesSearch = !searchQuery || q.statement.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSource = selectedSourceExams.length === 0 || selectedSourceExams.includes(q.sourceExam);
     const matchesSelected = !showOnlySelected || selectedQuestions.some(sq => sq.id === q.id);
-    return matchesArea && matchesTheme && matchesSubArea && matchesSearch && matchesSource && matchesSelected;
+    return matchesArea && matchesTheme && matchesSearch && matchesSource && matchesSelected;
   });
 
   useEffect(() => {
@@ -413,23 +400,11 @@ export const CreateExamPage: React.FC = () => {
                     onChange={(e) => {
                       setAreaFilter(e.target.value);
                       setThemeFilterIds([]);
-                      setSubAreaFilter('');
                     }}
                     className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
                   >
                     <option value="">Todas as Áreas</option>
                     {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                  <select
-                    value={subAreaFilter}
-                    onChange={(e) => setSubAreaFilter(e.target.value)}
-                    disabled={!areaFilter || subAreasForAreaFilter.length === 0}
-                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 disabled:opacity-50"
-                  >
-                    <option value="">
-                      {!areaFilter ? 'Selecione uma área' : subAreasForAreaFilter.length === 0 ? 'Sem subáreas' : 'Todas as Subáreas'}
-                    </option>
-                    {subAreasForAreaFilter.map(sa => <option key={sa} value={sa}>{sa}</option>)}
                   </select>
                   <CheckboxMultiSelect
                     label="Tema"
@@ -488,13 +463,12 @@ export const CreateExamPage: React.FC = () => {
                   <p className="text-[11px] text-slate-400">
                     <strong className="text-cyan-400 font-bold">{filteredQuestions.length}</strong> questõe{filteredQuestions.length === 1 ? '' : 's'} encontrada{filteredQuestions.length === 1 ? '' : 's'} para os filtros atuais.
                   </p>
-                  {(searchQuery || areaFilter || themeFilterIds.length > 0 || subAreaFilter || selectedSourceExams.length > 0 || showOnlySelected) && (
+                  {(searchQuery || areaFilter || themeFilterIds.length > 0 || selectedSourceExams.length > 0 || showOnlySelected) && (
                     <button
                       onClick={() => {
                         setSearchQuery('');
                         setAreaFilter('');
                         setThemeFilterIds([]);
-                        setSubAreaFilter('');
                         setSelectedSourceExams([]);
                         setShowOnlySelected(false);
                       }}

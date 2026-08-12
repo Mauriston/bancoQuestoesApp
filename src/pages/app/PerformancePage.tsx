@@ -8,8 +8,8 @@ import {
   AreaChart, Area as RechartsArea, XAxis, YAxis, ReferenceLine, LabelList, PieChart, Pie, Cell
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserStats, getAllUserStats, getAreas, getThemes, getUserAttempts, getUsers } from '../../services/firebaseService';
-import { UserStats, Area as ExamArea, Theme, Attempt } from '../../types';
+import { getUserStats, getAllUserStats, getAreas, getGroups, getThemes, getUserAttempts, getUsers } from '../../services/firebaseService';
+import { UserStats, Area as ExamArea, Group, Theme, Attempt } from '../../types';
 import { scoreColorHex } from '../../utils/helpers';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
 
@@ -37,22 +37,25 @@ export const PerformancePage: React.FC = () => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [peerStats, setPeerStats] = useState<UserStats[]>([]);
   const [areas, setAreas] = useState<ExamArea[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [allStatsForRanking, setAllStatsForRanking] = useState<UserStats[]>([]);
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
 
   useEffect(() => {
     async function loadData() {
       if (!currentUser) return;
       try {
         setLoading(true);
-        const [uStats, allStats, areaList, themeList, userAttempts, allUsers] = await Promise.all([
+        const [uStats, allStats, areaList, groupList, themeList, userAttempts, allUsers] = await Promise.all([
           getUserStats(currentUser.id),
           getAllUserStats(),
           getAreas(),
+          getGroups(),
           getThemes(),
           getUserAttempts(currentUser.id),
           getUsers()
@@ -62,6 +65,7 @@ export const PerformancePage: React.FC = () => {
         setAllStatsForRanking(allStats);
         setUserNameById(Object.fromEntries(allUsers.map(u => [u.id, u.name])));
         setAreas(areaList);
+        setGroups(groupList);
         setThemes(themeList);
         setAttempts(userAttempts);
       } catch (err) {
@@ -90,6 +94,31 @@ export const PerformancePage: React.FC = () => {
     });
     return result;
   }, [peerStats]);
+
+  // Mapa themeId -> groupId, usado para agregar estatísticas (próprias e dos
+  // colegas) por Grupo TEOT a partir dos dados que só existem por tema.
+  const themeGroupById = useMemo(() => new Map(themes.map(t => [t.id, t.groupId])), [themes]);
+
+  // Média (ponderada pelo volume de questões) dos demais usuários, por Grupo
+  // TEOT — agregada a partir de `themes` dos colegas (não existe um agregado
+  // por grupo salvo em UserStats, só por área/tema).
+  const peerGroupAverage = useMemo(() => {
+    const totals: Record<string, { solved: number; correct: number }> = {};
+    peerStats.forEach(s => {
+      Object.entries(s.themes || {}).forEach(([themeId, data]) => {
+        const groupId = themeGroupById.get(themeId);
+        if (!groupId) return;
+        if (!totals[groupId]) totals[groupId] = { solved: 0, correct: 0 };
+        totals[groupId].solved += data.solved || 0;
+        totals[groupId].correct += data.correct || 0;
+      });
+    });
+    const result: Record<string, number | null> = {};
+    Object.entries(totals).forEach(([groupId, t]) => {
+      result[groupId] = t.solved > 0 ? Math.round((t.correct / t.solved) * 100) : null;
+    });
+    return result;
+  }, [peerStats, themeGroupById]);
 
   // Média geral da plataforma (todos os colegas), ponderada por questões.
   const platformAverage = useMemo(() => {
@@ -163,36 +192,34 @@ export const PerformancePage: React.FC = () => {
   const themePerformanceList = themes.map(theme => {
     const themeData = stats?.themes?.[theme.id] || { solved: 0, correct: 0 };
     const acc = themeData.solved > 0 ? Math.round((themeData.correct / themeData.solved) * 100) : 0;
-    return { id: theme.id, name: theme.name, areaId: theme.areaId, subArea: theme.subArea, solved: themeData.solved, correct: themeData.correct, accuracy: acc };
+    return {
+      id: theme.id, name: theme.name, areaId: theme.areaId,
+      groupId: theme.groupId, groupName: theme.groupName,
+      solved: themeData.solved, correct: themeData.correct, accuracy: acc
+    };
   }).filter(t => t.solved > 0);
 
   // Desempenho crítico: 5 piores temas, de quaisquer áreas.
   const criticalThemes = [...themePerformanceList].sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
 
-  // Desempenho por Subárea — agrega os temas já respondidos (themePerformanceList)
-  // por área + subárea. Áreas sem subagrupamento (Anatomia, Ciência Básica) e
-  // temas ainda sem subArea migrado simplesmente não entram aqui.
-  const subAreaPerformanceList = (() => {
-    const groups: Record<string, { areaId: string; areaName: string; subArea: string; solved: number; correct: number }> = {};
-    themePerformanceList.forEach(t => {
-      if (!t.subArea) return;
-      const key = `${t.areaId}::${t.subArea}`;
-      if (!groups[key]) {
-        groups[key] = {
-          areaId: t.areaId,
-          areaName: areas.find(a => a.id === t.areaId)?.name || t.areaId,
-          subArea: t.subArea,
-          solved: 0,
-          correct: 0
-        };
-      }
-      groups[key].solved += t.solved;
-      groups[key].correct += t.correct;
-    });
-    return Object.values(groups)
-      .map(g => ({ ...g, accuracy: g.solved > 0 ? Math.round((g.correct / g.solved) * 100) : 0 }))
-      .sort((a, b) => a.areaName.localeCompare(b.areaName) || a.subArea.localeCompare(b.subArea));
-  })();
+  // Desempenho por Grupo (TEOT) — cruza Áreas (ex.: "Trauma Adulto" reúne
+  // temas de Mão, Joelho, Ombro e Cotovelo etc.), por isso é agregado direto
+  // por groupId a partir de todos os temas já respondidos, sem passar por
+  // Área. Lista fixa (7 grupos) vinda de `groups`, só com os que já têm
+  // alguma questão resolvida.
+  const groupPerformanceList = groups.map(group => {
+    const themesOfGroup = themePerformanceList.filter(t => t.groupId === group.id);
+    const solved = themesOfGroup.reduce((s, t) => s + t.solved, 0);
+    const correct = themesOfGroup.reduce((s, t) => s + t.correct, 0);
+    return {
+      id: group.id,
+      name: group.name,
+      solved,
+      correct,
+      accuracy: solved > 0 ? Math.round((correct / solved) * 100) : 0,
+      peerAverage: peerGroupAverage[group.id] ?? null
+    };
+  }).filter(g => g.solved > 0);
 
   const radarData = areaPerformanceList.map(a => ({
     area: a.name.length > 14 ? a.name.slice(0, 14) + '…' : a.name,
@@ -204,7 +231,6 @@ export const PerformancePage: React.FC = () => {
   // por Tema" — por padrão, a primeira área com questões respondidas.
   const effectiveAreaId = selectedAreaId || areaPerformanceList[0]?.id || '';
   const selectedArea = areaPerformanceList.find(a => a.id === effectiveAreaId) || null;
-  const selectedAreaSubAreas = subAreaPerformanceList.filter(s => s.areaId === effectiveAreaId);
   const selectedAreaDelta = selectedArea && selectedArea.peerAverage !== null
     ? selectedArea.accuracy - selectedArea.peerAverage
     : null;
@@ -213,18 +239,27 @@ export const PerformancePage: React.FC = () => {
     ? themePerformanceList.filter(t => t.areaId === selectedArea.id).sort((a, b) => b.accuracy - a.accuracy)
     : [];
 
-  // Agrupa os temas da área filtrada por subárea (quando a área tem esse
-  // agrupamento) — "Sem Subárea" reúne temas sem subArea definido, o que só
-  // deve acontecer para dados legados ainda não migrados.
-  const themeIdToSubArea = new Map(themes.map(t => [t.id, t.subArea]));
-  const selectedAreaHasSubAreas = selectedAreaThemes.some(t => themeIdToSubArea.get(t.id));
-  const selectedAreaThemesBySubArea = selectedAreaHasSubAreas
+  // Agrupa os temas da área filtrada por Grupo TEOT (um mesmo tema só tem 1
+  // grupo, mas áreas diferentes têm seus temas espalhados por vários grupos
+  // — ex.: a área "Coluna" tem temas em "Ciência Básica", "Ortopedia Adulto",
+  // "Ortopedia Infantil" e "Trauma Adulto"). "Sem Grupo" reúne temas sem
+  // groupName definido, o que só deve acontecer para dados legados.
+  const selectedAreaHasGroups = selectedAreaThemes.some(t => t.groupName);
+  const selectedAreaThemesByGroup = selectedAreaHasGroups
     ? selectedAreaThemes.reduce((acc, t) => {
-        const key = themeIdToSubArea.get(t.id) || 'Sem Subárea';
+        const key = t.groupName || 'Sem Grupo';
         if (!acc[key]) acc[key] = [];
         acc[key].push(t);
         return acc;
       }, {} as Record<string, typeof selectedAreaThemes>)
+    : null;
+
+  // Grupo TEOT atualmente filtrado no card "Desempenho por Grupo" — cruza
+  // Áreas, por isso é um card independente do de Área acima.
+  const effectiveGroupId = selectedGroupId || groupPerformanceList[0]?.id || '';
+  const selectedGroup = groupPerformanceList.find(g => g.id === effectiveGroupId) || null;
+  const selectedGroupDelta = selectedGroup && selectedGroup.peerAverage !== null
+    ? selectedGroup.accuracy - selectedGroup.peerAverage
     : null;
 
   const rankingData: RankingEntry[] = allStatsForRanking
@@ -352,8 +387,9 @@ export const PerformancePage: React.FC = () => {
         </div>
       )}
 
-      {/* Desempenho por Área — donut da área selecionada no filtro, com o
-          detalhamento por subárea logo abaixo, dentro do mesmo card. */}
+      {/* Desempenho por Área — donut da área selecionada no filtro. Área
+          continua servindo também de filtro de questões no banco/provas;
+          aqui é só a visão de estatística. */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
@@ -377,17 +413,115 @@ export const PerformancePage: React.FC = () => {
         {!selectedArea ? (
           <p className="text-sm text-slate-500 italic">Complete simulados para visualizar a estatística por Área.</p>
         ) : (
-          <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
-            {/* Donut com o percentual da área filtrada no centro — fica à
-                esquerda no desktop, ao lado das subáreas. */}
-            <div className="flex flex-col items-center shrink-0 mx-auto lg:mx-0">
+          <div className="flex flex-col items-center">
+            <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'acerto', value: selectedArea.accuracy },
+                      { name: 'resto', value: Math.max(0, 100 - selectedArea.accuracy) }
+                    ]}
+                    dataKey="value"
+                    innerRadius="72%"
+                    outerRadius="100%"
+                    startAngle={90}
+                    endAngle={-270}
+                    stroke="none"
+                    isAnimationActive
+                    animationDuration={500}
+                    animationEasing="ease-out"
+                  >
+                    <Cell fill={scoreColorHex(selectedArea.accuracy)} />
+                    <Cell fill="#1e293b" />
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={effectiveAreaId}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="flex flex-col items-center"
+                  >
+                    <span className={`text-3xl sm:text-4xl font-black ${TIER_STYLES[getTier(selectedArea.accuracy)].text}`}>
+                      {selectedArea.accuracy}%
+                    </span>
+                    <span className="text-[11px] text-slate-500 text-center mt-1 truncate max-w-full">{selectedArea.name}</span>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={effectiveAreaId}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="flex flex-col items-center"
+              >
+                <p className="text-center text-xs text-slate-500 mt-3">
+                  {selectedArea.correct}/{selectedArea.solved} questões corretas
+                </p>
+
+                {/* Comparação com a média dos colegas, no mesmo formato do
+                    card de Taxa Geral de Acerto no topo da página. */}
+                {selectedAreaDelta !== null && (
+                  <div className="flex items-center gap-1.5 mt-2 text-xs">
+                    {selectedAreaDelta > 0 && <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />}
+                    {selectedAreaDelta < 0 && <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
+                    {selectedAreaDelta === 0 && <Minus className="w-3.5 h-3.5 text-slate-500" />}
+                    <span className={selectedAreaDelta > 0 ? 'text-emerald-400 font-semibold' : selectedAreaDelta < 0 ? 'text-red-400 font-semibold' : 'text-slate-400'}>
+                      {selectedAreaDelta > 0 ? '+' : ''}{selectedAreaDelta} pp
+                    </span>
+                    <span className="text-slate-500">vs. média dos colegas ({selectedArea.peerAverage}%)</span>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* Desempenho por Grupo (TEOT) — Anatomia, Ciência Básica, Ortopedia
+          Adulto, Ortopedia Infantil, Trauma Adulto, Trauma Infantil,
+          Oncologia Ortopédica. Card independente do de Área porque um Grupo
+          cruza várias Áreas (ex.: "Trauma Adulto" reúne temas de Mão, Joelho,
+          Ombro e Cotovelo etc.) — usado só para estatística de desempenho,
+          nunca como filtro de questões. */}
+      {groupPerformanceList.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-teal-400" />
+              Desempenho por Grupo (TEOT)
+            </h2>
+
+            <select
+              value={effectiveGroupId}
+              onChange={(e) => setSelectedGroupId(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+            >
+              {groupPerformanceList.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {selectedGroup && (
+            <div className="flex flex-col items-center">
               <div className="relative w-48 h-48 sm:w-56 sm:h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'acerto', value: selectedArea.accuracy },
-                        { name: 'resto', value: Math.max(0, 100 - selectedArea.accuracy) }
+                        { name: 'acerto', value: selectedGroup.accuracy },
+                        { name: 'resto', value: Math.max(0, 100 - selectedGroup.accuracy) }
                       ]}
                       dataKey="value"
                       innerRadius="72%"
@@ -399,7 +533,7 @@ export const PerformancePage: React.FC = () => {
                       animationDuration={500}
                       animationEasing="ease-out"
                     >
-                      <Cell fill={scoreColorHex(selectedArea.accuracy)} />
+                      <Cell fill={scoreColorHex(selectedGroup.accuracy)} />
                       <Cell fill="#1e293b" />
                     </Pie>
                   </PieChart>
@@ -407,17 +541,17 @@ export const PerformancePage: React.FC = () => {
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4 overflow-hidden">
                   <AnimatePresence mode="wait">
                     <motion.div
-                      key={effectiveAreaId}
+                      key={effectiveGroupId}
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.25, ease: 'easeOut' }}
                       className="flex flex-col items-center"
                     >
-                      <span className={`text-3xl sm:text-4xl font-black ${TIER_STYLES[getTier(selectedArea.accuracy)].text}`}>
-                        {selectedArea.accuracy}%
+                      <span className={`text-3xl sm:text-4xl font-black ${TIER_STYLES[getTier(selectedGroup.accuracy)].text}`}>
+                        {selectedGroup.accuracy}%
                       </span>
-                      <span className="text-[11px] text-slate-500 text-center mt-1 truncate max-w-full">{selectedArea.name}</span>
+                      <span className="text-[11px] text-slate-500 text-center mt-1 truncate max-w-full">{selectedGroup.name}</span>
                     </motion.div>
                   </AnimatePresence>
                 </div>
@@ -425,7 +559,7 @@ export const PerformancePage: React.FC = () => {
 
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={effectiveAreaId}
+                  key={effectiveGroupId}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
@@ -433,58 +567,26 @@ export const PerformancePage: React.FC = () => {
                   className="flex flex-col items-center"
                 >
                   <p className="text-center text-xs text-slate-500 mt-3">
-                    {selectedArea.correct}/{selectedArea.solved} questões corretas
+                    {selectedGroup.correct}/{selectedGroup.solved} questões corretas
                   </p>
 
-                  {/* Comparação com a média dos colegas, no mesmo formato do
-                      card de Taxa Geral de Acerto no topo da página. */}
-                  {selectedAreaDelta !== null && (
+                  {selectedGroupDelta !== null && (
                     <div className="flex items-center gap-1.5 mt-2 text-xs">
-                      {selectedAreaDelta > 0 && <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />}
-                      {selectedAreaDelta < 0 && <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
-                      {selectedAreaDelta === 0 && <Minus className="w-3.5 h-3.5 text-slate-500" />}
-                      <span className={selectedAreaDelta > 0 ? 'text-emerald-400 font-semibold' : selectedAreaDelta < 0 ? 'text-red-400 font-semibold' : 'text-slate-400'}>
-                        {selectedAreaDelta > 0 ? '+' : ''}{selectedAreaDelta} pp
+                      {selectedGroupDelta > 0 && <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />}
+                      {selectedGroupDelta < 0 && <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
+                      {selectedGroupDelta === 0 && <Minus className="w-3.5 h-3.5 text-slate-500" />}
+                      <span className={selectedGroupDelta > 0 ? 'text-emerald-400 font-semibold' : selectedGroupDelta < 0 ? 'text-red-400 font-semibold' : 'text-slate-400'}>
+                        {selectedGroupDelta > 0 ? '+' : ''}{selectedGroupDelta} pp
                       </span>
-                      <span className="text-slate-500">vs. média dos colegas ({selectedArea.peerAverage}%)</span>
+                      <span className="text-slate-500">vs. média dos colegas ({selectedGroup.peerAverage}%)</span>
                     </div>
                   )}
                 </motion.div>
               </AnimatePresence>
             </div>
-
-            {/* Desempenho por Subárea dentro da área filtrada */}
-            {selectedAreaSubAreas.length > 0 && (
-              <div className="flex-1 w-full pt-5 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-800/80 lg:pl-8">
-                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Desempenho por Subárea</h3>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={effectiveAreaId}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
-                    className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
-                  >
-                    {selectedAreaSubAreas.map(item => {
-                      const style = TIER_STYLES[getTier(item.accuracy)];
-                      return (
-                        <div key={`${item.areaId}::${item.subArea}`} className={`bg-slate-950 border ${style.ring} rounded-xl p-3.5 sm:p-4`}>
-                          <p className="text-[11px] sm:text-xs font-semibold text-slate-300 truncate mb-1">{item.subArea}</p>
-                          <span className={`text-xl sm:text-2xl font-black ${style.text}`}>{item.accuracy}%</span>
-                          <div className="mt-2 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                            <div className={`h-full rounded-full ${style.bar} transition-all duration-500`} style={{ width: `${Math.min(100, item.accuracy)}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Desempenho por Tema, dentro da mesma área filtrada acima */}
       {selectedArea && (
@@ -496,21 +598,21 @@ export const PerformancePage: React.FC = () => {
 
           {selectedAreaThemes.length === 0 ? (
             <p className="text-sm text-slate-500 italic mt-2">Nenhum tema respondido nesta área ainda.</p>
-          ) : selectedAreaThemesBySubArea ? (
+          ) : selectedAreaThemesByGroup ? (
             <div className="space-y-5 mt-3">
-              {Object.entries(selectedAreaThemesBySubArea).map(([subAreaName, subThemes]) => {
-                const subTotal = subThemes.reduce((s, t) => s + t.solved, 0);
-                const subCorrect = subThemes.reduce((s, t) => s + t.correct, 0);
-                const subAcc = subTotal > 0 ? Math.round((subCorrect / subTotal) * 100) : 0;
-                const subStyle = TIER_STYLES[getTier(subAcc)];
+              {Object.entries(selectedAreaThemesByGroup).map(([groupName, groupThemes]) => {
+                const groupTotal = groupThemes.reduce((s, t) => s + t.solved, 0);
+                const groupCorrect = groupThemes.reduce((s, t) => s + t.correct, 0);
+                const groupAcc = groupTotal > 0 ? Math.round((groupCorrect / groupTotal) * 100) : 0;
+                const groupStyle = TIER_STYLES[getTier(groupAcc)];
                 return (
-                  <div key={subAreaName}>
+                  <div key={groupName}>
                     <div className="flex items-center justify-between gap-3 mb-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{subAreaName}</h4>
-                      <span className={`text-xs font-bold ${subStyle.text}`}>{subAcc}%</span>
+                      <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{groupName}</h4>
+                      <span className={`text-xs font-bold ${groupStyle.text}`}>{groupAcc}%</span>
                     </div>
                     <div className="space-y-3">
-                      {subThemes.map(t => {
+                      {groupThemes.map(t => {
                         const style = TIER_STYLES[getTier(t.accuracy)];
                         return (
                           <div key={t.id}>
@@ -567,7 +669,7 @@ export const PerformancePage: React.FC = () => {
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-slate-300 truncate">
                       {t.name}
-                      {t.subArea && <span className="text-slate-500 font-normal"> · {t.subArea}</span>}
+                      {t.groupName && <span className="text-slate-500 font-normal"> · {t.groupName}</span>}
                     </span>
                     <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}%</span>
                   </div>

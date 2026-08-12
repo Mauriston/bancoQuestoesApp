@@ -2,7 +2,7 @@ import { doc, writeBatch, serverTimestamp, getDoc, collection, query, where, get
 import { db } from '../firebase/config';
 import { Area, Theme, Question, QuestionAnswer, QuestionBankJsonRaw } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
-import { getThemes } from './firebaseService';
+import { getThemes, getGroups } from './firebaseService';
 
 export interface ImportProgress {
   currentStep: string;
@@ -241,51 +241,53 @@ export async function importQuestionBankJson(
   return { created: createdCount, updated: updatedCount, errors };
 }
 
-export interface SubAreaMigrationProgress {
+export interface GroupMigrationProgress {
   phase: 'temas' | 'questoes';
   processedCount: number;
   totalCount: number;
 }
 
-export interface SubAreaMigrationResult {
+export interface GroupMigrationResult {
   matched: number;
   matchedQuestions: number;
   unmatched: string[]; // "Área > Tema" que não bateu com nenhum tema existente
-  skippedAreas: string[]; // áreas sem agrupamento por subárea (ex.: Anatomia)
+  unknownGroups: string[]; // nomes de grupo do JSON sem correspondência em `groups`
 }
 
-// Grava o campo `subArea` nos documentos de `themes` já existentes E em
-// TODAS as questões de cada tema (coleção `questions` — denormalizado ali
-// para não depender de cruzar com `themes` a cada leitura/filtro/análise),
-// a partir de uma árvore Área → Subárea → Temas (ver
-// reference/arvore_temas_subareas.json). Os IDs de tema são determinísticos
-// (`theme_<nome-normalizado>`, gerados em importQuestionBankJson) — por isso
-// dá para localizar o documento certo só pelo nome do tema, sem precisar
-// cruzar com o ID da área. Só atualiza temas/questões que já existem (nunca
-// cria nada novo); qualquer nome de tema sem correspondência exata volta na
-// lista `unmatched` para reconciliação manual.
-export async function applyThemeSubAreas(
+// Grava `groupId`/`groupName` (agrupamento TEOT — ver Group em types.ts) nos
+// documentos de `themes` já existentes E em TODAS as questões de cada tema
+// (coleção `questions`, mesma denormalização que existia para o extinto
+// campo `subArea`), a partir de uma árvore Área → Grupo → Temas (ver
+// reference/areas_grupos_temas.json). Diferente da antiga árvore de
+// subáreas, aqui o agrupamento é por Tema, não por Área inteira — uma mesma
+// Área pode ter temas em vários Grupos diferentes (ex.: a Área "Coluna" tem
+// temas em "Ciência Básica", "Ortopedia Adulto", "Ortopedia Infantil" e
+// "Trauma Adulto"). Os IDs de tema são determinísticos
+// (`theme_<nome-normalizado>`, gerados em importQuestionBankJson), então dá
+// para localizar o documento certo só pelo nome do tema. Só atualiza
+// temas/questões que já existem (nunca cria nada novo); qualquer nome de
+// tema sem correspondência exata volta na lista `unmatched`.
+export async function applyThemeGroups(
   treeJson: any[],
-  onProgress?: (progress: SubAreaMigrationProgress) => void
-): Promise<SubAreaMigrationResult> {
+  onProgress?: (progress: GroupMigrationProgress) => void
+): Promise<GroupMigrationResult> {
   if (!Array.isArray(treeJson)) {
-    throw new Error("Estrutura JSON inválida: esperado um array de áreas.");
+    throw new Error("Estrutura JSON inválida: esperado um array de entradas Área/Grupo/Temas.");
   }
 
-  const existingThemes = await getThemes();
+  const [existingThemes, groups] = await Promise.all([getThemes(), getGroups()]);
   const existingIds = new Set(existingThemes.map(t => t.id));
+  const groupIdByNormName = new Map(groups.map(g => [normalizeText(g.name), g.id]));
 
   const unmatched: string[] = [];
-  const skippedAreas: string[] = [];
-  // themeId -> nome da subárea, só para os temas efetivamente encontrados —
-  // usado na segunda fase para atualizar as questões de cada tema.
-  const matchedThemeSubAreas = new Map<string, string>();
+  const unknownGroupsSet = new Set<string>();
+  // themeId -> {groupId, groupName}, só para os temas efetivamente
+  // encontrados — usado na segunda fase para atualizar as questões do tema.
+  const matchedThemeGroups = new Map<string, { groupId: string; groupName: string }>();
   let processedCount = 0;
 
-  const totalCount = treeJson.reduce((sum: number, areaItem: any) => {
-    const subAreas = areaItem['subáreas'] || areaItem.subareas || areaItem.subAreas;
-    if (!Array.isArray(subAreas)) return sum;
-    return sum + subAreas.reduce((s: number, sub: any) => s + (Array.isArray(sub.temas) ? sub.temas.length : 0), 0);
+  const totalCount = treeJson.reduce((sum: number, entry: any) => {
+    return sum + (Array.isArray(entry.themeName) ? entry.themeName.length : 0);
   }, 0);
 
   let batch = writeBatch(db);
@@ -300,43 +302,40 @@ export async function applyThemeSubAreas(
   };
 
   // Fase 1: temas
-  for (const areaItem of treeJson) {
-    const areaName = (areaItem['Área'] || areaItem.Area || areaItem.area || '').trim();
-    const subAreas = areaItem['subáreas'] || areaItem.subareas || areaItem.subAreas;
+  for (const entry of treeJson) {
+    const areaName = (entry.areaName || '').trim();
+    const groupName = (entry.groupName || '').trim();
+    const groupId = groupIdByNormName.get(normalizeText(groupName));
+    const temas: string[] = Array.isArray(entry.themeName) ? entry.themeName : [];
 
-    if (!Array.isArray(subAreas)) {
-      // Áreas sem agrupamento por subárea (Anatomia, Ciência Básica) — não
-      // há nada para gravar, mas registramos para deixar claro que foram
-      // vistas e puladas de propósito, não esquecidas.
-      if (areaName) skippedAreas.push(areaName);
+    if (!groupId) {
+      if (groupName) unknownGroupsSet.add(groupName);
+      processedCount += temas.length;
+      onProgress?.({ phase: 'temas', processedCount, totalCount });
       continue;
     }
 
-    for (const sub of subAreas) {
-      const subAreaName = (sub['subárea'] || sub.subarea || sub.subArea || '').trim();
-      const temas: string[] = Array.isArray(sub.temas) ? sub.temas : [];
+    for (const temaNameRaw of temas) {
+      const temaName = (temaNameRaw || '').trim();
+      processedCount++;
 
-      for (const temaNameRaw of temas) {
-        const temaName = (temaNameRaw || '').trim();
-        processedCount++;
+      const temaNorm = normalizeText(temaName);
+      const themeId = `theme_${temaNorm.replace(/[^a-z0-9]/g, '_')}`;
 
-        const temaNorm = normalizeText(temaName);
-        const themeId = `theme_${temaNorm.replace(/[^a-z0-9]/g, '_')}`;
-
-        if (existingIds.has(themeId)) {
-          batch.set(doc(db, 'themes', themeId), {
-            subArea: subAreaName,
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-          opCount++;
-          matchedThemeSubAreas.set(themeId, subAreaName);
-          await commitIfNeeded();
-        } else {
-          unmatched.push(`${areaName} > ${temaName}`);
-        }
-
-        onProgress?.({ phase: 'temas', processedCount, totalCount });
+      if (existingIds.has(themeId)) {
+        batch.set(doc(db, 'themes', themeId), {
+          groupId,
+          groupName,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        opCount++;
+        matchedThemeGroups.set(themeId, { groupId, groupName });
+        await commitIfNeeded();
+      } else {
+        unmatched.push(`${areaName} > ${temaName}`);
       }
+
+      onProgress?.({ phase: 'temas', processedCount, totalCount });
     }
   }
 
@@ -352,17 +351,18 @@ export async function applyThemeSubAreas(
   // o total da barra de progresso sem precisar consultar tudo antes.
   let matchedQuestions = 0;
   let questionsProcessed = 0;
-  const themeIds = Array.from(matchedThemeSubAreas.keys());
+  const themeIds = Array.from(matchedThemeGroups.keys());
   const themeById = new Map(existingThemes.map(t => [t.id, t]));
   const estimatedTotalQuestions = themeIds.reduce((sum, id) => sum + (themeById.get(id)?.questionCount || 0), 0);
 
   for (const themeId of themeIds) {
-    const subAreaName = matchedThemeSubAreas.get(themeId)!;
+    const { groupId, groupName } = matchedThemeGroups.get(themeId)!;
 
     const questionsSnap = await getDocs(query(collection(db, 'questions'), where('themeId', '==', themeId)));
     for (const qDoc of questionsSnap.docs) {
       batch.set(doc(db, 'questions', qDoc.id), {
-        subArea: subAreaName,
+        groupId,
+        groupName,
         updatedAt: serverTimestamp()
       }, { merge: true });
       opCount++;
@@ -378,5 +378,5 @@ export async function applyThemeSubAreas(
     await batch.commit();
   }
 
-  return { matched: matchedThemeSubAreas.size, matchedQuestions, unmatched, skippedAreas };
+  return { matched: matchedThemeGroups.size, matchedQuestions, unmatched, unknownGroups: Array.from(unknownGroupsSet) };
 }
