@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, createNotification } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area } from '../../types';
@@ -17,8 +17,8 @@ interface SubmittedRow {
 
 const PIE_COLORS = ['#050f41', '#06b6d4', '#FAB932', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
 
-// Tabela "Temas da Prova" paginada, 5 temas por página.
-const THEMES_PER_PAGE = 5;
+// Tabelas "Áreas da Prova" e "Temas da Prova" paginadas, 5 linhas por página.
+const ROWS_PER_PAGE = 5;
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -45,9 +45,16 @@ export const ExamViewPage: React.FC = () => {
   // concluída, com o desempenho por área derivado das respostas individuais.
   const [submittedRows, setSubmittedRows] = useState<SubmittedRow[]>([]);
   const [examAreas, setExamAreas] = useState<Area[]>([]);
-  // Nome de cada tema, usado só para rotular a tabela/gráfico de distribuição
-  // de temas da prova (ver themeDistribution abaixo).
+  // Nome de cada tema/área, usado só para rotular as tabelas e o gráfico de
+  // distribuição da prova (ver areaDistribution/themeDistribution abaixo).
   const [themeNameById, setThemeNameById] = useState<Record<string, string>>({});
+  const [areaNameById, setAreaNameById] = useState<Record<string, string>>({});
+  // Filtros cruzados: clicar numa área na 1ª tabela filtra a 2ª tabela de
+  // temas, o gráfico e as questões abaixo; clicar num tema na 2ª tabela
+  // filtra o gráfico e as questões (sem afetar a 1ª tabela, que continua no
+  // topo da hierarquia Área → Tema).
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
   // mexer nas questões de uma prova inativa e sem tentativas registradas.
   // Derivado a cada render (em vez de um estado próprio) para não ficar
@@ -57,32 +64,89 @@ export const ExamViewPage: React.FC = () => {
   // possível editar provas inativas." ao clicar.
   const canEdit = !!exam && !isExamActive(exam) && !hasAttempts;
 
-  // Quantidade de questões por tema nesta prova, para a tabela e o gráfico
-  // de pizza exibidos acima da lista de questões — ordenado do tema mais
-  // presente para o menos presente.
-  const themeDistribution = useMemo(() => {
+  // Quantidade de questões por área nesta prova — 1ª tabela (raiz do filtro
+  // cruzado, não é afetada pela seleção de área/tema).
+  const areaDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     questions.forEach(q => {
-      counts[q.themeId] = (counts[q.themeId] || 0) + 1;
+      counts[q.areaId] = (counts[q.areaId] || 0) + 1;
     });
     return Object.entries(counts)
-      .map(([themeId, count]) => ({ themeId, name: themeNameById[themeId] || 'Tema desconhecido', count }))
+      .map(([areaId, count]) => ({ areaId, name: areaNameById[areaId] || 'Área desconhecida', count }))
+      .sort((a, b) => b.count - a.count);
+  }, [questions, areaNameById]);
+
+  // Quantidade de questões por tema nesta prova (guardando a área de cada
+  // tema, para poder filtrar pela área selecionada na 1ª tabela).
+  const themeDistributionAll = useMemo(() => {
+    const counts: Record<string, { areaId: string; count: number }> = {};
+    questions.forEach(q => {
+      if (!counts[q.themeId]) counts[q.themeId] = { areaId: q.areaId, count: 0 };
+      counts[q.themeId].count += 1;
+    });
+    return Object.entries(counts)
+      .map(([themeId, v]) => ({ themeId, areaId: v.areaId, name: themeNameById[themeId] || 'Tema desconhecido', count: v.count }))
       .sort((a, b) => b.count - a.count);
   }, [questions, themeNameById]);
 
+  // 2ª tabela e gráfico: temas restritos à área selecionada (se houver).
+  const themeDistribution = useMemo(() => (
+    selectedAreaId ? themeDistributionAll.filter(t => t.areaId === selectedAreaId) : themeDistributionAll
+  ), [themeDistributionAll, selectedAreaId]);
+
+  // Gráfico: além do filtro de área acima, restrito ao tema selecionado (se
+  // houver) — clicar num tema na 2ª tabela "zooma" o gráfico nele.
+  const pieData = useMemo(() => (
+    selectedThemeId ? themeDistribution.filter(t => t.themeId === selectedThemeId) : themeDistribution
+  ), [themeDistribution, selectedThemeId]);
+
+  // Questões exibidas abaixo, restritas pelos mesmos filtros cruzados.
+  const filteredQuestions = useMemo(() => questions.filter(q => (
+    (!selectedAreaId || q.areaId === selectedAreaId) &&
+    (!selectedThemeId || q.themeId === selectedThemeId)
+  )), [questions, selectedAreaId, selectedThemeId]);
+
+  const handleAreaClick = (areaId: string) => {
+    setSelectedAreaId(prev => (prev === areaId ? null : areaId));
+    setSelectedThemeId(null);
+  };
+
+  const handleThemeClick = (themeId: string) => {
+    setSelectedThemeId(prev => (prev === themeId ? null : themeId));
+  };
+
+  const clearFilters = () => {
+    setSelectedAreaId(null);
+    setSelectedThemeId(null);
+  };
+
+  const [areaTablePage, setAreaTablePage] = useState(1);
+  const areaTableTotalPages = Math.max(1, Math.ceil(areaDistribution.length / ROWS_PER_PAGE));
+  const paginatedAreas = useMemo(() => {
+    const start = (areaTablePage - 1) * ROWS_PER_PAGE;
+    return areaDistribution.slice(start, start + ROWS_PER_PAGE);
+  }, [areaDistribution, areaTablePage]);
+
   const [themeTablePage, setThemeTablePage] = useState(1);
-  const themeTableTotalPages = Math.max(1, Math.ceil(themeDistribution.length / THEMES_PER_PAGE));
+  const themeTableTotalPages = Math.max(1, Math.ceil(themeDistribution.length / ROWS_PER_PAGE));
   const paginatedThemes = useMemo(() => {
-    const start = (themeTablePage - 1) * THEMES_PER_PAGE;
-    return themeDistribution.slice(start, start + THEMES_PER_PAGE);
+    const start = (themeTablePage - 1) * ROWS_PER_PAGE;
+    return themeDistribution.slice(start, start + ROWS_PER_PAGE);
   }, [themeDistribution, themeTablePage]);
 
   // Volta para a primeira página sempre que a prova carregada mudar (troca
   // de examId) ou a distribuição encolher a ponto da página atual não
-  // existir mais.
+  // existir mais; a tabela de temas também volta ao trocar o filtro de área.
   useEffect(() => {
+    setAreaTablePage(1);
     setThemeTablePage(1);
   }, [examId]);
+  useEffect(() => {
+    setThemeTablePage(1);
+  }, [selectedAreaId]);
+  useEffect(() => {
+    if (areaTablePage > areaTableTotalPages) setAreaTablePage(areaTableTotalPages);
+  }, [areaTablePage, areaTableTotalPages]);
   useEffect(() => {
     if (themeTablePage > themeTableTotalPages) setThemeTablePage(themeTableTotalPages);
   }, [themeTablePage, themeTableTotalPages]);
@@ -113,6 +177,10 @@ export const ExamViewPage: React.FC = () => {
         const themeNames: Record<string, string> = {};
         allThemes.forEach(t => { themeNames[t.id] = t.name; });
         setThemeNameById(themeNames);
+
+        const areaNames: Record<string, string> = {};
+        allAreas.forEach(a => { areaNames[a.id] = a.name; });
+        setAreaNameById(areaNames);
 
         const keysMap: Record<string, QuestionAnswer> = {};
         await Promise.all(examQs.map(async (q) => {
@@ -282,93 +350,189 @@ export const ExamViewPage: React.FC = () => {
         </button>
       </div>
 
-      {themeDistribution.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
-              <Layers className="w-4 h-4 text-cyan-400" />
-              Temas da Prova
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
-                  <tr>
-                    <th className="p-3">Tema</th>
-                    <th className="p-3">Questões</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/80">
-                  {paginatedThemes.map((t) => {
-                    const idx = themeDistribution.indexOf(t);
-                    return (
-                      <tr key={t.themeId}>
-                        <td className="p-3 font-semibold text-[#050f41] flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                          <span className="truncate">{t.name}</span>
-                        </td>
-                        <td className="p-3 font-bold text-slate-300">{t.count}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {themeTableTotalPages > 1 && (
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setThemeTablePage(p => Math.max(1, p - 1))}
-                  disabled={themeTablePage === 1}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  Anterior
-                </button>
-                <span className="text-[11px] text-slate-400">
-                  Página <strong className="text-slate-200">{themeTablePage}</strong> de {themeTableTotalPages}
+      {areaDistribution.length > 0 && (
+        <div className="space-y-3">
+          {(selectedAreaId || selectedThemeId) && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span>Filtrando por:</span>
+              {selectedAreaId && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-semibold">
+                  {areaNameById[selectedAreaId] || 'Área'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setThemeTablePage(p => Math.min(themeTableTotalPages, p + 1))}
-                  disabled={themeTablePage === themeTableTotalPages}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Próxima
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-cyan-400" />
-              Distribuição por Tema
-            </h2>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={themeDistribution}
-                    dataKey="count"
-                    nameKey="name"
-                    innerRadius="45%"
-                    outerRadius="90%"
-                    paddingAngle={2}
-                  >
-                    {themeDistribution.map((t, i) => (
-                      <Cell key={t.themeId} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
-                    formatter={(value: number, name: string) => [`${value} questões`, name]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              )}
+              {selectedThemeId && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-semibold">
+                  {themeNameById[selectedThemeId] || 'Tema'}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1 text-slate-400 hover:text-[#050f41] font-semibold"
+              >
+                <X className="w-3 h-3" />
+                Limpar filtros
+              </button>
             </div>
-          </section>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Áreas da Prova — raiz do filtro cruzado */}
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-cyan-400" />
+                Áreas da Prova
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="p-3">Área</th>
+                      <th className="p-3">Questões</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {paginatedAreas.map((a) => {
+                      const idx = areaDistribution.indexOf(a);
+                      const isSelected = selectedAreaId === a.areaId;
+                      return (
+                        <tr
+                          key={a.areaId}
+                          onClick={() => handleAreaClick(a.areaId)}
+                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
+                        >
+                          <td className="p-3 font-semibold text-[#050f41] flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                            <span className="truncate">{a.name}</span>
+                          </td>
+                          <td className="p-3 font-bold text-slate-300">{a.count}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {areaTableTotalPages > 1 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAreaTablePage(p => Math.max(1, p - 1))}
+                    disabled={areaTablePage === 1}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    Anterior
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Página <strong className="text-slate-200">{areaTablePage}</strong> de {areaTableTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAreaTablePage(p => Math.min(areaTableTotalPages, p + 1))}
+                    disabled={areaTablePage === areaTableTotalPages}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Próxima
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Temas da Prova — filtrado pela área selecionada, se houver */}
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+                <Layers className="w-4 h-4 text-cyan-400" />
+                Temas da Prova
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="p-3">Tema</th>
+                      <th className="p-3">Questões</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {paginatedThemes.map((t) => {
+                      const idx = themeDistribution.indexOf(t);
+                      const isSelected = selectedThemeId === t.themeId;
+                      return (
+                        <tr
+                          key={t.themeId}
+                          onClick={() => handleThemeClick(t.themeId)}
+                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
+                        >
+                          <td className="p-3 font-semibold text-[#050f41] flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                            <span className="truncate">{t.name}</span>
+                          </td>
+                          <td className="p-3 font-bold text-slate-300">{t.count}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {themeTableTotalPages > 1 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setThemeTablePage(p => Math.max(1, p - 1))}
+                    disabled={themeTablePage === 1}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    Anterior
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Página <strong className="text-slate-200">{themeTablePage}</strong> de {themeTableTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setThemeTablePage(p => Math.min(themeTableTotalPages, p + 1))}
+                    disabled={themeTablePage === themeTableTotalPages}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Próxima
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Gráfico — reflete os filtros de área e tema selecionados */}
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-cyan-400" />
+                Distribuição por Tema
+              </h2>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="count"
+                      nameKey="name"
+                      innerRadius="45%"
+                      outerRadius="90%"
+                      paddingAngle={2}
+                    >
+                      {pieData.map((t) => (
+                        <Cell key={t.themeId} fill={PIE_COLORS[themeDistributionAll.indexOf(t) % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                      formatter={(value: number, name: string) => [`${value} questões`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </div>
         </div>
       )}
 
@@ -413,7 +577,10 @@ export const ExamViewPage: React.FC = () => {
       )}
 
       <section className="space-y-6">
-        {questions.map((q, idx) => {
+        {(selectedAreaId || selectedThemeId) && filteredQuestions.length === 0 && (
+          <p className="text-center text-xs text-slate-500 italic py-4">Nenhuma questão para este filtro.</p>
+        )}
+        {filteredQuestions.map((q, idx) => {
           const key = answerKeys[q.originalQuestionId];
           const qStats = stats[q.id];
           const accuracyPercent = qStats && qStats.totalAnswered > 0
