@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Plus, X, Video, Presentation, Eye, CheckCircle2, Users as UsersIcon, Pencil, Trash2 } from 'lucide-react';
+import { Plus, X, Video, Presentation, Eye, CheckCircle2, Users as UsersIcon, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAreas, getThemes, getVideotecaItems, createVideotecaItem, updateVideotecaItem, deleteVideotecaItem,
@@ -103,6 +103,13 @@ export const ExtrasPage: React.FC = () => {
     availableThemeIds.has(t.id) && (areaFilterIds.length === 0 || areaFilterIds.includes(t.areaId))
   );
 
+  // Materiais ainda não vistos pelo usuário, por tab — badge nas abas
+  // (só faz sentido no acesso User; o admin não tem "visto/não visto").
+  const unseenCountByTab: Record<MaterialTab, number> = useMemo(() => ({
+    videoteca: videos.filter(v => !viewedIds.has(v.id)).length,
+    aulas: aulas.filter(a => !viewedIds.has(a.id)).length
+  }), [videos, aulas, viewedIds]);
+
   // Nº de visualizações por material (contagem bruta, sem deduplicar) —
   // exibido no card para o admin.
   const viewCountByMaterial = useMemo(() => {
@@ -164,27 +171,31 @@ export const ExtrasPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <div>
-        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-cyan-400" />
-          Extras
-        </h1>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1 w-fit">
-        {(['videoteca', 'aulas'] as const).map(t => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => { setTab(t); setAreaFilterIds([]); setThemeFilterIds([]); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
-              tab === t ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {t === 'videoteca' ? 'Videoteca' : 'Aulas'}
-          </button>
-        ))}
+      {/* Tabs — topo da página, cada uma ocupando 50% da largura */}
+      <div className="flex items-stretch gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1">
+        {(['videoteca', 'aulas'] as const).map(t => {
+          const unseenCount = unseenCountByTab[t];
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => { setTab(t); setAreaFilterIds([]); setThemeFilterIds([]); }}
+              className={`w-1/2 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-colors ${
+                tab === t ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>{t === 'videoteca' ? 'Videoteca' : 'Aulas'}</span>
+              {!isAdmin && unseenCount > 0 && (
+                <span className={`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-bold ${
+                  tab === t ? 'bg-slate-950/20 text-slate-950' : 'bg-cyan-500/20 text-cyan-300'
+                }`}>
+                  {unseenCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Filtros + botão de inserir (admin) */}
