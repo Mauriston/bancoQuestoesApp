@@ -222,8 +222,13 @@ export const QuestionsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
 
-      {/* Header + Filter Bar fixos no topo durante o scroll */}
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 bg-slate-950/95 backdrop-blur space-y-4">
+      {/* Header + Filter Bar fixos no topo durante o scroll — z-20 (não
+          z-30) de propósito: a sidebar do AdminLayout usa z-30 no desktop
+          para se sobrepor ao conteúdo quando expande em overlay ao passar
+          o mouse; com z-30 aqui também, o empate de z-index (desempatado
+          pela ordem no DOM) fazia esta barra ficar por cima da sidebar
+          expandida em vez do contrário. */}
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 bg-slate-950/95 backdrop-blur space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
