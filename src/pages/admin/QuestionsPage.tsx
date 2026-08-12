@@ -254,10 +254,15 @@ export const QuestionsPage: React.FC = () => {
           desktop para se sobrepor ao conteúdo quando expande em overlay ao
           passar o mouse; com z-30 aqui também, o empate de z-index
           (desempatado pela ordem no DOM) fazia esta barra ficar por cima da
-          sidebar expandida em vez do contrário. */}
+          sidebar expandida em vez do contrário.
+          Sem overflow-y-auto/max-h aqui: esse card não tem conteúdo alto o
+          bastante para precisar rolar, e um container com overflow corta
+          (clipa) os menus suspensos absolutamente posicionados dentro dele
+          assim que ultrapassam a borda — era isso que fazia os dropdowns de
+          Tema/Fonte parecerem "sumir atrás" do fundo da página. */}
       <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-6">
         <div
-          className={`lg:w-72 xl:w-80 shrink-0 sticky top-16 lg:top-20 z-20 transition-transform duration-300 ease-in-out lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${
+          className={`lg:w-72 xl:w-80 shrink-0 sticky top-16 lg:top-20 z-20 transition-transform duration-300 ease-in-out lg:self-start ${
             filterBarHidden ? '-translate-y-[calc(100%+1rem)]' : 'translate-y-0'
           } lg:translate-y-0`}
         >
