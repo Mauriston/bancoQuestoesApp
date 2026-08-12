@@ -377,7 +377,6 @@ export const CreateExamPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-[#050f41]">Etapa 2: Selecionar Questões do Banco</h2>
-              <p className="text-slate-400">Questões selecionadas: <strong className="text-cyan-400">{selectedQuestions.length}</strong></p>
             </div>
             <div className="flex items-center gap-3">
               <Switch
@@ -502,9 +501,15 @@ export const CreateExamPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="text-center pt-1">
-                    <p className="text-4xl font-extrabold text-cyan-400 leading-none">{filteredQuestions.length}</p>
-                    <p className="text-[11px] text-slate-400 mt-1.5">questõe{filteredQuestions.length === 1 ? '' : 's'} filtrada{filteredQuestions.length === 1 ? '' : 's'}</p>
+                  <div className="grid grid-cols-2 pt-1">
+                    <div className="text-center">
+                      <p className="text-4xl font-extrabold text-cyan-400 leading-none">{filteredQuestions.length}</p>
+                      <p className="text-[11px] text-slate-400 mt-1.5">questõe{filteredQuestions.length === 1 ? '' : 's'} filtrada{filteredQuestions.length === 1 ? '' : 's'}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-4xl font-extrabold text-emerald-400 leading-none">{selectedQuestions.length}</p>
+                      <p className="text-[11px] text-slate-400 mt-1.5">questõe{selectedQuestions.length === 1 ? '' : 's'} selecionada{selectedQuestions.length === 1 ? '' : 's'}</p>
+                    </div>
                   </div>
                   {(searchQuery || areaFilter || themeFilterIds.length > 0 || selectedSourceExams.length > 0 || showOnlySelected) && (
                     <button
