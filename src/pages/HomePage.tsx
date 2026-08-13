@@ -85,15 +85,20 @@ export const HomePage: React.FC = () => {
         <motion.div
           layout
           transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
-          className={`flex flex-col items-center ${stage === 'splash' ? 'justify-center flex-1' : 'pt-16 md:pt-20'}`}
+          className={`flex flex-col items-center ${stage === 'splash' ? 'flex-1' : 'pt-16 md:pt-20'}`}
         >
+          {/* Espaçador do topo (só na splash): empurra o bloco de marca para
+              cerca de 2/3 da altura da tela, deixando "clique para
+              continuar" (flex-1 abaixo) cair no terço inferior. */}
+          {stage === 'splash' && <div className="flex-[2]" aria-hidden="true" />}
+
           {/* Brand Header */}
           <motion.div
             layout="position"
             transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
             className="text-center mb-8"
           >
-            <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-16 h-16 rounded-2xl shadow-xl shadow-black/20 mb-4" />
+            <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-16 h-16 rounded-2xl shadow-xl shadow-black/20 mb-4 mx-auto" />
             <h1 className="text-2xl font-bold text-white tracking-tight">TEOT HMA 2027</h1>
             <p className="text-xs text-white/60 mt-1">O ano da vitória 🏆</p>
           </motion.div>
@@ -107,7 +112,7 @@ export const HomePage: React.FC = () => {
                 transition={{
                   opacity: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
                 }}
-                className="text-[11px] text-white/40 tracking-wide"
+                className="flex-1 flex items-center justify-center w-full text-[11px] text-white/40 tracking-wide"
               >
                 clique para continuar
               </motion.p>
