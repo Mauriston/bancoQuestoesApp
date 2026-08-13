@@ -103,38 +103,40 @@ export const HomePage: React.FC = () => {
         <motion.div
           layout
           transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
-          className={`flex flex-col items-center ${stage === 'splash' ? 'flex-1' : 'pt-16 md:pt-20'}`}
+          className={`relative w-full flex flex-col items-center ${stage === 'splash' ? 'flex-1' : 'pt-16 md:pt-20'}`}
         >
-          {/* Espaçador do topo (só na splash): empurra o bloco de marca para
-              cerca de 2/3 da altura da tela, deixando "clique para
-              continuar" (flex-1 abaixo) cair no terço inferior. */}
-          {stage === 'splash' && <div className="flex-[2]" aria-hidden="true" />}
-
-          {/* Brand Header — ícone/título/subtítulo entram em stagger com
-              bounce (ver brandEntrance); o ícone ainda flutua continuamente
-              depois de assentar, num motion.img separado para não conflitar
-              com a própria animação de entrada. */}
-          <motion.div
-            layout="position"
-            transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
-            className="text-center mb-8"
-          >
-            <motion.div {...brandEntrance(0)}>
-              <motion.img
-                src="/icons/icon-192.png"
-                alt="TEOT HMA 2027"
-                className="w-[72px] h-[72px] rounded-2xl shadow-xl shadow-black/40 mb-4 mx-auto block object-contain"
-                animate={{ y: [0, -16, 0], rotate: [0, -4, 0], scale: [1, 1.05, 1] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-              />
+          {/* Na splash, o bloco de marca fica centralizado de fato no meio
+              da tela (wrapper absoluto, sem depender de flex-grow dividido
+              com o "clique para continuar" abaixo — assim um não empurra o
+              outro). No gate, o wrapper vira "contents" (não afeta layout) e
+              o bloco volta ao fluxo normal, ancorado no topo. */}
+          <div className={stage === 'splash' ? 'absolute inset-0 flex items-center justify-center' : 'contents'}>
+            {/* Brand Header — ícone/título/subtítulo entram em stagger com
+                bounce (ver brandEntrance); o ícone ainda flutua continuamente
+                depois de assentar, num motion.img separado para não conflitar
+                com a própria animação de entrada. */}
+            <motion.div
+              layout="position"
+              transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
+              className="text-center mb-8"
+            >
+              <motion.div {...brandEntrance(0)}>
+                <motion.img
+                  src="/icons/icon-192.png"
+                  alt="TEOT HMA 2027"
+                  className="w-[72px] h-[72px] rounded-2xl shadow-xl shadow-black/40 mb-4 mx-auto block object-contain"
+                  animate={{ y: [0, -16, 0], rotate: [0, -4, 0], scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              </motion.div>
+              <motion.h1 {...brandEntrance(0.12)} className="text-2xl font-extrabold text-white tracking-tight">
+                TEOT HMA 2027
+              </motion.h1>
+              <motion.p {...brandEntrance(0.22)} className="text-xs text-white/60 mt-1">
+                O ano da vitória 🏆
+              </motion.p>
             </motion.div>
-            <motion.h1 {...brandEntrance(0.12)} className="text-2xl font-extrabold text-white tracking-tight">
-              TEOT HMA 2027
-            </motion.h1>
-            <motion.p {...brandEntrance(0.22)} className="text-xs text-white/60 mt-1">
-              O ano da vitória 🏆
-            </motion.p>
-          </motion.div>
+          </div>
 
           <AnimatePresence>
             {stage === 'splash' && (
@@ -145,7 +147,7 @@ export const HomePage: React.FC = () => {
                 transition={{
                   opacity: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
                 }}
-                className="flex-1 flex items-center justify-center w-full text-[11px] text-white/40 tracking-wide"
+                className="absolute inset-x-0 bottom-[16%] text-center text-[11px] text-white/40 tracking-wide"
               >
                 clique para continuar
               </motion.p>
