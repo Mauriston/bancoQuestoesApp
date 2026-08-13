@@ -36,7 +36,7 @@ export const HomePage: React.FC = () => {
               to={item.path}
               className="bg-teal-500 hover:bg-teal-600 rounded-2xl p-5 transition-colors flex flex-col items-center gap-3 text-center"
             >
-              <Icon className="w-8 h-8 text-cyan-500" strokeWidth={1.75} />
+              <Icon className="w-8 h-8 text-white" strokeWidth={1.75} />
               <span className="text-sm font-bold text-white">{item.label}</span>
             </Link>
           );
