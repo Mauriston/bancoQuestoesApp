@@ -315,6 +315,14 @@ export interface Sabatina {
   updatedAt?: any;
 }
 
+export interface SabatinaViewLog {
+  id: string;
+  sabatinaId: string;
+  userId: string;
+  userName?: string;
+  viewedAt?: any;
+}
+
 // --- NOTIFICAÇÕES ---
 
 export type NotificationType =

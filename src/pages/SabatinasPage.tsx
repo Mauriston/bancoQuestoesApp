@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MessageSquare, Plus, X, Presentation, Download, Pencil, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, X, Presentation, Download, Pencil, Trash2, Users as UsersIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAreas, getThemes, subscribeSabatinas, createSabatina, updateSabatina, deleteSabatina, createNotification } from '../services/firebaseService';
-import { Area, Theme, Sabatina } from '../types';
+import { getAreas, getThemes, subscribeSabatinas, createSabatina, updateSabatina, deleteSabatina, createNotification, logSabatinaView, subscribeAllSabatinaViewLogs } from '../services/firebaseService';
+import { Area, Theme, Sabatina, SabatinaViewLog } from '../types';
 import { toPresentEmbedUrl, googleSlidesPdfExportUrl } from '../utils/mediaUrls';
 import { shareOrDownloadFile, toSafeFileName } from '../utils/fileShare';
 import { CheckboxMultiSelect } from '../components/CheckboxMultiSelect';
@@ -26,6 +26,9 @@ export const SabatinasPage: React.FC = () => {
   const [editingItem, setEditingItem] = useState<Sabatina | null>(null);
   const [viewingItem, setViewingItem] = useState<Sabatina | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  // Todos os registros de visualização, carregados só para o admin —
+  // alimenta o contador de visualizações exibido em cada card.
+  const [allViewLogs, setAllViewLogs] = useState<SabatinaViewLog[]>([]);
 
   // Área/Tema são cadastro de referência (mudam raramente) — busca única.
   useEffect(() => {
@@ -44,6 +47,35 @@ export const SabatinasPage: React.FC = () => {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    return subscribeAllSabatinaViewLogs(setAllViewLogs);
+  }, [isAdmin]);
+
+  // Nº de visualizações por sabatina (contagem bruta, sem deduplicar) —
+  // exibido no card só para o admin.
+  const viewCountBySabatina = useMemo(() => {
+    const map: Record<string, number> = {};
+    allViewLogs.forEach(log => { map[log.sabatinaId] = (map[log.sabatinaId] || 0) + 1; });
+    return map;
+  }, [allViewLogs]);
+
+  // Nomes únicos de quem visualizou cada sabatina, para o tooltip do
+  // contador de visualizações — sem repetir quem já apareceu.
+  const viewerNamesBySabatina = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    const seenBySabatina: Record<string, Set<string>> = {};
+    allViewLogs.forEach(log => {
+      if (!seenBySabatina[log.sabatinaId]) { seenBySabatina[log.sabatinaId] = new Set(); map[log.sabatinaId] = []; }
+      const key = log.userName || log.userId;
+      if (!seenBySabatina[log.sabatinaId].has(key)) {
+        seenBySabatina[log.sabatinaId].add(key);
+        map[log.sabatinaId].push(key);
+      }
+    });
+    return map;
+  }, [allViewLogs]);
 
   // Agrupadas por data (ordem cronológica crescente) — cada data vira o
   // título de uma seção da página.
@@ -66,6 +98,16 @@ export const SabatinasPage: React.FC = () => {
   const handleOpenEdit = (item: Sabatina) => {
     setEditingItem(item);
     setModalOpen(true);
+  };
+
+  const handleOpenItem = (item: Sabatina) => {
+    setViewingItem(item);
+    // allViewLogs é uma assinatura ao vivo (só para o admin) — o novo
+    // registro reflete sozinho assim que o Firestore confirma a escrita,
+    // sem precisar atualizar o estado local otimisticamente aqui.
+    if (currentUser) {
+      logSabatinaView(item.id, currentUser.id, currentUser.name).catch(err => console.error('Erro ao registrar visualização da sabatina:', err));
+    }
   };
 
   const handleDelete = async (item: Sabatina) => {
@@ -154,19 +196,8 @@ export const SabatinasPage: React.FC = () => {
                         </>
                       )}
                     </div>
-                    <button onClick={() => setViewingItem(item)} className="text-left w-full">
-                      <div>
-                        <p className="px-3 pt-3 text-sm font-bold text-slate-100 line-clamp-2 pr-24">{item.title}</p>
-                        {themeNames.length > 0 && (
-                          <div className="px-3 mt-1.5 flex flex-wrap gap-1">
-                            {themeNames.map(name => (
-                              <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-600 border border-teal-500/30">
-                                {name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                    <button onClick={() => handleOpenItem(item)} className="text-left w-full">
+                      <p className="px-3 pt-3 text-sm font-bold text-slate-100 line-clamp-2 pr-24">{item.title}</p>
                       <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
                         {embedUrl ? (
                           // pointer-events-none faz o clique atravessar o iframe e
@@ -178,6 +209,31 @@ export const SabatinasPage: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      {themeNames.length > 0 && (
+                        <div className={`px-3 mt-2 flex flex-wrap gap-1 ${isAdmin ? '' : 'pb-3'}`}>
+                          {themeNames.map(name => (
+                            <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-600 border border-teal-500/30">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {isAdmin && (
+                        <div className="relative px-3 py-2 group/viewcount w-fit">
+                          <p
+                            title={(viewerNamesBySabatina[item.id] || []).length > 0 ? viewerNamesBySabatina[item.id].join(', ') : undefined}
+                            className="text-[10px] text-slate-500 flex items-center gap-1 cursor-default"
+                          >
+                            <UsersIcon className="w-3 h-3" />
+                            {viewCountBySabatina[item.id] || 0} visualizaç{(viewCountBySabatina[item.id] || 0) === 1 ? 'ão' : 'ões'}
+                          </p>
+                          {(viewerNamesBySabatina[item.id] || []).length > 0 && (
+                            <div className="absolute left-3 bottom-full mb-1 z-20 hidden group-hover/viewcount:block w-max max-w-[14rem] bg-slate-950 border border-slate-700 rounded-lg shadow-2xl px-2.5 py-1.5">
+                              <p className="text-[10px] text-slate-300 leading-relaxed">{viewerNamesBySabatina[item.id].join(', ')}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </button>
                   </div>
                 );
