@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText, History, BarChart3, LogOut, Trophy, Menu, X, CalendarDays, Sparkles, GraduationCap, Home, MessageSquare
+  FileText, History, BarChart3, LogOut, Menu, X, CalendarDays, Sparkles, GraduationCap, Home, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -80,9 +80,11 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               </button>
 
               <Link to="/app/home" className="hidden md:flex items-center gap-2.5 group min-w-0 shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
-                  <Trophy className="w-5 h-5" />
-                </div>
+                <img
+                  src="/icons/icon-192.png"
+                  alt="TEOT HMA 2027"
+                  className="w-10 h-10 rounded-xl shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0"
+                />
               </Link>
 
               <h1 className="flex-1 md:flex-initial text-center md:text-left text-2xl sm:text-xl font-extrabold text-white tracking-tight leading-tight truncate px-1">
@@ -178,9 +180,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       >
         {/* Ícone do app — o mesmo usado na tela de login. */}
         <div className="flex flex-col items-center py-2 mb-1">
-          <div className="w-12 h-12 rounded-2xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20">
-            <Trophy className="w-6 h-6" />
-          </div>
+          <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-12 h-12 rounded-2xl shadow-lg shadow-black/20" />
           <span className="mt-2 text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap">
             TEOT HMA 2027
           </span>
@@ -237,9 +237,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           a navegação continua na gaveta/topbar mobile de sempre. */}
       <aside className="group/sidebar hidden lg:flex fixed inset-y-0 top-16 bottom-0 left-0 z-30 w-16 hover:w-64 bg-[#05413b] border-r border-white/10 py-4 px-3 transition-[width] duration-200 flex-col shadow-2xl overflow-hidden">
         <div className="flex flex-col items-center pb-4 mb-4 border-b border-white/10 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20 shrink-0">
-            <Trophy className="w-5 h-5" />
-          </div>
+          <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-10 h-10 rounded-xl shadow-lg shadow-black/20 shrink-0" />
           <span className="mt-2 hidden text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap group-hover/sidebar:block">
             TEOT HMA 2027
           </span>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Trophy, Lock, AlertCircle, ArrowRight, ShieldCheck, Mail, ArrowLeft
+  Lock, AlertCircle, ArrowRight, ShieldCheck, Mail, ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserInactiveError, UserNotRegisteredError } from '../services/authService';
@@ -93,9 +93,7 @@ export const HomePage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
             className="text-center mb-8"
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FFCB70] text-[#05413b] shadow-xl shadow-black/20 mb-4">
-              <Trophy className="w-8 h-8" />
-            </div>
+            <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-16 h-16 rounded-2xl shadow-xl shadow-black/20 mb-4" />
             <h1 className="text-2xl font-bold text-white tracking-tight">TEOT HMA 2027</h1>
             <p className="text-xs text-white/60 mt-1">O ano da vitória 🏆</p>
           </motion.div>
