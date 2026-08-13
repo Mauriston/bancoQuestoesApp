@@ -31,7 +31,7 @@ export const AdminLoginPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans">
       <div className="max-w-md w-full">
         
-        <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] mb-6 transition-colors">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#05413b] mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Seleção de Usuários</span>
         </Link>
@@ -42,7 +42,7 @@ export const AdminLoginPage: React.FC = () => {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-[#050f41]">Área restrita</h1>
+              <h1 className="text-base font-bold text-[#05413b]">Área restrita</h1>
             </div>
           </div>
 
@@ -64,7 +64,7 @@ export const AdminLoginPage: React.FC = () => {
                   placeholder="mauriston@oncoortopedia.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500"
                 />
               </div>
             </div>
@@ -79,7 +79,7 @@ export const AdminLoginPage: React.FC = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500"
                 />
               </div>
             </div>

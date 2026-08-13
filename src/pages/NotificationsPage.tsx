@@ -56,7 +56,7 @@ export const NotificationsPage: React.FC = () => {
           <Bell className="w-4.5 h-4.5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-[#050f41] leading-tight">Notificações</h1>
+          <h1 className="text-xl font-bold text-[#05413b] leading-tight">Notificações</h1>
           <p className="text-xs text-slate-400">Eventos recentes relevantes para você</p>
         </div>
       </div>

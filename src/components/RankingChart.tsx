@@ -36,7 +36,7 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
           type="category"
           dataKey="name"
           width={140}
-          tick={{ fill: '#050f41', fontSize: 14, fontWeight: 700 }}
+          tick={{ fill: '#05413b', fontSize: 14, fontWeight: 700 }}
           interval={0}
         />
         <Tooltip
@@ -61,7 +61,7 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
             dataKey="score"
             position="right"
             formatter={(value: any) => `${value}%`}
-            style={{ fill: '#050f41', fontSize: 13, fontWeight: 700 }}
+            style={{ fill: '#05413b', fontSize: 13, fontWeight: 700 }}
           />
         </Bar>
       </BarChart>

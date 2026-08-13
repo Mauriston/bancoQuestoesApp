@@ -9,7 +9,7 @@ import { getQuestions, getAreas, getThemes } from '../../services/firebaseServic
 import { Question, Area, Theme } from '../../types';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 
-const PIE_COLORS = ['#050f41', '#06b6d4', '#FAB932', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
+const PIE_COLORS = ['#05413b', '#418f87', '#FFCB70', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
 
 type ExamType = 'TEOT' | 'TARO' | 'OUTROS';
 
@@ -27,7 +27,7 @@ function parseSourceExam(sourceExam: string): { type: ExamType; year: number | n
 
 const EXAM_TYPE_COLOR: Record<ExamType, string> = {
   TEOT: '#079551',
-  TARO: '#FAB932',
+  TARO: '#FFCB70',
   OUTROS: '#7680ac'
 };
 
@@ -171,7 +171,7 @@ export const ExamStatsPage: React.FC = () => {
 
       {/* Título e subtítulo da página */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#050f41]">Estatísticas TEOT e TARO</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#05413b]">Estatísticas TEOT e TARO</h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
           Verifique as áreas e temas mais frequentes por prova e ano. TEOT 2021 a 2026 | TARO 2016 - 2026.
         </p>
@@ -187,7 +187,7 @@ export const ExamStatsPage: React.FC = () => {
               onClick={() => setExamTypeFilter(opt)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 examTypeFilter === opt
-                  ? 'bg-[#FAB932] text-[#050f41]'
+                  ? 'bg-[#FFCB70] text-[#05413b]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -259,7 +259,7 @@ export const ExamStatsPage: React.FC = () => {
               {/* Distribuição histórica por ano — TEOT vs TARO, questões cadastradas no banco */}
               {yearDistribution.length > 0 && (
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-                  <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
                     <ListOrdered className="w-4 h-4 text-teal-400" />
                     Questões por Ano
                   </h2>
@@ -286,7 +286,7 @@ export const ExamStatsPage: React.FC = () => {
 
             {/* Top 5 temas mais cobrados, dentro do recorte ativo — pizza */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col">
-              <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-teal-400" />
                 Temas Mais Cobrados
               </h2>
@@ -334,7 +334,7 @@ export const ExamStatsPage: React.FC = () => {
 
           {/* Distribuição por área, dentro do recorte de filtros ativo */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-            <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-teal-400" />
               Áreas Mais Cobradas
             </h2>
@@ -354,7 +354,7 @@ export const ExamStatsPage: React.FC = () => {
                     />
                     <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                       {areaDistribution.map((a, i) => (
-                        <Cell key={a.areaId} fill={i === 0 ? '#050f41' : '#3548a8'} />
+                        <Cell key={a.areaId} fill={i === 0 ? '#05413b' : '#245e58'} />
                       ))}
                     </Bar>
                   </BarChart>

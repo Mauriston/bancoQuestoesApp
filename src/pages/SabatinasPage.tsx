@@ -91,7 +91,7 @@ export const SabatinasPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#05413b] flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-cyan-400" />
           Sabatinas
         </h1>
@@ -113,7 +113,7 @@ export const SabatinasPage: React.FC = () => {
       ) : (
         groupedByDate.map(({ date, items }) => (
           <div key={date} className="space-y-3">
-            <h2 className="text-sm font-bold text-[#050f41]">{formatIsoDateBr(date)}</h2>
+            <h2 className="text-sm font-bold text-[#05413b]">{formatIsoDateBr(date)}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {items.map(item => {
                 const themeNames = item.themeIds
@@ -130,7 +130,7 @@ export const SabatinasPage: React.FC = () => {
                           onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
                           disabled={isDownloading}
                           title="Baixar apresentação em PDF"
-                          className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#050f41] backdrop-blur-sm disabled:opacity-50"
+                          className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#05413b] backdrop-blur-sm disabled:opacity-50"
                         >
                           <Download className={`w-3.5 h-3.5 ${isDownloading ? 'animate-pulse' : ''}`} />
                         </button>
@@ -140,7 +140,7 @@ export const SabatinasPage: React.FC = () => {
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }}
                             title="Editar sabatina"
-                            className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#050f41] backdrop-blur-sm"
+                            className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#05413b] backdrop-blur-sm"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
@@ -156,7 +156,7 @@ export const SabatinasPage: React.FC = () => {
                     </div>
                     <button onClick={() => setViewingItem(item)} className="text-left w-full">
                       <div>
-                        <p className="px-3 pt-3 text-sm font-bold text-[#050f41] line-clamp-2 pr-24">{item.title}</p>
+                        <p className="px-3 pt-3 text-sm font-bold text-[#05413b] line-clamp-2 pr-24">{item.title}</p>
                         {themeNames.length > 0 && (
                           <div className="px-3 mt-1.5 flex flex-wrap gap-1">
                             {themeNames.map(name => (
@@ -262,16 +262,16 @@ const SabatinaFormModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-[#05413b]/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-sm font-bold text-[#050f41]">{editingItem ? 'Editar' : 'Inserir'} Sabatina</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-[#050f41]"><X className="w-4 h-4" /></button>
+          <h3 className="text-sm font-bold text-[#05413b]">{editingItem ? 'Editar' : 'Inserir'} Sabatina</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-[#05413b]"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
           <div>
             <label className="block text-slate-300 font-medium mb-1">Título *</label>
-            <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]" />
+            <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#05413b]" />
           </div>
           <div>
             <label className="block text-slate-300 font-medium mb-1">Data da Sabatina *</label>
@@ -297,7 +297,7 @@ const SabatinaFormModal: React.FC<{
           </div>
           <div>
             <label className="block text-slate-300 font-medium mb-1">URL da apresentação (Google Apresentações, modo Apresentar) *</label>
-            <input required type="url" placeholder="https://docs.google.com/presentation/d/..." value={url} onChange={e => setUrl(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#050f41]" />
+            <input required type="url" placeholder="https://docs.google.com/presentation/d/..." value={url} onChange={e => setUrl(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#05413b]" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800">Cancelar</button>
@@ -316,7 +316,7 @@ const FullscreenPresentation: React.FC<{ item: Sabatina; onClose: () => void }> 
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#050f41] shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#05413b] shrink-0">
         <h3 className="text-sm font-bold text-white truncate pr-4">{item.title}</h3>
         <button onClick={onClose} className="text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
       </div>

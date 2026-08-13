@@ -61,15 +61,15 @@ export const AddQuestionImageModal: React.FC<AddQuestionImageModalProps> = ({ qu
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#050f41]/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-[#05413b]/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
 
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+          <h3 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
             <Camera className="w-4 h-4 text-cyan-400" />
             Adicionar Imagem
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-[#050f41]">
+          <button onClick={onClose} className="text-slate-400 hover:text-[#05413b]">
             <X className="w-4 h-4" />
           </button>
         </div>

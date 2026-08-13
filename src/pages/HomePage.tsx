@@ -66,14 +66,14 @@ export const HomePage: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen bg-[#050f41] text-white flex flex-col items-center p-4 relative overflow-hidden font-sans"
+      className="min-h-screen bg-[#05413b] text-white flex flex-col items-center p-4 relative overflow-hidden font-sans"
       onClick={() => {
         if (stage === 'splash') setStage('gate');
       }}
     >
 
       {/* Background Subtle Accent Gradients */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[#FAB932]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[#FFCB70]/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-[#079551]/15 rounded-full blur-3xl pointer-events-none" />
 
       <motion.div
@@ -93,7 +93,7 @@ export const HomePage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
             className="text-center mb-8"
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FAB932] text-[#050f41] shadow-xl shadow-black/20 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FFCB70] text-[#05413b] shadow-xl shadow-black/20 mb-4">
               <Trophy className="w-8 h-8" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">TEOT HMA 2027</h1>
@@ -128,7 +128,7 @@ export const HomePage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="w-full mt-2"
             >
-              <div className="bg-white text-[#050f41] rounded-2xl p-6 shadow-2xl overflow-hidden relative">
+              <div className="bg-white text-[#05413b] rounded-2xl p-6 shadow-2xl overflow-hidden relative">
                 <AnimatePresence mode="wait" initial={false}>
                   {cardMode === 'user' ? (
                     <motion.div
@@ -175,7 +175,7 @@ export const HomePage: React.FC = () => {
                               placeholder="seuemail@exemplo.com"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                             />
                           </div>
                         </div>
@@ -190,7 +190,7 @@ export const HomePage: React.FC = () => {
                               placeholder="••••••••"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                             />
                           </div>
                         </div>
@@ -198,7 +198,7 @@ export const HomePage: React.FC = () => {
                         <button
                           type="submit"
                           disabled={submitting}
-                          className="w-full flex items-center justify-center gap-2 bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#050f41]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                          className="w-full flex items-center justify-center gap-2 bg-[#227d74] hover:bg-[#1b625a] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#227d74]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
                         >
                           <span>{submitting ? 'Acessando...' : 'Entrar'}</span>
                           <ArrowRight className="w-4 h-4" />
@@ -211,7 +211,7 @@ export const HomePage: React.FC = () => {
                             setAdminError('');
                             setCardMode('admin');
                           }}
-                          className="text-xs text-slate-400 hover:text-[#050f41] inline-flex items-center gap-1.5 py-2.5 transition-colors"
+                          className="text-xs text-slate-400 hover:text-[#05413b] inline-flex items-center gap-1.5 py-2.5 transition-colors"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>Área restrita</span>
@@ -228,7 +228,7 @@ export const HomePage: React.FC = () => {
                     >
                       <button
                         onClick={() => setCardMode('user')}
-                        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#050f41] mb-4 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#05413b] mb-4 transition-colors"
                       >
                         <ArrowLeft className="w-4 h-4" />
                         <span>Voltar para Seleção de Usuários</span>
@@ -239,7 +239,7 @@ export const HomePage: React.FC = () => {
                           <ShieldCheck className="w-6 h-6" />
                         </div>
                         <div>
-                          <h1 className="text-base font-bold text-[#050f41]">Área restrita</h1>
+                          <h1 className="text-base font-bold text-[#05413b]">Área restrita</h1>
                         </div>
                       </div>
 
@@ -261,7 +261,7 @@ export const HomePage: React.FC = () => {
                               placeholder="mauriston@oncoortopedia.com"
                               value={adminEmail}
                               onChange={(e) => setAdminEmail(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500"
                             />
                           </div>
                         </div>
@@ -276,7 +276,7 @@ export const HomePage: React.FC = () => {
                               placeholder="••••••••"
                               value={adminPassword}
                               onChange={(e) => setAdminPassword(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-cyan-500"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500"
                             />
                           </div>
                         </div>

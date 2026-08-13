@@ -122,13 +122,13 @@ export function formatTimeSeconds(seconds: number): string {
 // já usados em outros contextos do design system).
 export function scoreColorHex(score: number): string {
   if (score < 50) return '#E20018';
-  if (score < 60) return '#FAB932';
+  if (score < 60) return '#FFCB70';
   return '#079551';
 }
 
 export function scoreColorClass(score: number): string {
   if (score < 50) return 'text-[#E20018]';
-  if (score < 60) return 'text-[#FAB932]';
+  if (score < 60) return 'text-[#FFCB70]';
   return 'text-[#079551]';
 }
 

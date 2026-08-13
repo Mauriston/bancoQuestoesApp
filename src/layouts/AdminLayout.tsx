@@ -37,10 +37,10 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Painel Administrativo';
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans selection:bg-[#FFCB70] selection:text-[#05413b]">
 
       {/* Top Admin Bar */}
-      <header className="sticky top-0 z-40 bg-[#050f41] border-b border-white/10">
+      <header className="sticky top-0 z-40 bg-[#05413b] border-b border-white/10">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
 
@@ -110,7 +110,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
           empurrar layout), revelando os rótulos. No mobile, continua a
           gaveta de sempre, ocupando a tela inteira em altura. */}
       <aside className={`
-        group/sidebar fixed inset-y-0 lg:inset-y-auto lg:top-16 lg:bottom-0 left-0 z-50 lg:z-30 w-64 lg:w-16 lg:hover:w-64 bg-[#0c1c5c] border-r border-white/10 p-3 lg:py-4 transition-[width,transform] duration-200 flex flex-col shadow-xl lg:shadow-2xl overflow-hidden
+        group/sidebar fixed inset-y-0 lg:inset-y-auto lg:top-16 lg:bottom-0 left-0 z-50 lg:z-30 w-64 lg:w-16 lg:hover:w-64 bg-[#05413b] border-r border-white/10 p-3 lg:py-4 transition-[width,transform] duration-200 flex flex-col shadow-xl lg:shadow-2xl overflow-hidden
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col items-center pb-4 mb-4 border-b border-white/10 relative shrink-0">
@@ -120,7 +120,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20 shrink-0">
             <Trophy className="w-5 h-5" />
           </div>
           <span className="mt-2 block text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap lg:hidden lg:group-hover/sidebar:block">
@@ -140,11 +140,11 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                 title={item.label}
                 className={`flex items-center gap-3 lg:justify-center lg:group-hover/sidebar:justify-start px-3.5 lg:px-0 lg:group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                    ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40 font-semibold shadow-sm'
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FFCB70]' : 'text-white/50'}`} />
                 <span className="lg:hidden lg:group-hover/sidebar:inline">{item.label}</span>
               </Link>
             );
@@ -166,7 +166,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             align="left"
             triggerClassName={`flex items-center gap-3 lg:justify-center lg:group-hover/sidebar:justify-start px-3.5 lg:px-0 lg:group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 w-full ${
               location.pathname.startsWith('/admin/settings') || location.pathname.startsWith('/admin/notifications')
-                ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40 font-semibold shadow-sm'
                 : 'text-white/70 hover:bg-white/10 hover:text-white'
             }`}
             nameSlot={<span className="lg:hidden lg:group-hover/sidebar:inline truncate">{currentUser.name}</span>}

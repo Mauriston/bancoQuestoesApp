@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 /*
-  Sistema de design institucional (paleta e tipografia derivadas do guia de
-  identidade visual). As três cores de base são:
+  Sistema de design institucional (paleta SBOT — rebrand alinhado ao novo
+  ícone do app, um troféu com a gota da marca SBOT). As três cores de base
+  são:
 
-    Azul Institucional  #050F41  — cor dominante: texto, navegação, ações primárias
-    Amarelo Ouro  #FAB932  — acento de alta visibilidade (uso pontual)
-    Verde Brasil  #079551  — acento positivo/confirmação (uso pontual)
+    Elm         #227D74  — acento primário (marca): botões, links, destaques
+    Blue Stone  #03665C  — cor dominante: texto, navegação, tom mais escuro
+    Goldenrod   #FFCB70  — acento de alta visibilidade (uso pontual)
 
   Em vez de recolorir cada classe utilitária individualmente pelo código
   (centenas de ocorrências de bg-slate-*, text-teal-*, bg-amber-* etc.),
@@ -17,41 +18,44 @@
   componentes existente. A escala "slate" é deliberadamente invertida em
   relação ao Tailwind padrão (950 = claro/fundo de página, 100 = escuro/texto
   primário) porque o app usa esses tokens como "texto claro sobre fundo
-  escuro" — aqui viram "texto escuro (Azul Institucional) sobre fundo claro".
+  escuro" — aqui viram "texto escuro (Blue Stone) sobre fundo claro". Os
+  literais de cor embutidos como valor arbitrário pelo código (ex.:
+  text-[#050f41]) foram atualizados à parte, ver commit — não passam por
+  este arquivo.
 */
 @theme {
   /* Neutros institucionais — fundo predominantemente branco (60–80% da UI) */
   --color-slate-50: #ffffff;
-  --color-slate-100: #050f41; /* texto primário = Azul Institucional */
-  --color-slate-200: #101b4a;
-  --color-slate-300: #24305e;
-  --color-slate-400: #4b567f; /* texto secundário/muted */
-  --color-slate-500: #5b6690;
-  --color-slate-600: #7680ac; /* ícones muted */
-  --color-slate-700: #a8b0d2; /* borda com mais ênfase / hover */
-  --color-slate-800: #dbe0f0; /* borda padrão de card / chip neutro */
+  --color-slate-100: #05413b; /* texto primário = Blue Stone */
+  --color-slate-200: #104a44;
+  --color-slate-300: #245e58;
+  --color-slate-400: #4b7f7a; /* texto secundário/muted */
+  --color-slate-500: #5b908b;
+  --color-slate-600: #76aca7; /* ícones muted */
+  --color-slate-700: #a8d2ce; /* borda com mais ênfase / hover */
+  --color-slate-800: #dbf0ee; /* borda padrão de card / chip neutro */
   --color-slate-900: #ffffff; /* superfície de card */
   --color-slate-950: #f4f6fb; /* fundo de página */
 
-  /* Acento primário (marca) — família Azul Institucional */
-  --color-teal-300: #3e58a6;
-  --color-teal-400: #1b2f6b;
-  --color-teal-500: #050f41; /* Azul Institucional exato */
-  --color-teal-600: #030a2e;
+  /* Acento primário (marca) — família Elm */
+  --color-teal-300: #7fb4ae;
+  --color-teal-400: #4a948d;
+  --color-teal-500: #227d74; /* Elm exato */
+  --color-teal-600: #1b625a;
 
-  /* Acento secundário (área administrativa) — azul institucional mais claro */
-  --color-cyan-300: #6e93e0;
-  --color-cyan-400: #3765c9;
-  --color-cyan-500: #123e8f;
-  --color-cyan-600: #0c2f70;
-  --color-blue-500: #1e4fa6;
-  --color-blue-600: #143b82;
+  /* Acento secundário (área administrativa) — variação mais clara de Elm */
+  --color-cyan-300: #abceca;
+  --color-cyan-400: #7fb4ae;
+  --color-cyan-500: #418f87;
+  --color-cyan-600: #1f736b;
+  --color-blue-500: #388a82;
+  --color-blue-600: #1d6c64;
 
-  /* Amarelo Ouro — acento de alta visibilidade (nunca como texto sobre branco) */
-  --color-amber-200: #c98a00;
-  --color-amber-300: #a66e00;
-  --color-amber-400: #8a5a00;
-  --color-amber-500: #fab932; /* Amarelo Ouro institucional exato */
+  /* Goldenrod — acento de alta visibilidade (nunca como texto sobre branco) */
+  --color-amber-200: #614d2b;
+  --color-amber-300: #806638;
+  --color-amber-400: #a38248;
+  --color-amber-500: #ffcb70; /* Goldenrod institucional exato */
 
   /* Verde Brasil — confirmações e estados positivos */
   --color-emerald-300: #0e6b3b;

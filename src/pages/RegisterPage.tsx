@@ -49,7 +49,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050f41] text-slate-100 flex flex-col items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-[#05413b] text-slate-100 flex flex-col items-center justify-center p-4 font-sans">
       <div className="max-w-md w-full">
 
         <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white mb-6 transition-colors">
@@ -57,19 +57,19 @@ export const RegisterPage: React.FC = () => {
           <span>Voltar para o login</span>
         </Link>
 
-        <div className="bg-white text-[#050f41] rounded-2xl p-6 shadow-2xl">
+        <div className="bg-white text-[#05413b] rounded-2xl p-6 shadow-2xl">
           {done ? (
             <div className="text-center py-4">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-[#079551]/15 text-[#079551] border border-[#079551]/30 flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-7 h-7" />
               </div>
-              <h1 className="text-base font-bold text-[#050f41] mb-2">Usuário cadastrado com sucesso</h1>
+              <h1 className="text-base font-bold text-[#05413b] mb-2">Usuário cadastrado com sucesso</h1>
               <p className="text-xs text-slate-500 mb-6">
                 Aguarde a liberação do administrador para acessar o sistema.
               </p>
               <button
                 onClick={() => navigate('/')}
-                className="w-full bg-[#050f41] hover:bg-[#0e1748] text-white font-bold py-3 px-4 min-h-11 rounded-xl shadow-lg shadow-[#050f41]/20 text-sm transition-all"
+                className="w-full bg-[#227d74] hover:bg-[#1b625a] text-white font-bold py-3 px-4 min-h-11 rounded-xl shadow-lg shadow-[#227d74]/20 text-sm transition-all"
               >
                 Voltar para o login
               </button>
@@ -81,7 +81,7 @@ export const RegisterPage: React.FC = () => {
                   <UserPlus className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-base font-bold text-[#050f41]">Cadastro de Usuário</h1>
+                  <h1 className="text-base font-bold text-[#05413b]">Cadastro de Usuário</h1>
                   <p className="text-xs text-slate-400">Crie seu acesso com e-mail e senha</p>
                 </div>
               </div>
@@ -104,7 +104,7 @@ export const RegisterPage: React.FC = () => {
                       placeholder="Ex: Dr. Roberto Alcantara"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                     />
                   </div>
                 </div>
@@ -119,7 +119,7 @@ export const RegisterPage: React.FC = () => {
                       placeholder="roberto@ortopedia.br"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                     />
                   </div>
                 </div>
@@ -134,7 +134,7 @@ export const RegisterPage: React.FC = () => {
                       placeholder="Mínimo 6 caracteres"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                     />
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export const RegisterPage: React.FC = () => {
                       placeholder="Repita a senha"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#050f41] focus:outline-none focus:border-[#079551]"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                     />
                   </div>
                 </div>
