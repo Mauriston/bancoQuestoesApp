@@ -10,6 +10,24 @@ import { UserInactiveError, UserNotRegisteredError } from '../services/authServi
 type Stage = 'splash' | 'gate';
 type CardMode = 'user' | 'admin';
 
+// Easings usados na animação de entrada da splash (bounce, para o ícone/
+// título/subtítulo "pularem" para o lugar) e nas transições gerais de UI
+// (suave, sem overshoot) — mesmos valores usados no protótipo de motion
+// feito no Claude Design para esta tela.
+const BOUNCE_EASE: [number, number, number, number] = [0.34, 1.56, 0.64, 1];
+const SMOOTH_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+// Entrada em stagger do bloco de marca (ícone/título/subtítulo): parte de
+// baixo, pequeno e levemente rotacionado, e "salta" para o lugar.
+const brandEntrance = (delay: number) => ({
+  initial: { opacity: 0, y: 60, scale: 0.55, rotate: -6 },
+  animate: { opacity: 1, y: 0, scale: 1, rotate: 0 },
+  transition: {
+    default: { duration: 1, ease: BOUNCE_EASE, delay },
+    opacity: { duration: 0.45, ease: 'easeOut' as const, delay }
+  }
+});
+
 export const HomePage: React.FC = () => {
   const { userLogin, adminLogin } = useAuth();
   const navigate = useNavigate();
@@ -92,15 +110,30 @@ export const HomePage: React.FC = () => {
               continuar" (flex-1 abaixo) cair no terço inferior. */}
           {stage === 'splash' && <div className="flex-[2]" aria-hidden="true" />}
 
-          {/* Brand Header */}
+          {/* Brand Header — ícone/título/subtítulo entram em stagger com
+              bounce (ver brandEntrance); o ícone ainda flutua continuamente
+              depois de assentar, num motion.img separado para não conflitar
+              com a própria animação de entrada. */}
           <motion.div
             layout="position"
             transition={{ type: 'spring', stiffness: 90, damping: 20, mass: 1 }}
             className="text-center mb-8"
           >
-            <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-16 h-16 rounded-2xl shadow-xl shadow-black/20 mb-4 mx-auto" />
-            <h1 className="text-2xl font-bold text-white tracking-tight">TEOT HMA 2027</h1>
-            <p className="text-xs text-white/60 mt-1">O ano da vitória 🏆</p>
+            <motion.div {...brandEntrance(0)}>
+              <motion.img
+                src="/icons/icon-192.png"
+                alt="TEOT HMA 2027"
+                className="w-[72px] h-[72px] rounded-2xl shadow-xl shadow-black/40 mb-4 mx-auto block object-contain"
+                animate={{ y: [0, -16, 0], rotate: [0, -4, 0], scale: [1, 1.05, 1] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </motion.div>
+            <motion.h1 {...brandEntrance(0.12)} className="text-2xl font-extrabold text-white tracking-tight">
+              TEOT HMA 2027
+            </motion.h1>
+            <motion.p {...brandEntrance(0.22)} className="text-xs text-white/60 mt-1">
+              O ano da vitória 🏆
+            </motion.p>
           </motion.div>
 
           <AnimatePresence>
@@ -124,10 +157,10 @@ export const HomePage: React.FC = () => {
           {stage === 'gate' && (
             <motion.div
               key="gate-card"
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 22 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8, transition: { duration: 0.4, ease: 'easeInOut' } }}
-              transition={{ type: 'spring', stiffness: 80, damping: 18, mass: 1, delay: 0.25 }}
+              transition={{ duration: 0.65, ease: SMOOTH_EASE, delay: 0.12 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full mt-2"
             >
@@ -148,11 +181,11 @@ export const HomePage: React.FC = () => {
                       <p className="text-xs text-slate-400 mb-4">Entre com seu e-mail e senha cadastrados.</p>
 
                       {notRegisteredEmail && (
-                        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-start gap-2.5">
-                          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="mb-4 p-3 rounded-2xl bg-[#FFF8E7] border border-[#F3D9A6] text-[#8a6a1f] text-xs flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-[#c99a3c] shrink-0 mt-0.5" />
                           <span>
                             Não encontramos cadastro para o e-mail <strong>{notRegisteredEmail}</strong>.{' '}
-                            <Link to="/cadastro" state={{ email: notRegisteredEmail }} className="font-bold underline hover:text-amber-900">
+                            <Link to="/cadastro" state={{ email: notRegisteredEmail }} className="font-bold underline hover:text-[#5c4813]">
                               Clique aqui para se cadastrar
                             </Link>
                             .
@@ -161,39 +194,39 @@ export const HomePage: React.FC = () => {
                       )}
 
                       {authError && (
-                        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2.5">
-                          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                        <div className="mb-4 p-3 rounded-2xl bg-[#FDEEEC] border border-[#F3C6C0] text-[#9b2c26] text-xs flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-[#9b2c26] shrink-0 mt-0.5" />
                           <span>{authError}</span>
                         </div>
                       )}
 
                       <form onSubmit={handleAccess} className="space-y-4">
                         <div>
-                          <label className="block text-xs font-medium text-slate-500 mb-1">E-mail</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">E-mail</label>
                           <div className="relative">
-                            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                             <input
                               type="email"
                               required
                               placeholder="seuemail@exemplo.com"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
+                              className="w-full bg-white border-[1.5px] border-[#0f4a43] rounded-full pl-11 pr-4 py-3 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-500 mb-1">Senha</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">Senha</label>
                           <div className="relative">
-                            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                             <input
                               type="password"
                               required
                               placeholder="••••••••"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
+                              className="w-full bg-white border-[1.5px] border-[#0f4a43] rounded-full pl-11 pr-4 py-3 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                             />
                           </div>
                         </div>
@@ -201,7 +234,7 @@ export const HomePage: React.FC = () => {
                         <button
                           type="submit"
                           disabled={submitting}
-                          className="w-full flex items-center justify-center gap-2 bg-[#227d74] hover:bg-[#1b625a] text-white font-bold py-3.5 px-4 min-h-11 rounded-xl shadow-lg shadow-[#227d74]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                          className="w-full flex items-center justify-center gap-2 bg-[#227d74] hover:bg-[#1b625a] text-white font-bold py-3.5 px-4 min-h-11 rounded-full shadow-lg shadow-[#227d74]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
                         >
                           <span>{submitting ? 'Acessando...' : 'Entrar'}</span>
                           <ArrowRight className="w-4 h-4" />
@@ -238,7 +271,7 @@ export const HomePage: React.FC = () => {
                       </button>
 
                       <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 rounded-xl bg-cyan-500/15 text-cyan-500 border border-cyan-500/30 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-2xl bg-[#079551]/10 text-[#079551] border border-[#079551]/30 flex items-center justify-center">
                           <ShieldCheck className="w-6 h-6" />
                         </div>
                         <div>
@@ -247,39 +280,39 @@ export const HomePage: React.FC = () => {
                       </div>
 
                       {adminError && (
-                        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                        <div className="mb-4 p-3 rounded-2xl bg-[#FDEEEC] border border-[#F3C6C0] text-[#9b2c26] text-xs flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-[#9b2c26] shrink-0 mt-0.5" />
                           <span>{adminError}</span>
                         </div>
                       )}
 
                       <form onSubmit={handleAdminSubmit} className="space-y-4">
                         <div>
-                          <label className="block text-xs font-medium text-slate-500 mb-1">E-mail do Administrador</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">E-mail do Administrador</label>
                           <div className="relative">
-                            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                             <input
                               type="email"
                               required
                               placeholder="mauriston@oncoortopedia.com"
                               value={adminEmail}
                               onChange={(e) => setAdminEmail(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500"
+                              className="w-full bg-white border-[1.5px] border-[#0f4a43] rounded-full pl-11 pr-4 py-3 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-500 mb-1">Senha</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">Senha</label>
                           <div className="relative">
-                            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                             <input
                               type="password"
                               required
                               placeholder="••••••••"
                               value={adminPassword}
                               onChange={(e) => setAdminPassword(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500"
+                              className="w-full bg-white border-[1.5px] border-[#0f4a43] rounded-full pl-11 pr-4 py-3 text-xs text-[#05413b] focus:outline-none focus:border-[#079551]"
                             />
                           </div>
                         </div>
@@ -287,7 +320,7 @@ export const HomePage: React.FC = () => {
                         <button
                           type="submit"
                           disabled={adminSubmitting}
-                          className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 min-h-11 rounded-xl shadow-lg shadow-cyan-500/20 text-sm transition-all disabled:opacity-50"
+                          className="w-full bg-[#227d74] hover:bg-[#1b625a] text-white font-bold py-3.5 px-4 min-h-11 rounded-full shadow-lg shadow-[#227d74]/30 text-sm transition-all disabled:opacity-50"
                         >
                           {adminSubmitting ? 'Autenticando...' : 'Entrar'}
                         </button>
