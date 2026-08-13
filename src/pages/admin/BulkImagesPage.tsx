@@ -174,7 +174,7 @@ export const BulkImagesSection: React.FC = () => {
           multiple
           onChange={handleFolderChange}
           disabled={!isReadyForFolder || processing}
-          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300 file:text-xs file:font-semibold disabled:opacity-60"
+          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-600 file:text-xs file:font-semibold disabled:opacity-60"
         />
 
         {entries.length > 0 && (
@@ -197,7 +197,7 @@ export const BulkImagesSection: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-slate-100">3. Conferir e importar</h3>
-            <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+            <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded bg-cyan-500/15 text-cyan-600 border border-cyan-500/30">
               Prova: {prova.trim()}
             </span>
           </div>

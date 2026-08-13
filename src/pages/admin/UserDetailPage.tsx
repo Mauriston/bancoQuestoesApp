@@ -187,7 +187,7 @@ export const UserDetailPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-600 border border-teal-500/30 flex items-center justify-center">
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
@@ -211,7 +211,7 @@ export const UserDetailPage: React.FC = () => {
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-600 border border-cyan-500/30 flex items-center justify-center">
               <Award className="w-5 h-5" />
             </div>
             <div>
@@ -294,7 +294,7 @@ export const UserDetailPage: React.FC = () => {
                         </div>
                         <Link
                           to={`/app/attempts/${att.id}/result`}
-                          className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl shrink-0"
+                          className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-600 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl shrink-0"
                         >
                           <span>Ver Relatório</span>
                           <ChevronRight className="w-3.5 h-3.5" />

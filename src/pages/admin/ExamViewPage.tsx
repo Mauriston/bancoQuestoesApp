@@ -491,7 +491,7 @@ export const ExamViewPage: React.FC = () => {
                     : a.status === 'completed'
                       ? { label: 'Concluída', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' }
                       : a.invitedAt
-                        ? { label: 'Convidado', className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' }
+                        ? { label: 'Convidado', className: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30' }
                         : { label: 'Disponível', className: 'bg-slate-800 text-slate-300 border-slate-700' };
                   return (
                     <tr key={a.id}>
@@ -548,12 +548,12 @@ export const ExamViewPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span>Filtrando por:</span>
               {selectedAreaId && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 font-semibold">
                   {areaNameById[selectedAreaId] || 'Área'}
                 </span>
               )}
               {selectedThemeId && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 font-semibold">
                   {themeNameById[selectedThemeId] || 'Tema'}
                 </span>
               )}
@@ -844,7 +844,7 @@ export const ExamViewPage: React.FC = () => {
                       className={`p-3 rounded-xl border text-xs flex items-start gap-3 transition-all ${
                         isCorrectKey
                           ? 'bg-emerald-500/15 border-emerald-500/50 text-slate-100 font-semibold'
-                          : 'bg-slate-950 border-slate-800/80 text-slate-300'
+                          : 'bg-slate-950 border-slate-800/80 text-slate-100'
                       }`}
                     >
                       <div className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
@@ -872,12 +872,12 @@ export const ExamViewPage: React.FC = () => {
                     />
                   </button>
                   {openComments[q.id] && (
-                    <div className="px-4 pb-4 text-xs text-slate-300 space-y-2">
+                    <div className="px-4 pb-4 text-xs text-slate-100 space-y-2">
                       {key.correctAlternative && (
                         <p className="font-bold text-teal-400">GABARITO: {key.correctAlternative}</p>
                       )}
                       {key.comments && (
-                        <p className="text-slate-300 leading-relaxed mt-4">{key.comments}</p>
+                        <p className="text-slate-100 leading-relaxed mt-4">{key.comments}</p>
                       )}
                       {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                       <ReferenceSource reference={references.find(r => r.id === key.referenceId)} />

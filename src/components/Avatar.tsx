@@ -31,8 +31,8 @@ export const Avatar: React.FC<AvatarProps> = ({ name, photoUrl, role = 'user', s
   }
 
   const colorClass = role === 'admin'
-    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-    : 'bg-teal-500/20 text-teal-300 border border-teal-500/30';
+    ? 'bg-cyan-500/20 text-cyan-600 border border-cyan-500/30'
+    : 'bg-teal-500/20 text-teal-600 border border-teal-500/30';
 
   return (
     <div className={`${sizeClass} rounded-full flex items-center justify-center font-bold shrink-0 ${colorClass}`}>

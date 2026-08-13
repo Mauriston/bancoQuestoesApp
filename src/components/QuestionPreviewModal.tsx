@@ -113,7 +113,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
                   className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 ${
                     isCorrect
                       ? 'bg-emerald-500/15 border-emerald-500/50 text-slate-100'
-                      : 'bg-slate-950/80 border-slate-800 text-slate-300'
+                      : 'bg-slate-950/80 border-slate-800 text-slate-100'
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
@@ -148,12 +148,12 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
                 />
               </button>
               {commentsOpen && (
-                <div className="px-4 pb-4 text-xs sm:text-sm text-slate-300 space-y-2">
+                <div className="px-4 pb-4 text-xs sm:text-sm text-slate-100 space-y-2">
                   {answer.correctAlternative && (
                     <p className="font-bold text-teal-400">GABARITO: {answer.correctAlternative}</p>
                   )}
                   {answer.comments && (
-                    <p className="text-slate-300 leading-relaxed mt-4">{answer.comments}</p>
+                    <p className="text-slate-100 leading-relaxed mt-4">{answer.comments}</p>
                   )}
                   {answer.commentMediaUrl && <CommentMedia url={answer.commentMediaUrl} />}
                   <ReferenceSource reference={references.find(r => r.id === answer.referenceId)} />

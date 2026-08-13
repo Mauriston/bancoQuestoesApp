@@ -160,7 +160,7 @@ export const SabatinasPage: React.FC = () => {
                         {themeNames.length > 0 && (
                           <div className="px-3 mt-1.5 flex flex-wrap gap-1">
                             {themeNames.map(name => (
-                              <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                              <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-600 border border-teal-500/30">
                                 {name}
                               </span>
                             ))}
