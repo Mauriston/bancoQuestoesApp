@@ -50,7 +50,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ home, left, ri
 
   return (
     <nav
-      className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-40 bottom-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-1.5 bg-[#05413b]/95 backdrop-blur-md border border-white/10 rounded-full shadow-2xl shadow-black/40 px-2 py-2 transition-transform duration-300 ease-out ${
+      className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-40 bottom-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-6 bg-[#05413b]/95 backdrop-blur-md border border-white/10 rounded-full shadow-2xl shadow-black/40 px-2 py-2 transition-transform duration-300 ease-out ${
         visible ? 'translate-y-0' : 'translate-y-[calc(150%+1rem)]'
       }`}
     >
