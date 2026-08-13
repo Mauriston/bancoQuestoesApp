@@ -8,7 +8,7 @@ import { db, storage } from '../firebase/config';
 import {
    AppUser, Area, Group, Theme, Question, QuestionAnswer, Reference, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
-   VideotecaItem, AulaItem, MaterialViewLog, Sabatina, AppNotification, NotificationAudience
+   VideotecaItem, AulaItem, MaterialViewLog, Sabatina, SabatinaViewLog, AppNotification, NotificationAudience
  } from '../types';
 import { normalizeText, generateId } from '../utils/helpers';
 
@@ -1325,6 +1325,30 @@ export async function updateSabatina(id: string, data: Omit<Sabatina, 'id' | 'cr
 
 export async function deleteSabatina(id: string): Promise<void> {
   await deleteDoc(doc(db, 'sabatinas', id));
+}
+
+// Registra que um usuário abriu uma sabatina — usado pelo admin para
+// conferir o total de visualizações de cada sabatina (ver
+// subscribeAllSabatinaViewLogs), mesmo padrão de logMaterialView.
+export async function logSabatinaView(sabatinaId: string, userId: string, userName: string): Promise<void> {
+  const id = generateId('sabview');
+  await setDoc(doc(db, 'sabatinaViewLogs', id), {
+    id,
+    sabatinaId,
+    userId,
+    userName,
+    viewedAt: serverTimestamp()
+  });
+}
+
+// Versão "ao vivo" de todos os registros de visualização de sabatinas — o
+// contador no card do admin atualiza sozinho assim que alguém abre uma.
+export function subscribeAllSabatinaViewLogs(callback: (logs: SabatinaViewLog[]) => void): () => void {
+  return onSnapshot(collection(db, 'sabatinaViewLogs'), (snapshot) => {
+    const logs: SabatinaViewLog[] = [];
+    snapshot.forEach(d => logs.push({ id: d.id, ...d.data() } as SabatinaViewLog));
+    callback(logs);
+  });
 }
 
 // --- NOTIFICAÇÕES ---
