@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, FileCheck, History, UploadCloud,
-  LogOut, Trophy, Menu, X, GraduationCap, Sparkles, Home, MessageSquare
+  LogOut, Menu, X, GraduationCap, Sparkles, Home, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -120,9 +120,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20 shrink-0">
-            <Trophy className="w-5 h-5" />
-          </div>
+          <img src="/icons/icon-192.png" alt="TEOT HMA 2027" className="w-10 h-10 rounded-xl shadow-lg shadow-black/20 shrink-0" />
           <span className="mt-2 block text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap lg:hidden lg:group-hover/sidebar:block">
             TEOT HMA 2027
           </span>
