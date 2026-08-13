@@ -50,7 +50,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ home, left, ri
 
   return (
     <nav
-      className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-40 bottom-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-1.5 bg-[#050f41]/95 backdrop-blur-md border border-white/10 rounded-full shadow-2xl shadow-black/40 px-2 py-2 transition-transform duration-300 ease-out ${
+      className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-40 bottom-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-1.5 bg-[#05413b]/95 backdrop-blur-md border border-white/10 rounded-full shadow-2xl shadow-black/40 px-2 py-2 transition-transform duration-300 ease-out ${
         visible ? 'translate-y-0' : 'translate-y-[calc(150%+1rem)]'
       }`}
     >
@@ -64,7 +64,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ home, left, ri
             aria-label={btn.label}
             title={btn.label}
             className={`tap-target flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
-              active ? 'bg-[#FAB932]/20 text-[#FAB932]' : 'text-white/60 hover:text-white hover:bg-white/10'
+              active ? 'bg-[#FFCB70]/20 text-[#FFCB70]' : 'text-white/60 hover:text-white hover:bg-white/10'
             }`}
           >
             <Icon className="w-5 h-5" />

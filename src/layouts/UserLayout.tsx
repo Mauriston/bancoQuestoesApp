@@ -15,7 +15,7 @@ import { useUnseenExtrasCount } from '../hooks/useUnseenExtrasCount';
 const NavBadge: React.FC<{ count: number }> = ({ count }) => {
   if (count <= 0) return null;
   return (
-    <span className="absolute -top-1 -right-1.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-[#E20018] text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#050f41] leading-none">
+    <span className="absolute -top-1 -right-1.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-[#E20018] text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#05413b] leading-none">
       {count > 9 ? '9+' : count}
     </span>
   );
@@ -54,7 +54,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
   if (isTakingExam) {
     return (
-      <div className="min-h-dvh bg-slate-950 font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
+      <div className="min-h-dvh bg-slate-950 font-sans selection:bg-[#FFCB70] selection:text-[#05413b]">
         <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
           {children || <Outlet />}
         </main>
@@ -63,9 +63,9 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 flex flex-col font-sans selection:bg-[#FAB932] selection:text-[#050f41]">
+    <div className="min-h-dvh bg-slate-950 flex flex-col font-sans selection:bg-[#FFCB70] selection:text-[#05413b]">
       {/* Top Bar Navigation */}
-      <header className="sticky top-0 z-40 bg-[#050f41] border-b border-white/10">
+      <header className="sticky top-0 z-40 bg-[#05413b] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
 
@@ -80,7 +80,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               </button>
 
               <Link to="/app/home" className="hidden md:flex items-center gap-2.5 group min-w-0 shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20 group-hover:scale-105 transition-transform shrink-0">
                   <Trophy className="w-5 h-5" />
                 </div>
               </Link>
@@ -102,12 +102,12 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     to={item.path}
                     className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 shadow-sm'
+                        ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40 shadow-sm'
                         : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     <span className="relative inline-flex shrink-0">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#FFCB70]' : 'text-white/50'}`} />
                       {item.path === '/app/extras' && <NavBadge count={extrasUnseenCount} />}
                     </span>
                     {item.label}
@@ -163,7 +163,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       <div
         onClick={() => setMobileMenuOpen(false)}
         aria-hidden="true"
-        className={`md:hidden fixed inset-0 z-40 bg-[#050f41]/60 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`md:hidden fixed inset-0 z-40 bg-[#05413b]/60 backdrop-blur-sm transition-opacity duration-300 ${
           mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
@@ -172,13 +172,13 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           a aproximadamente 50% da largura da tela quando totalmente
           expandida. */}
       <nav
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-1/2 max-w-xs bg-[#050f41] border-r border-white/10 shadow-2xl px-3 py-4 flex flex-col gap-1 overflow-y-auto transition-transform duration-300 ease-out ${
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-1/2 max-w-xs bg-[#05413b] border-r border-white/10 shadow-2xl px-3 py-4 flex flex-col gap-1 overflow-y-auto transition-transform duration-300 ease-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Ícone do app — o mesmo usado na tela de login. */}
         <div className="flex flex-col items-center py-2 mb-1">
-          <div className="w-12 h-12 rounded-2xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20">
+          <div className="w-12 h-12 rounded-2xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20">
             <Trophy className="w-6 h-6" />
           </div>
           <span className="mt-2 text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap">
@@ -196,12 +196,12 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               onClick={() => setMobileMenuOpen(false)}
               className={`flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
+                  ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40'
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
               }`}
             >
               <span className="relative inline-flex shrink-0">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#FFCB70]' : 'text-white/50'}`} />
                 {item.path === '/app/extras' && <NavBadge count={extrasUnseenCount} />}
               </span>
               {item.label}
@@ -223,7 +223,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             align="left"
             triggerClassName={`mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors w-full ${
               location.pathname.startsWith('/app/settings') || location.pathname.startsWith('/app/notifications')
-                ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40'
+                ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40'
                 : 'text-white/80 hover:bg-white/10 hover:text-white'
             }`}
             nameSlot={<span className="truncate">{currentUser.name}</span>}
@@ -235,9 +235,9 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
           borda esquerda, recolhida (só ícones) por padrão, expande em
           overlay ao passar o mouse. Só aparece a partir de lg; abaixo disso
           a navegação continua na gaveta/topbar mobile de sempre. */}
-      <aside className="group/sidebar hidden lg:flex fixed inset-y-0 top-16 bottom-0 left-0 z-30 w-16 hover:w-64 bg-[#0c1c5c] border-r border-white/10 py-4 px-3 transition-[width] duration-200 flex-col shadow-2xl overflow-hidden">
+      <aside className="group/sidebar hidden lg:flex fixed inset-y-0 top-16 bottom-0 left-0 z-30 w-16 hover:w-64 bg-[#05413b] border-r border-white/10 py-4 px-3 transition-[width] duration-200 flex-col shadow-2xl overflow-hidden">
         <div className="flex flex-col items-center pb-4 mb-4 border-b border-white/10 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-[#FAB932] flex items-center justify-center text-[#050f41] shadow-lg shadow-black/20 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#FFCB70] flex items-center justify-center text-[#05413b] shadow-lg shadow-black/20 shrink-0">
             <Trophy className="w-5 h-5" />
           </div>
           <span className="mt-2 hidden text-[10px] font-bold text-white/70 tracking-wide text-center whitespace-nowrap group-hover/sidebar:block">
@@ -256,12 +256,12 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 title={item.label}
                 className={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                    ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40 font-semibold shadow-sm'
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <span className="relative inline-flex shrink-0">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#FAB932]' : 'text-white/50'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#FFCB70]' : 'text-white/50'}`} />
                   {item.path === '/app/extras' && <NavBadge count={extrasUnseenCount} />}
                 </span>
                 <span className="hidden group-hover/sidebar:inline">{item.label}</span>
@@ -284,7 +284,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             align="left"
             triggerClassName={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 w-full ${
               location.pathname.startsWith('/app/settings') || location.pathname.startsWith('/app/notifications')
-                ? 'bg-[#FAB932]/15 text-[#FAB932] border border-[#FAB932]/40 font-semibold shadow-sm'
+                ? 'bg-[#FFCB70]/15 text-[#FFCB70] border border-[#FFCB70]/40 font-semibold shadow-sm'
                 : 'text-white/70 hover:bg-white/10 hover:text-white'
             }`}
             nameSlot={<span className="hidden group-hover/sidebar:inline truncate">{currentUser.name}</span>}
@@ -298,7 +298,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       </main>
 
       {/* Footer */}
-      <footer className="hidden sm:block border-t border-white/10 bg-[#050f41] py-6 text-center text-xs text-white/50">
+      <footer className="hidden sm:block border-t border-white/10 bg-[#05413b] py-6 text-center text-xs text-white/50">
         <p>2026. Developed by Mauriston Martins. Powered by Claude Code / Google AI Studio.</p>
       </footer>
 

@@ -75,7 +75,7 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
             className="max-h-80 lg:max-h-[28rem] w-auto object-contain rounded-xl mx-auto"
           />
           {allowZoom && (
-            <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+            <div className="absolute inset-0 bg-[#05413b]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
               <ZoomIn className="w-4 h-4" />
               <span>Clique para ampliar</span>
             </div>
@@ -86,7 +86,7 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
       {/* Modal de ampliação de imagem */}
       {isZoomed && (
         <div 
-          className="fixed inset-0 z-50 bg-[#050f41]/90 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-[#05413b]/90 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setIsZoomed(false)}
         >
           <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center">

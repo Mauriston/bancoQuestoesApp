@@ -42,7 +42,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#050f41]">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#05413b]">
           Olá, {currentUser?.name?.split(' ')[0] || 'residente'}!
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">O que você quer fazer agora?</p>
@@ -65,9 +65,9 @@ export const HomePage: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className="bg-[#050f41] hover:bg-[#0c1c5c] rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col items-center gap-3 text-center"
+              className="bg-[#227d74] hover:bg-[#1b625a] rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col items-center gap-3 text-center"
             >
-              <Icon className="w-8 h-8 text-[#FAB932]" strokeWidth={1.75} />
+              <Icon className="w-8 h-8 text-[#FFCB70]" strokeWidth={1.75} />
               <span className="text-sm font-bold text-white">{item.label}</span>
             </Link>
           );
@@ -122,7 +122,7 @@ const PendingExamsCarousel: React.FC<{
                     Em Andamento
                   </span>
                 )}
-                <h3 className="text-base font-bold text-[#050f41] line-clamp-2">
+                <h3 className="text-base font-bold text-[#05413b] line-clamp-2">
                   {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
                 </h3>
                 <span className="text-xs text-slate-400 font-medium">

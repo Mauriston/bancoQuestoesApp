@@ -161,7 +161,7 @@ export const ExamResultPage: React.FC = () => {
           onClick={() => navigate('/app/history')}
           aria-label="Voltar para o Histórico"
           title="Voltar para o Histórico"
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-[#050f41] hover:bg-slate-800 transition-colors shrink-0"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-[#05413b] hover:bg-slate-800 transition-colors shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -173,12 +173,12 @@ export const ExamResultPage: React.FC = () => {
       {/* Main KPI Banner Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
         <div className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
-          score >= 60 ? 'bg-[#079551]/10' : score >= 50 ? 'bg-[#FAB932]/10' : 'bg-[#E20018]/10'
+          score >= 60 ? 'bg-[#079551]/10' : score >= 50 ? 'bg-[#FFCB70]/10' : 'bg-[#E20018]/10'
         }`} />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div className="min-w-0 flex-1 text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41] break-words">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#05413b] break-words">
               {attempt.examName || 'Simulado Ortopedia TEOT'}
             </h1>
           </div>
@@ -195,7 +195,7 @@ export const ExamResultPage: React.FC = () => {
         {areaBreakdown.length > 0 && (
           <div className="mt-8 pt-6 border-t border-slate-800 space-y-6">
             <div>
-              <h3 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-teal-400" />
                 Desempenho por Área nesta Prova
               </h3>
@@ -221,7 +221,7 @@ export const ExamResultPage: React.FC = () => {
 
             {groupBreakdown.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-[#050f41] mb-3">Desempenho por Grupo (TEOT) nesta Prova</h3>
+                <h3 className="text-sm font-bold text-[#05413b] mb-3">Desempenho por Grupo (TEOT) nesta Prova</h3>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                   {groupBreakdown.map(g => {
                     const tone = scoreColorClass(g.accuracy);
@@ -240,7 +240,7 @@ export const ExamResultPage: React.FC = () => {
 
             {themeBreakdown.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-[#050f41] mb-3">Temas desta Prova (do mais fraco ao mais forte)</h3>
+                <h3 className="text-sm font-bold text-[#05413b] mb-3">Temas desta Prova (do mais fraco ao mais forte)</h3>
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                   {themeBreakdown.map(t => {
                     const tone = scoreColorClass(t.accuracy);
@@ -349,7 +349,7 @@ export const ExamResultPage: React.FC = () => {
                       let style = 'bg-slate-950 border-slate-800/80 text-slate-300';
                       
                       if (isCorrectKey) {
-                        style = 'bg-emerald-500/15 border-emerald-500/50 text-[#050f41] font-semibold';
+                        style = 'bg-emerald-500/15 border-emerald-500/50 text-[#05413b] font-semibold';
                       } else if (isSelectedByUser && !isCorrectKey) {
                         style = 'bg-red-500/15 border-red-500/50 text-red-200';
                       }

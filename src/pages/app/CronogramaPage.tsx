@@ -3,9 +3,9 @@ import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TRAINING_SCHEDULE, TRAINING_SCHEDULE_NOTE, TrainingScheduleItem } from '../../constants';
 
 const CATEGORY_STYLES: Record<TrainingScheduleItem['category'], { dot: string; badge: string; label: string }> = {
-  traumatologia: { dot: 'bg-[#050f41]', badge: 'bg-[#050f41]/10 text-[#050f41] border-[#050f41]/30', label: 'Traumatologia' },
+  traumatologia: { dot: 'bg-[#05413b]', badge: 'bg-[#05413b]/10 text-[#05413b] border-[#05413b]/30', label: 'Traumatologia' },
   ortopedia: { dot: 'bg-[#079551]', badge: 'bg-[#079551]/10 text-[#079551] border-[#079551]/30', label: 'Ortopedia' },
-  oncologia: { dot: 'bg-[#FAB932]', badge: 'bg-[#FAB932]/10 text-[#FAB932] border-[#FAB932]/30', label: 'Oncologia Ortopédica' },
+  oncologia: { dot: 'bg-[#FFCB70]', badge: 'bg-[#FFCB70]/10 text-[#FFCB70] border-[#FFCB70]/30', label: 'Oncologia Ortopédica' },
 };
 
 const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -64,7 +64,7 @@ export const CronogramaPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h1 className="text-xl font-bold text-[#050f41] flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[#05413b] flex items-center gap-2">
           <CalendarDays className="w-5 h-5 text-teal-400" />
           Cronograma
         </h1>
@@ -84,11 +84,11 @@ export const CronogramaPage: React.FC = () => {
       {/* Calendário mensal */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => goToMonth(-1)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-[#050f41]">
+          <button onClick={() => goToMonth(-1)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-[#05413b]">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <h2 className="text-sm font-bold text-[#050f41]">{MONTH_LABELS[viewMonth]} {viewYear}</h2>
-          <button onClick={() => goToMonth(1)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-[#050f41]">
+          <h2 className="text-sm font-bold text-[#05413b]">{MONTH_LABELS[viewMonth]} {viewYear}</h2>
+          <button onClick={() => goToMonth(1)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-[#05413b]">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -109,7 +109,7 @@ export const CronogramaPage: React.FC = () => {
                 className={`aspect-square rounded-lg text-xs flex flex-col items-center justify-center gap-0.5 transition-colors ${
                   !cell.day ? 'invisible' :
                   isSelected ? 'bg-cyan-500 text-slate-950 font-bold' :
-                  hasEvents ? 'bg-slate-800 text-[#050f41] font-semibold hover:bg-slate-700' :
+                  hasEvents ? 'bg-slate-800 text-[#05413b] font-semibold hover:bg-slate-700' :
                   'text-slate-500 hover:bg-slate-800/60'
                 }`}
               >
@@ -130,12 +130,12 @@ export const CronogramaPage: React.FC = () => {
       {/* Detalhe do dia selecionado */}
       {selectedEvents.length > 0 && (
         <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-4 sm:p-6 shadow-xl space-y-3">
-          <h3 className="text-sm font-bold text-[#050f41]">Eventos selecionados</h3>
+          <h3 className="text-sm font-bold text-[#05413b]">Eventos selecionados</h3>
           {selectedEvents.map(ev => (
             <div key={ev.n} className="flex items-start gap-3">
               <span className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${CATEGORY_STYLES[ev.category].dot}`} />
               <div>
-                <p className="text-sm font-semibold text-[#050f41]">{ev.title} <span className="text-slate-400 font-normal">— {ev.subtitle}</span></p>
+                <p className="text-sm font-semibold text-[#05413b]">{ev.title} <span className="text-slate-400 font-normal">— {ev.subtitle}</span></p>
                 <span className={`inline-flex items-center text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mt-1 ${CATEGORY_STYLES[ev.category].badge}`}>
                   {CATEGORY_STYLES[ev.category].label}
                 </span>
@@ -147,12 +147,12 @@ export const CronogramaPage: React.FC = () => {
 
       {/* Lista completa (agenda) */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <h3 className="text-sm font-bold text-[#050f41] px-4 sm:px-6 pt-4 sm:pt-6">Programação Completa</h3>
+        <h3 className="text-sm font-bold text-[#05413b] px-4 sm:px-6 pt-4 sm:pt-6">Programação Completa</h3>
         <div className="divide-y divide-slate-800/80 mt-2">
           {TRAINING_SCHEDULE.map(ev => (
             <div key={ev.n} className="p-4 sm:px-6 flex items-center gap-4">
               <div className="w-16 shrink-0 text-center">
-                <p className="text-xs font-bold text-[#050f41]">{ev.date}</p>
+                <p className="text-xs font-bold text-[#05413b]">{ev.date}</p>
               </div>
               <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${CATEGORY_STYLES[ev.category].dot}`} />
               <div className="min-w-0">

@@ -88,7 +88,7 @@ export const CsvBulkImportSection: React.FC<CsvBulkImportSectionProps> = ({ mate
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-      <h3 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+      <h3 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
         <UploadCloud className="w-4 h-4 text-cyan-400" />
         {title}
       </h3>
