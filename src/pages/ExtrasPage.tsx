@@ -244,7 +244,7 @@ export const ExtrasPage: React.FC = () => {
       ) : groupedByArea ? (
         Object.entries(groupedByArea).map(([areaName, groupItems]) => (
           <div key={areaName} className="space-y-3">
-            <h2 className="text-sm font-bold text-[#05413b]">{areaName}</h2>
+            <h2 className="text-sm font-bold text-slate-100">{areaName}</h2>
             <MaterialGrid items={groupItems} themes={themes} viewedIds={viewedIds} viewCountByMaterial={viewCountByMaterial} viewerNamesByMaterial={viewerNamesByMaterial} isAdmin={isAdmin} onOpen={handleOpenItem} onEdit={handleOpenEdit} onDelete={handleDelete} />
           </div>
         ))
@@ -311,7 +311,7 @@ const MaterialGrid: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                   title="Editar material"
-                  className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-[#05413b] backdrop-blur-sm"
+                  className="p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-slate-100 backdrop-blur-sm"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -326,7 +326,7 @@ const MaterialGrid: React.FC<{
             )}
             <button onClick={() => onOpen(item)} className="text-left w-full">
               <div>
-                <p className="px-3 pt-3 text-sm font-bold text-[#05413b] line-clamp-2 pr-14">{item.title}</p>
+                <p className="px-3 pt-3 text-sm font-bold text-slate-100 line-clamp-2 pr-14">{item.title}</p>
               </div>
               <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
                 {thumbnail ? (
@@ -460,18 +460,18 @@ const MaterialFormModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#05413b]/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-100/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-sm font-bold text-[#05413b]">
+          <h3 className="text-sm font-bold text-slate-100">
             {editingItem ? 'Editar' : 'Inserir'} {tab === 'videoteca' ? 'Vídeo' : 'Aula'}
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-[#05413b]"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-100"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
           <div>
             <label className="block text-slate-300 font-medium mb-1">Título *</label>
-            <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#05413b]" />
+            <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100" />
           </div>
           <div>
             <label className="block text-slate-300 font-medium mb-1">Área *</label>
@@ -500,7 +500,7 @@ const MaterialFormModal: React.FC<{
               {tab === 'videoteca' ? 'URL do vídeo (YouTube) *' : 'Código de incorporação do Canva ou URL do Google Slides *'}
             </label>
             {tab === 'videoteca' ? (
-              <input required type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#05413b]" />
+              <input required type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100" />
             ) : (
               <>
                 <textarea
@@ -509,7 +509,7 @@ const MaterialFormModal: React.FC<{
                   placeholder='Cole aqui o <iframe> de "Compartilhar > Incorporar" do Canva, ou a URL de apresentação do Google Slides'
                   value={url}
                   onChange={e => setUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[#05413b] font-mono text-[11px]"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono text-[11px]"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">No Canva: Compartilhar → Mais → Incorporar → copiar código e colar aqui.</p>
               </>
@@ -567,7 +567,7 @@ const ViewMaterialModal: React.FC<{
   if (item.kind === 'aulas') {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
-        <div className="flex items-center justify-between px-4 py-2.5 bg-[#05413b] shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 shrink-0">
           <h3 className="text-sm font-bold text-white truncate pr-4">{item.title}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
         </div>
@@ -590,11 +590,11 @@ const ViewMaterialModal: React.FC<{
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#05413b]/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-100/90 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 sticky top-0 bg-slate-900">
-          <h3 className="text-sm font-bold text-[#05413b] truncate pr-4">{item.title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-[#05413b] shrink-0"><X className="w-4 h-4" /></button>
+          <h3 className="text-sm font-bold text-slate-100 truncate pr-4">{item.title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-100 shrink-0"><X className="w-4 h-4" /></button>
         </div>
         <div className="aspect-video w-full bg-black">
           {embedUrl ? (

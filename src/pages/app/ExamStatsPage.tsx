@@ -9,7 +9,7 @@ import { getQuestions, getAreas, getThemes } from '../../services/firebaseServic
 import { Question, Area, Theme } from '../../types';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 
-const PIE_COLORS = ['#05413b', '#418f87', '#FFCB70', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
+const PIE_COLORS = ['#2C3A47', '#2F9C8C', '#2F9C8C', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#C7362F'];
 
 type ExamType = 'TEOT' | 'TARO' | 'OUTROS';
 
@@ -27,8 +27,8 @@ function parseSourceExam(sourceExam: string): { type: ExamType; year: number | n
 
 const EXAM_TYPE_COLOR: Record<ExamType, string> = {
   TEOT: '#079551',
-  TARO: '#FFCB70',
-  OUTROS: '#7680ac'
+  TARO: '#2F9C8C',
+  OUTROS: '#9AA2A9'
 };
 
 export const ExamStatsPage: React.FC = () => {
@@ -171,7 +171,7 @@ export const ExamStatsPage: React.FC = () => {
 
       {/* Título e subtítulo da página */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#05413b]">Estatísticas TEOT e TARO</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-100">Estatísticas TEOT e TARO</h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
           Verifique as áreas e temas mais frequentes por prova e ano. TEOT 2021 a 2026 | TARO 2016 - 2026.
         </p>
@@ -187,7 +187,7 @@ export const ExamStatsPage: React.FC = () => {
               onClick={() => setExamTypeFilter(opt)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 examTypeFilter === opt
-                  ? 'bg-[#FFCB70] text-[#05413b]'
+                  ? 'bg-cyan-500 text-slate-100'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -259,17 +259,17 @@ export const ExamStatsPage: React.FC = () => {
               {/* Distribuição histórica por ano — TEOT vs TARO, questões cadastradas no banco */}
               {yearDistribution.length > 0 && (
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-                  <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
                     <ListOrdered className="w-4 h-4 text-teal-400" />
                     Questões por Ano
                   </h2>
                   <div className="h-56 sm:h-72 w-full mt-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={yearDistribution} margin={{ top: 4, right: 8, bottom: 4, left: -12 }}>
-                        <CartesianGrid stroke="#dbe0f0" vertical={false} />
-                        <XAxis dataKey="year" tick={{ fill: '#4b567f', fontSize: 11 }} />
-                        <YAxis allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
-                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }} />
+                        <CartesianGrid stroke="#F2F2F5" vertical={false} />
+                        <XAxis dataKey="year" tick={{ fill: '#6B7680', fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fill: '#9AA2A9', fontSize: 10 }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }} />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         {(examTypeFilter === 'TODOS' || examTypeFilter === 'TEOT') && (
                           <Bar dataKey="TEOT" fill={EXAM_TYPE_COLOR.TEOT} radius={[4, 4, 0, 0]} />
@@ -286,7 +286,7 @@ export const ExamStatsPage: React.FC = () => {
 
             {/* Top 5 temas mais cobrados, dentro do recorte ativo — pizza */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col">
-              <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-teal-400" />
                 Temas Mais Cobrados
               </h2>
@@ -310,7 +310,7 @@ export const ExamStatsPage: React.FC = () => {
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                          contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
                           formatter={(value: number, name: string) => [`${value} questões`, name]}
                         />
                       </PieChart>
@@ -334,7 +334,7 @@ export const ExamStatsPage: React.FC = () => {
 
           {/* Distribuição por área, dentro do recorte de filtros ativo */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-            <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-teal-400" />
               Áreas Mais Cobradas
             </h2>
@@ -345,16 +345,16 @@ export const ExamStatsPage: React.FC = () => {
               <div className="h-64 sm:h-80 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={areaDistribution} layout="vertical" margin={{ top: 4, right: 32, bottom: 4, left: 4 }}>
-                    <CartesianGrid stroke="#dbe0f0" horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: '#7680ac', fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" width={130} tick={{ fill: '#4b567f', fontSize: 11 }} />
+                    <CartesianGrid stroke="#F2F2F5" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: '#9AA2A9', fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={130} tick={{ fill: '#6B7680', fontSize: 11 }} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
                       formatter={(value: number, _n, item: any) => [`${value} questões (${item.payload.pct}%)`, 'Total']}
                     />
                     <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                       {areaDistribution.map((a, i) => (
-                        <Cell key={a.areaId} fill={i === 0 ? '#05413b' : '#245e58'} />
+                        <Cell key={a.areaId} fill={i === 0 ? '#2C3A47' : '#146B5E'} />
                       ))}
                     </Bar>
                   </BarChart>

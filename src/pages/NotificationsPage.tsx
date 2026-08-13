@@ -56,7 +56,7 @@ export const NotificationsPage: React.FC = () => {
           <Bell className="w-4.5 h-4.5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-[#05413b] leading-tight">Notificações</h1>
+          <h1 className="text-xl font-bold text-slate-100 leading-tight">Notificações</h1>
           <p className="text-xs text-slate-400">Eventos recentes relevantes para você</p>
         </div>
       </div>
@@ -84,7 +84,7 @@ export const NotificationsPage: React.FC = () => {
                   <p className="text-xs text-slate-200 leading-snug">{n.message}</p>
                   <p className="text-[10px] text-slate-500 mt-1">{formatRelative(createdAt)}</p>
                 </div>
-                {isUnread && <span className="w-2 h-2 rounded-full bg-[#E20018] shrink-0 mt-1.5" />}
+                {isUnread && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1.5" />}
               </div>
             );
           })}

@@ -307,14 +307,14 @@ export const TakeExamPage: React.FC = () => {
       {/* Top: nome da prova centralizado + indicador de progresso em pizza */}
       <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-px">
         <div />
-        <h2 className="text-base font-bold text-[#05413b] leading-tight truncate text-center">
+        <h2 className="text-base font-bold text-slate-100 leading-tight truncate text-center">
           {exam?.name || 'Simulado Ortopedia'}
         </h2>
         <div className="flex items-center justify-end shrink-0">
           <div
             className="w-8 h-8 rounded-full transition-[background] duration-300"
             style={{
-              background: `conic-gradient(#14b8a6 0deg ${progressPercent * 3.6}deg, #1e293b ${progressPercent * 3.6}deg 360deg)`
+              background: `conic-gradient(#1E8C7C 0deg ${progressPercent * 3.6}deg, #2C3A47 ${progressPercent * 3.6}deg 360deg)`
             }}
           />
         </div>
@@ -341,7 +341,7 @@ export const TakeExamPage: React.FC = () => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
-                <div className="absolute inset-0 bg-[#05413b]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
+                <div className="absolute inset-0 bg-slate-100/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
                   <ZoomIn className="w-4 h-4" />
                   <span>Clique para ampliar</span>
                 </div>
@@ -363,8 +363,8 @@ export const TakeExamPage: React.FC = () => {
                 onClick={() => handleSelectOption(letter)}
                 className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 transition-all ${
                   isSelected
-                    ? 'bg-teal-500/15 border-teal-500/60 text-[#05413b] shadow-md shadow-teal-500/10'
-                    : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-[#05413b]'
+                    ? 'bg-teal-500/15 border-teal-500/60 text-slate-100 shadow-md shadow-teal-500/10'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
@@ -414,7 +414,7 @@ export const TakeExamPage: React.FC = () => {
           <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setPreviewImageUrl(null)}
-              className="tap-target absolute -top-10 right-0 flex items-center justify-center text-white bg-[#05413b]/60 rounded-full p-1.5 hover:bg-[#05413b]/80"
+              className="tap-target absolute -top-10 right-0 flex items-center justify-center text-white bg-slate-100/60 rounded-full p-1.5 hover:bg-slate-100/80"
             >
               <X className="w-6 h-6" />
             </button>

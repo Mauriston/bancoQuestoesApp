@@ -52,7 +52,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#05413b]/80 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-100/80 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -63,7 +63,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
           <span className="text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-lg">
             Pré-visualização da Questão
           </span>
-          <button onClick={onClose} className="text-slate-400 hover:text-[#05413b]">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-100">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -112,7 +112,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
                   key={letter}
                   className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 ${
                     isCorrect
-                      ? 'bg-emerald-500/15 border-emerald-500/50 text-[#05413b]'
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-slate-100'
                       : 'bg-slate-950/80 border-slate-800 text-slate-300'
                   }`}
                 >

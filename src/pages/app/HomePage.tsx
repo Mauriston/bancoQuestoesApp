@@ -42,7 +42,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#05413b]">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
           Olá, {currentUser?.name?.split(' ')[0] || 'residente'}!
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">O que você quer fazer agora?</p>
@@ -65,9 +65,9 @@ export const HomePage: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className="bg-[#227d74] hover:bg-[#1b625a] rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col items-center gap-3 text-center"
+              className="bg-teal-500 hover:bg-teal-600 rounded-2xl p-5 transition-colors flex flex-col items-center gap-3 text-center"
             >
-              <Icon className="w-8 h-8 text-[#FFCB70]" strokeWidth={1.75} />
+              <Icon className="w-8 h-8 text-cyan-500" strokeWidth={1.75} />
               <span className="text-sm font-bold text-white">{item.label}</span>
             </Link>
           );
@@ -98,7 +98,7 @@ const PendingExamsCarousel: React.FC<{
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-bold text-[#E20018] flex items-center gap-1.5">
+      <h2 className="text-sm font-bold text-red-500 flex items-center gap-1.5">
         <AlertTriangle className="w-4 h-4" />
         Provas Teóricas Pendentes
       </h2>
@@ -116,19 +116,19 @@ const PendingExamsCarousel: React.FC<{
               onClick={() => onSelect(asgn.id)}
               className="w-full shrink-0 snap-center text-left px-1"
             >
-              <div className="bg-white border border-[#E20018]/30 rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col gap-2">
+              <div className="bg-white border border-red-500/30 rounded-2xl p-5 transition-colors hover:border-red-500/60 flex flex-col gap-2">
                 {isStarted && (
                   <span className="self-start text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30">
                     Em Andamento
                   </span>
                 )}
-                <h3 className="text-base font-bold text-[#05413b] line-clamp-2">
+                <h3 className="text-base font-bold text-slate-100 line-clamp-2">
                   {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
                 </h3>
                 <span className="text-xs text-slate-400 font-medium">
                   {asgn.exam?.questionCount || 0} questões
                 </span>
-                <span className="flex items-center gap-1.5 text-xs font-bold text-[#E20018] mt-1">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-red-500 mt-1">
                   {isStarted ? 'Clique aqui para continuar a prova' : 'Clique aqui para iniciar a prova'}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </span>
@@ -146,7 +146,7 @@ const PendingExamsCarousel: React.FC<{
               onClick={() => scrollToIndex(idx)}
               aria-label={`Ir para prova ${idx + 1}`}
               className={`h-1.5 rounded-full transition-all ${
-                idx === activeIndex ? 'w-5 bg-[#E20018]' : 'w-1.5 bg-slate-700'
+                idx === activeIndex ? 'w-5 bg-red-500' : 'w-1.5 bg-slate-700'
               }`}
             />
           ))}

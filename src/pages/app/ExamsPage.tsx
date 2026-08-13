@@ -83,7 +83,7 @@ export const ExamsPage: React.FC = () => {
                   )}
 
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-base font-bold text-[#05413b] group-hover:text-teal-300 transition-colors line-clamp-2 pr-6">
+                    <h3 className="text-base font-bold text-slate-100 group-hover:text-teal-300 transition-colors line-clamp-2 pr-6">
                       {asgn.exam?.name || 'Simulado Ortopedia TEOT'}
                     </h3>
                     <MoreVertical className="w-4 h-4 text-slate-600 shrink-0 absolute top-5 right-5" />

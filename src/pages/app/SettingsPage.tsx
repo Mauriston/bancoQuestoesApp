@@ -119,13 +119,13 @@ export const SettingsPage: React.FC = () => {
           />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-[#05413b] truncate">{currentUser.name}</h1>
+          <h1 className="text-xl font-bold text-slate-100 truncate">{currentUser.name}</h1>
           <p className="text-xs text-slate-400 truncate">{currentUser.email}</p>
         </div>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
-        <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
           <Phone className="w-4 h-4 text-teal-400" />
           Telefone / WhatsApp
         </h2>
@@ -141,7 +141,7 @@ export const SettingsPage: React.FC = () => {
             value={phoneInput}
             onChange={(e) => setPhoneInput(maskPhoneInput(e.target.value))}
             onBlur={handleSavePhone}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-teal-500"
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
           />
         </div>
         {savingPhone && <p className="text-[11px] text-slate-500">Salvando...</p>}
@@ -153,7 +153,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
           <Settings className="w-4 h-4 text-teal-400" />
           Alterar e-mail ou senha
         </h2>
@@ -186,7 +186,7 @@ export const SettingsPage: React.FC = () => {
                 placeholder="••••••••"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-teal-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
               />
             </div>
           </div>
@@ -200,7 +200,7 @@ export const SettingsPage: React.FC = () => {
                 placeholder={currentUser.email}
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-teal-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
               />
             </div>
           </div>
@@ -214,7 +214,7 @@ export const SettingsPage: React.FC = () => {
                 placeholder="Mínimo 6 caracteres"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-teal-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
               />
             </div>
           </div>
@@ -229,7 +229,7 @@ export const SettingsPage: React.FC = () => {
                   placeholder="Repita a nova senha"
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-teal-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
                 />
               </div>
             </div>
