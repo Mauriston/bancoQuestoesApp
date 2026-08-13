@@ -639,7 +639,7 @@ export const CreateExamPage: React.FC = () => {
                     className={`p-3 lg:p-4 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
                       isSelected
                         ? 'bg-cyan-500/15 border-cyan-500/50 text-slate-100 shadow-sm'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+                        : 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800'
                     }`}
                   >
                     <input

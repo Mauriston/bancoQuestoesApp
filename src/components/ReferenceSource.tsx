@@ -15,7 +15,7 @@ export const ReferenceSource: React.FC<ReferenceSourceProps> = ({ reference }) =
   if (!reference) return null;
 
   return (
-    <p className="mt-4 text-slate-300 leading-relaxed">
+    <p className="mt-4 text-slate-100 leading-relaxed">
       Fonte:{' '}
       <a
         href={reference.referenceUrlDownload}

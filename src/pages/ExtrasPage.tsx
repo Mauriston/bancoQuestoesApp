@@ -195,7 +195,7 @@ export const ExtrasPage: React.FC = () => {
               <span>{t === 'videoteca' ? 'Videoteca' : 'Aulas'}</span>
               {!isAdmin && unseenCount > 0 && (
                 <span className={`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-bold ${
-                  tab === t ? 'bg-slate-950/20 text-slate-950' : 'bg-cyan-500/20 text-cyan-300'
+                  tab === t ? 'bg-slate-950/20 text-slate-950' : 'bg-cyan-500/20 text-cyan-600'
                 }`}>
                   {unseenCount}
                 </span>
@@ -363,7 +363,7 @@ const MaterialGrid: React.FC<{
               {themeNames.length > 0 && (
                 <div className={`px-3 mt-2 flex flex-wrap gap-1 ${isAdmin ? '' : 'pb-3'}`}>
                   {themeNames.map(name => (
-                    <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                    <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-600 border border-teal-500/30">
                       {name}
                     </span>
                   ))}

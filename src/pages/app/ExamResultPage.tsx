@@ -346,7 +346,7 @@ export const ExamResultPage: React.FC = () => {
                       const isSelectedByUser = selected === altKey;
                       const isCorrectKey = correct === altKey;
 
-                      let style = 'bg-slate-950 border-slate-800/80 text-slate-300';
+                      let style = 'bg-slate-950 border-slate-800/80 text-slate-100';
                       
                       if (isCorrectKey) {
                         style = 'bg-emerald-500/15 border-emerald-500/50 text-slate-100 font-semibold';
@@ -390,12 +390,12 @@ export const ExamResultPage: React.FC = () => {
                         />
                       </button>
                       {openComments[q.id] && (
-                        <div className="px-4 pb-4 text-xs text-slate-300 space-y-2">
+                        <div className="px-4 pb-4 text-xs text-slate-100 space-y-2">
                           {key.correctAlternative && (
                             <p className="font-bold text-teal-400">GABARITO: {key.correctAlternative}</p>
                           )}
                           {key.comments && (
-                            <p className="text-slate-300 leading-relaxed mt-4">{key.comments}</p>
+                            <p className="text-slate-100 leading-relaxed mt-4">{key.comments}</p>
                           )}
                           {key.commentMediaUrl && <CommentMedia url={key.commentMediaUrl} />}
                           <ReferenceSource reference={references.find(r => r.id === key.referenceId)} />

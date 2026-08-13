@@ -364,7 +364,7 @@ export const TakeExamPage: React.FC = () => {
                 className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 transition-all ${
                   isSelected
                     ? 'bg-teal-500/15 border-teal-500/60 text-slate-100 shadow-md shadow-teal-500/10'
-                    : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-100 hover:bg-slate-800/80'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${

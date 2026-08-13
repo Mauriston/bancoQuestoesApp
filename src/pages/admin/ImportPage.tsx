@@ -172,7 +172,7 @@ export const ImportPage: React.FC = () => {
             </p>
             <button
               onClick={handleLoadBundledTree}
-              className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-600 border border-teal-500/40 text-xs font-semibold"
             >
               Carregar Estrutura Integrada
             </button>
@@ -272,7 +272,7 @@ export const ImportPage: React.FC = () => {
               </p>
               <button
                 onClick={handleLoadBundledGroupTree}
-                className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-600 border border-teal-500/40 text-xs font-semibold"
               >
                 Carregar Árvore Integrada
               </button>
