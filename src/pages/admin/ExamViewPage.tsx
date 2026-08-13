@@ -17,7 +17,7 @@ interface SubmittedRow {
   areaScores: Record<string, number | null>; // areaId -> percentage (null = sem questões dessa área nessa tentativa)
 }
 
-const PIE_COLORS = ['#05413b', '#418f87', '#FFCB70', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#E20018'];
+const PIE_COLORS = ['#2C3A47', '#2F9C8C', '#2F9C8C', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#C7362F'];
 
 // Tabelas "Áreas da Prova" e "Temas da Prova" paginadas, 5 linhas por página.
 const ROWS_PER_PAGE = 5;
@@ -33,7 +33,7 @@ const renderPieSliceLabel = (props: any) => {
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   const anchor = x > cx ? 'start' : 'end';
   return (
-    <text x={x} y={y} textAnchor={anchor} dominantBaseline="central" fill="#05413b" fontSize={11}>
+    <text x={x} y={y} textAnchor={anchor} dominantBaseline="central" fill="#2C3A47" fontSize={11}>
       <tspan x={x} dy="-0.35em" fontWeight={700}>{name}: {value}</tspan>
       <tspan x={x} dy="1.3em" fontWeight={600} fillOpacity={0.75}>{(percent * 100).toFixed(1)}%</tspan>
     </text>
@@ -397,7 +397,7 @@ export const ExamViewPage: React.FC = () => {
   if (!exam) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#05413b]">
+        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Lista de Provas</span>
         </Link>
@@ -408,14 +408,14 @@ export const ExamViewPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#05413b] transition-colors">
+      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Lista de Provas</span>
       </Link>
 
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex flex-col items-center gap-1.5">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#05413b] tracking-tight">{exam.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">{exam.name}</h1>
           <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
             isExamActive(exam)
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -440,7 +440,7 @@ export const ExamViewPage: React.FC = () => {
       </div>
 
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
-        <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
           <UserPlus className="w-4 h-4 text-cyan-400" />
           Adicionar Candidatos
         </h2>
@@ -471,7 +471,7 @@ export const ExamViewPage: React.FC = () => {
 
       {isExamActive(exam) && assignments.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <Send className="w-4 h-4 text-cyan-400" />
             Convidar Candidatos ({assignments.length})
           </h2>
@@ -495,7 +495,7 @@ export const ExamViewPage: React.FC = () => {
                         : { label: 'Disponível', className: 'bg-slate-800 text-slate-300 border-slate-700' };
                   return (
                     <tr key={a.id}>
-                      <td className="p-3 font-semibold text-[#05413b]">{a.userName}</td>
+                      <td className="p-3 font-semibold text-slate-100">{a.userName}</td>
                       <td className="p-3">
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusMeta.className}`}>
                           {statusMeta.label}
@@ -560,7 +560,7 @@ export const ExamViewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="inline-flex items-center gap-1 text-slate-400 hover:text-[#05413b] font-semibold"
+                className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-100 font-semibold"
               >
                 <X className="w-3 h-3" />
                 Limpar filtros
@@ -573,7 +573,7 @@ export const ExamViewPage: React.FC = () => {
                 desktop (mesmo tanto que a tabela de Temas; o gráfico fica
                 com 3/7). */}
             <section className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-cyan-400" />
                 Áreas da Prova
               </h2>
@@ -595,7 +595,7 @@ export const ExamViewPage: React.FC = () => {
                           onClick={() => handleAreaClick(a.areaId)}
                           className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
                         >
-                          <td className="p-3 font-semibold text-[#05413b] flex items-center gap-2">
+                          <td className="p-3 font-semibold text-slate-100 flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
                             <span className="truncate">{a.name}</span>
                           </td>
@@ -636,7 +636,7 @@ export const ExamViewPage: React.FC = () => {
 
             {/* Temas da Prova — filtrado pela área selecionada, se houver. 2/7 da largura no desktop. */}
             <section className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-cyan-400" />
                 Temas da Prova
               </h2>
@@ -658,7 +658,7 @@ export const ExamViewPage: React.FC = () => {
                           onClick={() => handleThemeClick(t.themeId)}
                           className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
                         >
-                          <td className="p-3 font-semibold text-[#05413b] flex items-center gap-2">
+                          <td className="p-3 font-semibold text-slate-100 flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
                             <span className="truncate">{t.name}</span>
                           </td>
@@ -699,7 +699,7 @@ export const ExamViewPage: React.FC = () => {
 
             {/* Gráfico — reflete os filtros de área e tema selecionados. 3/7 da largura no desktop. */}
             <section className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
                 Distribuição por Tema
               </h2>
@@ -714,21 +714,21 @@ export const ExamViewPage: React.FC = () => {
                       outerRadius="72%"
                       paddingAngle={2}
                       label={renderPieSliceLabel}
-                      labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                      labelLine={{ stroke: '#6B7680', strokeWidth: 1 }}
                       isAnimationActive
                     >
                       {chartData.map((t, i) => (
-                        <Cell key={t.themeId} fill={t.themeId === '__others__' ? '#64748b' : PIE_COLORS[i % PIE_COLORS.length]} />
+                        <Cell key={t.themeId} fill={t.themeId === '__others__' ? '#6B7680' : PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
                       formatter={(value: number, name: string) => [`${value} questões`, name]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-2xl sm:text-3xl font-black text-[#05413b]">{chartTotal}</span>
+                  <span className="text-2xl sm:text-3xl font-black text-slate-100">{chartTotal}</span>
                 </div>
               </div>
             </section>
@@ -738,7 +738,7 @@ export const ExamViewPage: React.FC = () => {
 
       {submittedRows.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <ClipboardList className="w-4 h-4 text-cyan-400" />
             Respostas Enviadas ({submittedRows.length})
           </h2>
@@ -756,7 +756,7 @@ export const ExamViewPage: React.FC = () => {
               <tbody className="divide-y divide-slate-800/80">
                 {submittedRows.map(({ attempt, areaScores }) => (
                   <tr key={attempt.id}>
-                    <td className="p-3 font-semibold text-[#05413b]">{attempt.userName || '—'}</td>
+                    <td className="p-3 font-semibold text-slate-100">{attempt.userName || '—'}</td>
                     <td className={`p-3 font-black ${scoreColorClass(attempt.scorePercentage || 0)}`}>
                       {attempt.scorePercentage ?? 0}%
                     </td>
@@ -843,7 +843,7 @@ export const ExamViewPage: React.FC = () => {
                       key={altKey}
                       className={`p-3 rounded-xl border text-xs flex items-start gap-3 transition-all ${
                         isCorrectKey
-                          ? 'bg-emerald-500/15 border-emerald-500/50 text-[#05413b] font-semibold'
+                          ? 'bg-emerald-500/15 border-emerald-500/50 text-slate-100 font-semibold'
                           : 'bg-slate-950 border-slate-800/80 text-slate-300'
                       }`}
                     >

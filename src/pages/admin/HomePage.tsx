@@ -21,7 +21,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#05413b]">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
           Olá, {currentUser?.name?.split(' ')[0] || 'admin'}!
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">O que você quer fazer agora?</p>
@@ -34,9 +34,9 @@ export const HomePage: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className="bg-[#227d74] hover:bg-[#1b625a] rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col items-center gap-3 text-center"
+              className="bg-teal-500 hover:bg-teal-600 rounded-2xl p-5 transition-colors flex flex-col items-center gap-3 text-center"
             >
-              <Icon className="w-8 h-8 text-[#FFCB70]" strokeWidth={1.75} />
+              <Icon className="w-8 h-8 text-cyan-500" strokeWidth={1.75} />
               <span className="text-sm font-bold text-white">{item.label}</span>
             </Link>
           );

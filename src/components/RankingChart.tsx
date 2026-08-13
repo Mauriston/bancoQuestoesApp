@@ -31,18 +31,18 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
   return (
     <ResponsiveContainer width="100%" height={chartHeight}>
       <BarChart data={sorted} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 4 }} barCategoryGap="28%">
-        <XAxis type="number" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} unit="%" />
+        <XAxis type="number" domain={[0, 100]} tick={{ fill: '#6B7680', fontSize: 11 }} unit="%" />
         <YAxis
           type="category"
           dataKey="name"
           width={140}
-          tick={{ fill: '#05413b', fontSize: 14, fontWeight: 700 }}
+          tick={{ fill: '#2C3A47', fontSize: 14, fontWeight: 700 }}
           interval={0}
         />
         <Tooltip
           formatter={(value: any) => [`${value}%`, 'Desempenho']}
-          contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, fontSize: 12 }}
-          labelStyle={{ color: '#e2e8f0' }}
+          contentStyle={{ background: '#23303B', border: '1px solid #2C3A47', borderRadius: 12, fontSize: 12 }}
+          labelStyle={{ color: '#D8DBDD' }}
         />
         <Bar
           dataKey="score"
@@ -61,7 +61,7 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
             dataKey="score"
             position="right"
             formatter={(value: any) => `${value}%`}
-            style={{ fill: '#05413b', fontSize: 13, fontWeight: 700 }}
+            style={{ fill: '#2C3A47', fontSize: 13, fontWeight: 700 }}
           />
         </Bar>
       </BarChart>

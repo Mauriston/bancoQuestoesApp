@@ -54,7 +54,7 @@ export const AvatarAccountMenu: React.FC<AvatarAccountMenuProps> = ({
         <span className="relative inline-flex shrink-0">
           <Avatar name={name} photoUrl={photoUrl} role={role} size={avatarSize} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-[#E20018] text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#05413b] leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-slate-100 leading-none">
               {badgeLabel}
             </span>
           )}
@@ -78,7 +78,7 @@ export const AvatarAccountMenu: React.FC<AvatarAccountMenuProps> = ({
               Notificações
             </span>
             {unreadCount > 0 && (
-              <span className="text-[10px] font-bold text-[#E20018]">{badgeLabel}</span>
+              <span className="text-[10px] font-bold text-red-500">{badgeLabel}</span>
             )}
           </Link>
           <Link

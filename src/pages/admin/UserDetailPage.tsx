@@ -107,7 +107,7 @@ export const UserDetailPage: React.FC = () => {
   if (!user) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#05413b]">
+        <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Usuários</span>
         </Link>
@@ -129,7 +129,7 @@ export const UserDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#05413b] transition-colors">
+      <Link to="/admin/users" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Usuários</span>
       </Link>
@@ -155,7 +155,7 @@ export const UserDetailPage: React.FC = () => {
           />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-[#05413b] truncate">{user.name}</h1>
+          <h1 className="text-xl font-bold text-slate-100 truncate">{user.name}</h1>
           <p className="text-xs text-slate-400 truncate">{user.email}</p>
           <div className="flex items-center gap-1.5 mt-1">
             <Phone className="w-3 h-3 text-slate-500 shrink-0" />
@@ -192,7 +192,7 @@ export const UserDetailPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Questões Respondidas</p>
-              <p className="text-xl font-black text-[#05413b] mt-0.5">{totalSolved}</p>
+              <p className="text-xl font-black text-slate-100 mt-0.5">{totalSolved}</p>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export const UserDetailPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400">Provas Concluídas</p>
-              <p className="text-xl font-black text-[#05413b] mt-0.5">{completedAttempts.length}</p>
+              <p className="text-xl font-black text-slate-100 mt-0.5">{completedAttempts.length}</p>
             </div>
           </div>
         </div>
@@ -224,7 +224,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Area Breakdown */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h2 className="text-sm font-bold text-[#05413b]">Desempenho por Área</h2>
+        <h2 className="text-sm font-bold text-slate-100">Desempenho por Área</h2>
         {areaPerformanceList.length === 0 ? (
           <p className="text-xs text-slate-500 italic">Nenhuma questão respondida ainda.</p>
         ) : (
@@ -250,7 +250,7 @@ export const UserDetailPage: React.FC = () => {
       {/* Attempts History — grid de cards para não desperdiçar a largura em
           telas largas (mesmo tratamento aplicado em AttemptsPage) */}
       <div className="space-y-4">
-        <h2 className="text-sm font-bold text-[#05413b]">Histórico de Tentativas ({attempts.length})</h2>
+        <h2 className="text-sm font-bold text-slate-100">Histórico de Tentativas ({attempts.length})</h2>
         {attempts.length === 0 ? (
           <p className="text-xs text-slate-500 italic">Nenhuma tentativa registrada ainda.</p>
         ) : (
@@ -276,7 +276,7 @@ export const UserDetailPage: React.FC = () => {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <h3 className="text-sm font-bold text-[#05413b] line-clamp-2">{att.examName || 'Simulado Ortopedia'}</h3>
+                    <h3 className="text-sm font-bold text-slate-100 line-clamp-2">{att.examName || 'Simulado Ortopedia'}</h3>
                     <p className="text-[11px] text-slate-500 mt-1">{formatDate(att.completedAt || att.startedAt)}</p>
                     <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
                       <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>

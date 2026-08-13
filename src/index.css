@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 /*
-  Sistema de design institucional (paleta SBOT — rebrand alinhado ao novo
-  ícone do app, um troféu com a gota da marca SBOT). As três cores de base
-  são:
+  Sistema de design institucional SBOT (Sociedade Brasileira de Ortopedia e
+  Traumatologia), conforme design.md / SBOT_DesignSystem. Duas cores centrais
+  fazem o trabalho estrutural da marca:
 
-    Elm         #227D74  — acento primário (marca): botões, links, destaques
-    Blue Stone  #03665C  — cor dominante: texto, navegação, tom mais escuro
-    Goldenrod   #FFCB70  — acento de alta visibilidade (uso pontual)
+    Teal (brand)  #1E8C7C / #2F9C8C — marca, navegação, ações primárias
+    Navy/grafite  #2C3A47           — texto institucional, cabeçalhos, chrome escuro
+
+  Azul editorial (#1F6E96) e laranja de campanha (#F05400) são acentos
+  pontuais — nunca cor de fundo estrutural nem substitutos do teal/navy.
+  Dourado (#F5A623) é reservado a avaliações (estrelas).
 
   Em vez de recolorir cada classe utilitária individualmente pelo código
   (centenas de ocorrências de bg-slate-*, text-teal-*, bg-amber-* etc.),
@@ -18,49 +21,48 @@
   componentes existente. A escala "slate" é deliberadamente invertida em
   relação ao Tailwind padrão (950 = claro/fundo de página, 100 = escuro/texto
   primário) porque o app usa esses tokens como "texto claro sobre fundo
-  escuro" — aqui viram "texto escuro (Blue Stone) sobre fundo claro". Os
-  literais de cor embutidos como valor arbitrário pelo código (ex.:
-  text-[#050f41]) foram atualizados à parte, ver commit — não passam por
-  este arquivo.
+  escuro" — aqui viram "texto escuro (navy) sobre fundo claro". Os
+  literais de cor embutidos como valor arbitrário pelo código foram
+  atualizados à parte, ver commit — não passam por este arquivo.
 */
 @theme {
   /* Neutros institucionais — fundo predominantemente branco (60–80% da UI) */
   --color-slate-50: #ffffff;
-  --color-slate-100: #05413b; /* texto primário = Blue Stone */
-  --color-slate-200: #104a44;
-  --color-slate-300: #245e58;
-  --color-slate-400: #4b7f7a; /* texto secundário/muted */
-  --color-slate-500: #5b908b;
-  --color-slate-600: #76aca7; /* ícones muted */
-  --color-slate-700: #a8d2ce; /* borda com mais ênfase / hover */
-  --color-slate-800: #dbf0ee; /* borda padrão de card / chip neutro */
+  --color-slate-100: #2c3a47; /* texto primário = navy/grafite institucional */
+  --color-slate-200: #35434f;
+  --color-slate-300: #47555f;
+  --color-slate-400: #6b7680; /* texto secundário/muted */
+  --color-slate-500: #838d95;
+  --color-slate-600: #9aa2a9; /* ícones muted */
+  --color-slate-700: #c3c9cd; /* borda com mais ênfase / hover */
+  --color-slate-800: #d8dbdd; /* borda padrão de card / chip neutro */
   --color-slate-900: #ffffff; /* superfície de card */
-  --color-slate-950: #f4f6fb; /* fundo de página */
+  --color-slate-950: #f5f5f5; /* fundo de página */
 
-  /* Acento primário (marca) — família Elm */
-  --color-teal-300: #7fb4ae;
-  --color-teal-400: #4a948d;
-  --color-teal-500: #227d74; /* Elm exato */
-  --color-teal-600: #1b625a;
+  /* Acento primário (marca) — família teal SBOT */
+  --color-teal-300: #8fc4bb;
+  --color-teal-400: #4aab9b;
+  --color-teal-500: #1e8c7c; /* teal.600 SBOT — primário */
+  --color-teal-600: #146b5e;
 
-  /* Acento secundário (área administrativa) — variação mais clara de Elm */
-  --color-cyan-300: #abceca;
-  --color-cyan-400: #7fb4ae;
-  --color-cyan-500: #418f87;
-  --color-cyan-600: #1f736b;
-  --color-blue-500: #388a82;
-  --color-blue-600: #1d6c64;
+  /* Acento secundário (área administrativa) — teal mais claro */
+  --color-cyan-300: #b7ddd6;
+  --color-cyan-400: #6fa89c;
+  --color-cyan-500: #2f9c8c; /* teal.500 SBOT */
+  --color-cyan-600: #1e8c7c;
+  --color-blue-500: #1f6e96; /* azul editorial — headlines/links de conteúdo */
+  --color-blue-600: #185777;
 
-  /* Goldenrod — acento de alta visibilidade (nunca como texto sobre branco) */
-  --color-amber-200: #614d2b;
-  --color-amber-300: #806638;
-  --color-amber-400: #a38248;
-  --color-amber-500: #ffcb70; /* Goldenrod institucional exato */
+  /* Laranja de campanha — uso tático/pontual apenas (selos, urgência) */
+  --color-amber-200: #7a2e00;
+  --color-amber-300: #a33d00;
+  --color-amber-400: #cc4c00;
+  --color-amber-500: #f05400; /* laranja institucional SBOT */
 
-  /* Verde Brasil — confirmações e estados positivos */
+  /* Verde — confirmações e estados positivos (funcional, não-marca) */
   --color-emerald-300: #0e6b3b;
   --color-emerald-400: #0b7a42;
-  --color-emerald-500: #079551; /* Verde Brasil institucional exato */
+  --color-emerald-500: #1e8c3f;
 
   /* Vermelho funcional (erro/alerta) — cor não institucional, uso restrito */
   --color-red-200: #c65850;
@@ -72,8 +74,11 @@
   --color-purple-300: #7c6bb0;
   --color-purple-500: #4a3b82;
 
-  --font-sans: "Montserrat", system-ui, -apple-system, sans-serif;
-  --font-display: "Montserrat", system-ui, -apple-system, sans-serif;
+  /* Dourado — reservado a avaliações/estrelas, nunca uso estrutural */
+  --color-gold-500: #f5a623;
+
+  --font-sans: "Nunito Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Poppins", system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
@@ -86,14 +91,15 @@
     font-family: var(--font-sans);
   }
 
-  h1 {
+  h1, h2, h3 {
     font-family: var(--font-display);
-    font-weight: 800;
-    letter-spacing: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
-  h2, h3, h4, h5, h6 {
+  h4, h5, h6 {
     font-family: var(--font-sans);
+    font-weight: 700;
   }
 }
 

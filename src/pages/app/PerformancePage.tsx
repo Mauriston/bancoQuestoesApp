@@ -28,8 +28,8 @@ const getTier = scoreTier;
 
 const TIER_STYLES: Record<Tier, { text: string; ring: string; bar: string }> = {
   good: { text: 'text-[#079551]', ring: 'border-[#079551]/30', bar: 'bg-[#079551]' },
-  warn: { text: 'text-[#FFCB70]', ring: 'border-[#FFCB70]/30', bar: 'bg-[#FFCB70]' },
-  bad: { text: 'text-[#E20018]', ring: 'border-[#E20018]/30', bar: 'bg-[#E20018]' }
+  warn: { text: 'text-cyan-500', ring: 'border-cyan-500/30', bar: 'bg-cyan-500' },
+  bad: { text: 'text-red-500', ring: 'border-red-500/30', bar: 'bg-red-500' }
 };
 
 export const PerformancePage: React.FC = () => {
@@ -275,7 +275,7 @@ export const PerformancePage: React.FC = () => {
 
       {/* Ranking Geral — mesmo gráfico do Dashboard admin, sem drill-down aqui */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
-        <h2 className="text-sm font-bold text-[#05413b]">Ranking Geral</h2>
+        <h2 className="text-sm font-bold text-slate-100">Ranking Geral</h2>
         <p className="text-xs text-slate-400">Desempenho geral residentes.</p>
         <RankingChart data={rankingData} />
       </div>
@@ -305,7 +305,7 @@ export const PerformancePage: React.FC = () => {
       {/* Evolução ao longo das provas — só a partir de 2 provas concluídas */}
       {evolutionData.length >= 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#05413b] mb-1">Evolução do Desempenho</h2>
+          <h2 className="text-sm font-bold text-slate-100 mb-1">Evolução do Desempenho</h2>
           <p className="text-xs text-slate-400 mb-2">Aproveitamento (%) ao longo das provas realizadas.</p>
           <div className="h-48 sm:h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -320,19 +320,19 @@ export const PerformancePage: React.FC = () => {
                 </defs>
                 <XAxis dataKey="idx" hide />
                 <YAxis domain={[0, 100]} hide />
-                <ReferenceLine y={50} stroke="#a8b0d2" strokeDasharray="4 4" />
+                <ReferenceLine y={50} stroke="#C3C9CD" strokeDasharray="4 4" />
                 <Tooltip
                   formatter={(value: any) => [`${value}%`, 'Aproveitamento']}
                   labelFormatter={(_label, payload) => payload?.[0]?.payload?.name || ''}
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
                 />
                 <RechartsArea
                   type="monotone"
                   dataKey="score"
-                  stroke="#05413b"
+                  stroke="#2C3A47"
                   strokeWidth={2.5}
                   fill="url(#evoFill)"
-                  dot={{ r: 4, fill: '#05413b', strokeWidth: 0 }}
+                  dot={{ r: 4, fill: '#2C3A47', strokeWidth: 0 }}
                   activeDot={{ r: 6 }}
                 >
                   <LabelList
@@ -364,7 +364,7 @@ export const PerformancePage: React.FC = () => {
       {/* Radar: Você vs Média dos Colegas */}
       {radarData.length >= 3 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
             <Users className="w-4 h-4 text-teal-400" />
             Você vs. Média dos Colegas
           </h2>
@@ -372,14 +372,14 @@ export const PerformancePage: React.FC = () => {
           <div className="h-72 sm:h-80 w-full -ml-4">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} outerRadius="70%">
-                <PolarGrid stroke="#dbe0f0" />
-                <PolarAngleAxis dataKey="area" tick={{ fill: '#4b567f', fontSize: 11 }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#7680ac', fontSize: 10 }} />
-                <Radar name="Você" dataKey="Você" stroke="#05413b" fill="#05413b" fillOpacity={0.35} />
-                <Radar name="Colegas" dataKey="Colegas" stroke="#ffcb70" fill="#ffcb70" fillOpacity={0.25} />
+                <PolarGrid stroke="#F2F2F5" />
+                <PolarAngleAxis dataKey="area" tick={{ fill: '#6B7680', fontSize: 11 }} />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#9AA2A9', fontSize: 10 }} />
+                <Radar name="Você" dataKey="Você" stroke="#2C3A47" fill="#2C3A47" fillOpacity={0.35} />
+                <Radar name="Colegas" dataKey="Colegas" stroke="#2F9C8C" fill="#2F9C8C" fillOpacity={0.25} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#dbe0f0', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
                 />
               </RadarChart>
             </ResponsiveContainer>
@@ -392,7 +392,7 @@ export const PerformancePage: React.FC = () => {
           aqui é só a visão de estatística. */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-teal-400" />
             Desempenho por Área
           </h2>
@@ -433,7 +433,7 @@ export const PerformancePage: React.FC = () => {
                     animationEasing="ease-out"
                   >
                     <Cell fill={scoreColorHex(selectedArea.accuracy)} />
-                    <Cell fill="#1e293b" />
+                    <Cell fill="#2C3A47" />
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
@@ -497,7 +497,7 @@ export const PerformancePage: React.FC = () => {
       {groupPerformanceList.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <h2 className="text-sm font-bold text-[#05413b] flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-teal-400" />
               Desempenho por Grupo (TEOT)
             </h2>
@@ -534,7 +534,7 @@ export const PerformancePage: React.FC = () => {
                       animationEasing="ease-out"
                     >
                       <Cell fill={scoreColorHex(selectedGroup.accuracy)} />
-                      <Cell fill="#1e293b" />
+                      <Cell fill="#2C3A47" />
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
@@ -591,7 +591,7 @@ export const PerformancePage: React.FC = () => {
       {/* Desempenho por Tema, dentro da mesma área filtrada acima */}
       {selectedArea && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
             <Layers className="w-4 h-4 text-teal-400" />
             Desempenho por Tema · {selectedArea.name}
           </h2>
@@ -655,7 +655,7 @@ export const PerformancePage: React.FC = () => {
       {/* Desempenho Crítico — 5 piores temas, de quaisquer áreas */}
       {criticalThemes.length > 0 && (
         <div className="bg-slate-900 border border-red-500/20 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#05413b] mb-1 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-red-400" />
             Desempenho Crítico
           </h2>

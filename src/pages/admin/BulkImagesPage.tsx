@@ -126,7 +126,7 @@ export const BulkImagesSection: React.FC = () => {
     <div className="space-y-6">
 
       <div>
-        <h2 className="text-lg font-bold text-[#05413b] flex items-center gap-2">
+        <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
           <Images className="w-5 h-5 text-cyan-400" />
           Atualizar Imagens de Questões em Lote
         </h2>
@@ -139,7 +139,7 @@ export const BulkImagesSection: React.FC = () => {
 
       {/* Passo 1: Fonte */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <h3 className="text-sm font-bold text-[#05413b] mb-2">1. Qual a fonte dessas imagens?</h3>
+        <h3 className="text-sm font-bold text-slate-100 mb-2">1. Qual a fonte dessas imagens?</h3>
         <p className="text-xs text-slate-400 mb-4">
           Usado para organizar o armazenamento por prova (ex.: <code className="text-slate-300">imagens_questoes/TEOT 2024/...</code>). Pode digitar um nome novo.
         </p>
@@ -150,7 +150,7 @@ export const BulkImagesSection: React.FC = () => {
           value={prova}
           onChange={(e) => { setProva(e.target.value); setResults([]); }}
           disabled={processing}
-          className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-[#05413b] focus:outline-none focus:border-cyan-500 disabled:opacity-60"
+          className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 disabled:opacity-60"
         />
         <datalist id="fonte-sugestoes">
           {FONTE_SUGESTOES.map((f) => <option key={f} value={f} />)}
@@ -159,7 +159,7 @@ export const BulkImagesSection: React.FC = () => {
 
       {/* Passo 2: Pasta */}
       <div className={`bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl transition-opacity ${!isReadyForFolder ? 'opacity-50 pointer-events-none' : ''}`}>
-        <h3 className="text-sm font-bold text-[#05413b] flex items-center gap-2 mb-2">
+        <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 mb-2">
           <FolderOpen className="w-4 h-4 text-cyan-400" />
           2. Selecione a pasta com as imagens
         </h3>
@@ -196,7 +196,7 @@ export const BulkImagesSection: React.FC = () => {
       {entries.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-[#05413b]">3. Conferir e importar</h3>
+            <h3 className="text-sm font-bold text-slate-100">3. Conferir e importar</h3>
             <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
               Prova: {prova.trim()}
             </span>
@@ -225,7 +225,7 @@ export const BulkImagesSection: React.FC = () => {
                   {r.status === 'not_found' && <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />}
                   {r.status === 'error' && <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />}
                   <div className="min-w-0">
-                    <p className="font-semibold text-[#05413b] truncate">{r.fileName}</p>
+                    <p className="font-semibold text-slate-100 truncate">{r.fileName}</p>
                     <p className="text-[11px] text-slate-400">
                       {r.status === 'success' && `Vinculada à questão ${r.questionId}.`}
                       {r.status === 'not_found' && `Nenhuma questão com id "${r.questionId}" foi encontrada — arquivo não enviado.`}

@@ -110,7 +110,7 @@ export const ExamsListPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-[#05413b] flex items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <FileCheck className="w-5 h-5 text-cyan-400" />
             Gerenciamento de Provas & Simulados
           </h1>
@@ -155,7 +155,7 @@ export const ExamsListPage: React.FC = () => {
                     : 'Ninguém respondeu ainda';
                   return (
                     <tr key={ex.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3.5 font-semibold text-[#05413b] max-w-[280px]">
+                      <td className="p-3.5 font-semibold text-slate-100 max-w-[280px]">
                         <span className="line-clamp-2">{ex.name}</span>
                       </td>
                       <td className="p-3.5 text-slate-400">{ex.questionCount}</td>

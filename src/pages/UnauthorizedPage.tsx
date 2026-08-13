@@ -14,7 +14,7 @@ export const UnauthorizedPage: React.FC = () => {
       </p>
       <Link
         to="/"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#227d74] hover:bg-[#1b625a] text-xs font-semibold text-white"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-500 text-xs font-semibold text-white"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Início</span>
@@ -35,7 +35,7 @@ export const InactivePage: React.FC = () => {
       </p>
       <Link
         to="/"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#227d74] hover:bg-[#1b625a] text-xs font-semibold text-white"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-500 text-xs font-semibold text-white"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar para Início</span>
