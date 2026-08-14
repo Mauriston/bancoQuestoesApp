@@ -195,9 +195,11 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
       </div>
 
       <MobileBottomNav
-        home={{ path: '/admin/home', icon: Home, label: 'Home' }}
-        left={{ path: '/admin/questions', icon: BookOpen, label: 'Questões' }}
-        right={{ path: '/admin/exams', icon: FileCheck, label: 'Provas' }}
+        items={[
+          { path: '/admin/questions', icon: BookOpen, label: 'Questões' },
+          { path: '/admin/home', icon: Home, label: 'Home' },
+          { path: '/admin/exams', icon: FileCheck, label: 'Provas' }
+        ]}
       />
 
       <NotificationToastHost />

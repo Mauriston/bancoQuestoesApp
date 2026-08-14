@@ -303,9 +303,12 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       </footer>
 
       <MobileBottomNav
-        home={{ path: '/app/home', icon: Home, label: 'Home' }}
-        left={{ path: '/app/history', icon: History, label: 'Histórico' }}
-        right={{ path: '/app/performance', icon: BarChart3, label: 'Desempenho' }}
+        items={[
+          { path: '/app/home', icon: Home, label: 'Home' },
+          { path: '/app/exams', icon: FileText, label: 'Provas' },
+          { path: '/app/history', icon: History, label: 'Histórico' },
+          { path: '/app/performance', icon: BarChart3, label: 'Painel' }
+        ]}
       />
 
       <NotificationToastHost />

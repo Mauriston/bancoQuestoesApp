@@ -26,6 +26,7 @@ export const ExamResultPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [selectedArea, setSelectedArea] = useState<{ areaId: string; name: string } | null>(null);
+  const [reviewFilter, setReviewFilter] = useState<'wrong' | 'all'>('wrong');
   const areaChartRef = useRef<HTMLDivElement>(null);
 
   // Clique em qualquer lugar fora do gráfico de área limpa o drill-down por
@@ -184,44 +185,53 @@ export const ExamResultPage: React.FC = () => {
   }
 
   const score = attempt.scorePercentage || 0;
+  const correctCount = questions.filter(q => answers[q.id]?.isCorrect).length;
+  const wrongCount = questions.filter(q => answers[q.id] && !answers[q.id].isCorrect).length;
 
   return (
     <div className="space-y-8 pb-12">
 
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/app/history')}
-          aria-label="Voltar para o Histórico"
-          title="Voltar para o Histórico"
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-[#050f41] hover:bg-slate-800 transition-colors shrink-0"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        {attempt.userName && (
-          <span className="text-sm font-bold text-slate-300 truncate">{attempt.userName}</span>
-        )}
+      {/* Header navy — voltar, nome da prova, data e o anel de nota */}
+      <div className="-mx-3 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 px-4 sm:px-6 lg:px-8 pt-4 pb-6 bg-[#050f41] rounded-b-3xl space-y-5">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/app/history')}
+            aria-label="Voltar para o Histórico"
+            title="Voltar para o Histórico"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors shrink-0"
+          >
+            <ArrowLeft className="w-4.5 h-4.5" />
+          </button>
+          <span className="text-sm font-bold text-white/90">Resultado</span>
+        </div>
+
+        <div className="flex items-center gap-5">
+          <div className="relative w-28 h-28 shrink-0">
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{ background: `conic-gradient(${scoreColorHex(score)} ${score * 3.6}deg, rgba(255,255,255,.14) ${score * 3.6}deg)` }}
+            />
+            <div className="absolute inset-[11px] rounded-full bg-[#050f41] flex flex-col items-center justify-center">
+              <span className="text-3xl font-black text-white tabular-nums leading-none">{score}%</span>
+              <span className="text-[9px] font-bold uppercase tracking-wide text-white/50 mt-1">Aproveitamento</span>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl font-bold text-white leading-tight break-words">
+              {attempt.examName || 'Simulado Ortopedia TEOT'}
+            </h1>
+            {attempt.userName && <p className="text-sm text-white/60 mt-0.5 truncate">{attempt.userName}</p>}
+            <div className="flex items-center gap-2 mt-2.5">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold">{correctCount} certas</span>
+              <span className="px-2.5 py-1 rounded-full bg-red-500/20 text-red-300 text-[11px] font-bold">{wrongCount} erradas</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main KPI Banner Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
-          score >= 60 ? 'bg-[#079551]/10' : score >= 50 ? 'bg-[#FAB932]/10' : 'bg-[#E20018]/10'
-        }`} />
-
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-          <div className="min-w-0 flex-1 text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#050f41] break-words">
-              {attempt.examName || 'Simulado Ortopedia TEOT'}
-            </h1>
-          </div>
-          <div className="text-center md:text-right shrink-0">
-            <div className={`text-6xl sm:text-7xl font-black tracking-tight ${scoreColorClass(score)}`}>
-              {attempt.scorePercentage}%
-            </div>
-          </div>
-        </div>
-
         {/* Desempenho por Área e Tema nesta prova — substitui os cards de
             Acertos/Erros/Sem Resposta por análises gráficas mais úteis para
             identificar pontos fracos e alimentar sugestões futuras de estudo. */}
@@ -348,19 +358,47 @@ export const ExamResultPage: React.FC = () => {
 
       {/* Detailed Question Review List */}
       {exam?.allowReviewAfterFinish !== false && (
-        <section className="space-y-6">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
-            <BookOpen className="w-4 h-4" />
-            Questões, Gabaritos e Comentários
-          </h2>
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-teal-400" />
+              Revisão
+            </h2>
+            <div className="flex bg-slate-800 rounded-full p-0.5">
+              <button
+                type="button"
+                onClick={() => setReviewFilter('wrong')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  reviewFilter === 'wrong' ? 'bg-slate-900 text-[#050f41] shadow-sm' : 'text-slate-400'
+                }`}
+              >
+                Erradas {wrongCount}
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewFilter('all')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  reviewFilter === 'all' ? 'bg-slate-900 text-[#050f41] shadow-sm' : 'text-slate-400'
+                }`}
+              >
+                Todas {questions.length}
+              </button>
+            </div>
+          </div>
 
           <div className="space-y-6">
-            {questions.map((q, idx) => {
+            {questions
+              .filter(q => reviewFilter === 'all' || (answers[q.id] && !answers[q.id].isCorrect))
+              .map((q) => {
+              const idx = questions.indexOf(q);
               const userAns = answers[q.id];
               const key = answerKeys[q.originalQuestionId];
               const selected = userAns?.selectedAlternative;
               const correct = key?.correctAlternative;
               const isCorrect = userAns?.isCorrect;
+              // Na aba "Erradas", mostra só a alternativa escolhida e o
+              // gabarito — nas demais (aba "Todas"), as 4 alternativas.
+              const condensed = reviewFilter === 'wrong' && selected && !isCorrect;
 
               return (
                 <div
@@ -428,6 +466,7 @@ export const ExamResultPage: React.FC = () => {
 
                       const isSelectedByUser = selected === altKey;
                       const isCorrectKey = correct === altKey;
+                      if (condensed && !isSelectedByUser && !isCorrectKey) return null;
 
                       let style = 'bg-slate-950 border-slate-800/80 text-slate-300';
                       
@@ -488,6 +527,11 @@ export const ExamResultPage: React.FC = () => {
                 </div>
               );
             })}
+            {reviewFilter === 'wrong' && wrongCount === 0 && (
+              <div className="text-center py-8 text-sm text-slate-500">
+                Nenhuma questão errada — bom trabalho!
+              </div>
+            )}
           </div>
         </section>
       )}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AlertTriangle, Users, TrendingUp, TrendingDown, Minus, BarChart3, Layers
+  AlertTriangle, Users, TrendingUp, TrendingDown, Minus, BarChart3
 } from 'lucide-react';
 import {
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip,
@@ -43,6 +43,7 @@ export const PerformancePage: React.FC = () => {
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const [perfTab, setPerfTab] = useState<'areas' | 'subareas' | 'temas'>('areas');
 
   useEffect(() => {
     async function loadData() {
@@ -209,24 +210,6 @@ export const PerformancePage: React.FC = () => {
     ? selectedArea.accuracy - selectedArea.peerAverage
     : null;
 
-  const selectedAreaThemes = selectedArea
-    ? themePerformanceList.filter(t => t.areaId === selectedArea.id).sort((a, b) => b.accuracy - a.accuracy)
-    : [];
-
-  // Agrupa os temas da área filtrada por subárea (quando a área tem esse
-  // agrupamento) — "Sem Subárea" reúne temas sem subArea definido, o que só
-  // deve acontecer para dados legados ainda não migrados.
-  const themeIdToSubArea = new Map(themes.map(t => [t.id, t.subArea]));
-  const selectedAreaHasSubAreas = selectedAreaThemes.some(t => themeIdToSubArea.get(t.id));
-  const selectedAreaThemesBySubArea = selectedAreaHasSubAreas
-    ? selectedAreaThemes.reduce((acc, t) => {
-        const key = themeIdToSubArea.get(t.id) || 'Sem Subárea';
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(t);
-        return acc;
-      }, {} as Record<string, typeof selectedAreaThemes>)
-    : null;
-
   const rankingData: RankingEntry[] = allStatsForRanking
     .filter(s => (s.totalSolved || 0) > 0 && s.userId)
     .map(s => ({
@@ -352,16 +335,87 @@ export const PerformancePage: React.FC = () => {
         </div>
       )}
 
-      {/* Desempenho por Área — donut da área selecionada no filtro, com o
-          detalhamento por subárea logo abaixo, dentro do mesmo card. */}
+      {/* Um card só, com abas — em vez de "Desempenho por Área" e
+          "Desempenho por Tema" empilhados, o residente escolhe o recorte. */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <h2 className="text-sm font-bold text-[#050f41] flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-teal-400" />
-            Desempenho por Área
+            Desempenho
           </h2>
 
-          {areaPerformanceList.length > 0 && (
+          <div className="flex bg-slate-800 rounded-full p-0.5">
+            {([
+              { key: 'areas', label: 'Áreas' },
+              { key: 'subareas', label: 'Subáreas' },
+              { key: 'temas', label: 'Temas' }
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setPerfTab(tab.key)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  perfTab === tab.key ? 'bg-slate-900 text-[#050f41] shadow-sm' : 'text-slate-400'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {perfTab === 'subareas' ? (
+          subAreaPerformanceList.length === 0 ? (
+            <p className="text-sm text-slate-500 italic">Complete simulados para visualizar a estatística por Subárea.</p>
+          ) : (
+            <div className="space-y-3">
+              {[...subAreaPerformanceList].sort((a, b) => a.accuracy - b.accuracy).map(item => {
+                const style = TIER_STYLES[getTier(item.accuracy)];
+                return (
+                  <div key={`${item.areaId}::${item.subArea}`}>
+                    <div className="flex items-center justify-between gap-3 text-sm mb-1">
+                      <span className="text-slate-300 truncate">
+                        {item.subArea} <span className="text-slate-500 font-normal">· {item.areaName}</span>
+                      </span>
+                      <span className={`font-bold shrink-0 ${style.text}`}>{item.accuracy}%</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, item.accuracy)}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : perfTab === 'temas' ? (
+          themePerformanceList.length === 0 ? (
+            <p className="text-sm text-slate-500 italic">Complete simulados para visualizar a estatística por Tema.</p>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {[...themePerformanceList].sort((a, b) => a.accuracy - b.accuracy).map(t => {
+                const style = TIER_STYLES[getTier(t.accuracy)];
+                const areaName = areas.find(a => a.id === t.areaId)?.name;
+                return (
+                  <div key={t.id}>
+                    <div className="flex items-center justify-between gap-3 text-sm mb-1">
+                      <span className="text-slate-300 truncate">
+                        {t.name}
+                        {(t.subArea || areaName) && <span className="text-slate-500 font-normal"> · {t.subArea || areaName}</span>}
+                      </span>
+                      <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}%</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, t.accuracy)}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : !selectedArea ? (
+          <p className="text-sm text-slate-500 italic">Complete simulados para visualizar a estatística por Área.</p>
+        ) : (
+          <div className="space-y-5">
             <select
               value={effectiveAreaId}
               onChange={(e) => setSelectedAreaId(e.target.value)}
@@ -371,12 +425,6 @@ export const PerformancePage: React.FC = () => {
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
-          )}
-        </div>
-
-        {!selectedArea ? (
-          <p className="text-sm text-slate-500 italic">Complete simulados para visualizar a estatística por Área.</p>
-        ) : (
           <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
             {/* Donut com o percentual da área filtrada no centro — fica à
                 esquerda no desktop, ao lado das subáreas. */}
@@ -483,72 +531,9 @@ export const PerformancePage: React.FC = () => {
               </div>
             )}
           </div>
+          </div>
         )}
       </div>
-
-      {/* Desempenho por Tema, dentro da mesma área filtrada acima */}
-      {selectedArea && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h2 className="text-sm font-bold text-[#050f41] mb-1 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-teal-400" />
-            Desempenho por Tema · {selectedArea.name}
-          </h2>
-
-          {selectedAreaThemes.length === 0 ? (
-            <p className="text-sm text-slate-500 italic mt-2">Nenhum tema respondido nesta área ainda.</p>
-          ) : selectedAreaThemesBySubArea ? (
-            <div className="space-y-5 mt-3">
-              {Object.entries(selectedAreaThemesBySubArea).map(([subAreaName, subThemes]) => {
-                const subTotal = subThemes.reduce((s, t) => s + t.solved, 0);
-                const subCorrect = subThemes.reduce((s, t) => s + t.correct, 0);
-                const subAcc = subTotal > 0 ? Math.round((subCorrect / subTotal) * 100) : 0;
-                const subStyle = TIER_STYLES[getTier(subAcc)];
-                return (
-                  <div key={subAreaName}>
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{subAreaName}</h4>
-                      <span className={`text-xs font-bold ${subStyle.text}`}>{subAcc}%</span>
-                    </div>
-                    <div className="space-y-3">
-                      {subThemes.map(t => {
-                        const style = TIER_STYLES[getTier(t.accuracy)];
-                        return (
-                          <div key={t.id}>
-                            <div className="flex items-center justify-between gap-3 text-sm mb-1">
-                              <span className="text-slate-300 truncate">{t.name}</span>
-                              <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}%</span>
-                            </div>
-                            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                              <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, t.accuracy)}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-3 mt-3">
-              {selectedAreaThemes.map(t => {
-                const style = TIER_STYLES[getTier(t.accuracy)];
-                return (
-                  <div key={t.id}>
-                    <div className="flex items-center justify-between gap-3 text-sm mb-1">
-                      <span className="text-slate-300 truncate">{t.name}</span>
-                      <span className={`font-bold shrink-0 ${style.text}`}>{t.accuracy}%</span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                      <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${Math.min(100, t.accuracy)}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Desempenho Crítico — 5 piores temas, de quaisquer áreas */}
       {criticalThemes.length > 0 && (

@@ -1,25 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MoreVertical, ChevronRight, Calendar, ThumbsUp, AlertTriangle, OctagonAlert } from 'lucide-react';
+import { ChevronRight, CircleDot } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserAttempts } from '../../services/firebaseService';
 import { Attempt } from '../../types';
-import { formatDateOnly, scoreColorClass } from '../../utils/helpers';
+import { formatDateOnly, scoreColorHex } from '../../utils/helpers';
 
-function ScoreIcon({ score, className }: { score: number; className?: string }) {
-  if (score >= 60) return <ThumbsUp className={className} />;
-  if (score >= 50) return <AlertTriangle className={className} />;
-  return <OctagonAlert className={className} />;
+function toDateSafe(value: any): Date | null {
+  if (!value) return null;
+  if (typeof value === 'object' && 'seconds' in value) return new Date(value.seconds * 1000);
+  if (value instanceof Date) return value;
+  return null;
 }
 
-// Divide o nome da prova em duas linhas quando houver um hífen cercado de
-// espaços (ex.: "PEDIÁTRICA - Trauma MMSS") — a parte antes fica em
-// destaque, a parte depois em uma segunda linha menor e mais discreta.
-function splitExamName(name: string): [string, string | null] {
-  const parts = name.split(/\s+-\s+/);
-  if (parts.length < 2) return [name, null];
-  return [parts[0], parts.slice(1).join(' - ')];
-}
+const MONTH_LABELS = [
+  'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+  'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+];
 
 export const HistoryPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -30,8 +27,8 @@ export const HistoryPage: React.FC = () => {
     if (currentUser) {
       getUserAttempts(currentUser.id)
         .then(res => setAttempts(res.sort((a, b) => {
-          const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
-          const bT = b.startedAt ? (typeof b.startedAt === 'object' && 'seconds' in b.startedAt ? b.startedAt.seconds : 0) : 0;
+          const aT = toDateSafe(a.startedAt)?.getTime() || 0;
+          const bT = toDateSafe(b.startedAt)?.getTime() || 0;
           return bT - aT;
         })))
         .catch(err => console.error("Erro ao carregar histórico:", err))
@@ -40,6 +37,30 @@ export const HistoryPage: React.FC = () => {
       setLoading(false);
     }
   }, [currentUser]);
+
+  const completed = attempts.filter(a => a.status === 'completed' && typeof a.scorePercentage === 'number');
+  const summary = useMemo(() => {
+    if (completed.length === 0) return null;
+    const avg = Math.round(completed.reduce((s, a) => s + (a.scorePercentage || 0), 0) / completed.length);
+    const best = Math.max(...completed.map(a => a.scorePercentage || 0));
+    return { count: completed.length, avg, best };
+  }, [completed]);
+
+  // Agrupa por mês (do mais recente primeiro), usando a data de conclusão
+  // para provas terminadas e a de início para as em andamento.
+  const groups = useMemo(() => {
+    const map = new Map<string, { label: string; items: Attempt[] }>();
+    attempts.forEach(att => {
+      const d = toDateSafe(att.completedAt) || toDateSafe(att.startedAt);
+      if (!d) return;
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!map.has(key)) {
+        map.set(key, { label: `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`, items: [] });
+      }
+      map.get(key)!.items.push(att);
+    });
+    return Array.from(map.values());
+  }, [attempts]);
 
   if (loading) {
     return (
@@ -51,74 +72,88 @@ export const HistoryPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
 
-      {currentUser && (
-        <div className="flex items-center">
-          <h1 className="text-base sm:text-lg font-bold text-slate-300">
-            {currentUser.name}, esse é o seu histórico de provas realizadas.
-          </h1>
-        </div>
-      )}
-
-      {/* History table list */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {attempts.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
-            Nenhuma tentativa registrada encontrada.
-          </div>
+      <div className="-mx-3 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 px-4 sm:px-6 lg:px-8 pt-5 pb-5 bg-[#050f41] rounded-b-3xl">
+        <h1 className="text-lg font-bold text-white">Histórico</h1>
+        {summary ? (
+          <p className="text-xs text-white/55 mt-1">
+            {summary.count} prova{summary.count === 1 ? '' : 's'} concluída{summary.count === 1 ? '' : 's'} · média {summary.avg}% · melhor {summary.best}%
+          </p>
         ) : (
-          <div className="divide-y divide-slate-800/80">
-            {attempts.map((att) => {
-              const score = att.scorePercentage || 0;
-              const isCompleted = att.status === 'completed';
-              const dest = isCompleted
-                ? `/app/attempts/${att.id}/result`
-                : `/app/exams/${att.assignmentId}`;
-              const [examNamePrimary, examNameSecondary] = splitExamName(att.examName || 'Simulado Ortopedia');
-
-              return (
-                <Link
-                  key={att.id}
-                  to={dest}
-                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-slate-800/40 transition-colors relative"
-                >
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {formatDateOnly(att.completedAt || att.startedAt)}
-                    </span>
-
-                    <h3 className="text-sm font-semibold text-slate-300 truncate">
-                      {examNamePrimary}
-                    </h3>
-                    {examNameSecondary && (
-                      <h4 className="text-xs text-slate-500 truncate">
-                        {examNameSecondary}
-                      </h4>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    {isCompleted ? (
-                      <span className={`flex items-center gap-1.5 text-2xl sm:text-3xl font-black leading-none ${scoreColorClass(score)}`}>
-                        <ScoreIcon score={score} className="w-5 h-5 sm:w-6 sm:h-6" />
-                        {score}%
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-sm font-bold text-amber-400">
-                        <span>Continuar</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-                    <MoreVertical className="w-4 h-4 text-slate-600 shrink-0" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <p className="text-xs text-white/55 mt-1">Nenhuma prova concluída ainda.</p>
         )}
       </div>
+
+      {groups.length === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-sm text-slate-500">
+          Nenhuma tentativa registrada encontrada.
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {groups.map(group => (
+            <div key={group.label}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 mb-2">{group.label}</p>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="divide-y divide-slate-800/80">
+                  {group.items.map(att => {
+                    const score = att.scorePercentage || 0;
+                    const isCompleted = att.status === 'completed';
+                    const dest = isCompleted
+                      ? `/app/attempts/${att.id}/result`
+                      : `/app/exams/${att.assignmentId}`;
+
+                    return (
+                      <Link
+                        key={att.id}
+                        to={dest}
+                        className="p-3.5 flex items-center gap-3 hover:bg-slate-800/40 transition-colors"
+                      >
+                        {isCompleted ? (
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-[15px] tabular-nums shrink-0"
+                            style={{ backgroundColor: `${scoreColorHex(score)}1a`, color: scoreColorHex(score) }}
+                          >
+                            {score}
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                            <CircleDot className="w-5 h-5" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-semibold text-[#050f41] truncate">
+                            {att.examName || 'Simulado Ortopedia'}
+                          </h3>
+                          {isCompleted ? (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {formatDateOnly(att.completedAt)} · {att.totalQuestions} questões · {att.correctAnswers ?? 0} certas
+                            </p>
+                          ) : (
+                            <p className="text-xs font-semibold text-amber-600 mt-0.5">
+                              {formatDateOnly(att.startedAt)} · em andamento
+                            </p>
+                          )}
+                        </div>
+
+                        {isCompleted ? (
+                          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                        ) : (
+                          <span className="flex items-center gap-0.5 text-xs font-bold text-emerald-600 shrink-0">
+                            Continuar
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

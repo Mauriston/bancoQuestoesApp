@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Bell, FileCheck, PlayCircle, MessageSquare, Video, GraduationCap } from 'lucide-react';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 import { markNotificationsRead } from '../services/firebaseService';
@@ -40,6 +41,9 @@ const ICONS: Record<AppNotification['type'], React.ElementType> = {
 export const NotificationsPage: React.FC = () => {
   const { currentUser } = useAuth();
   const { notifications, lastReadAt } = useUnreadNotifications();
+  // Visual um pouco mais rico (ícone tingido de verde nas não lidas) só na
+  // área do candidato — a área admin mantém o visual neutro de sempre.
+  const isCandidateArea = useLocation().pathname.startsWith('/app');
 
   useEffect(() => {
     if (currentUser) {
@@ -72,12 +76,15 @@ export const NotificationsPage: React.FC = () => {
             const createdAt = toDate(n.createdAt);
             const createdSeconds = createdAt ? createdAt.getTime() / 1000 : 0;
             const isUnread = createdSeconds > lastReadSeconds;
+            const iconStyle = isCandidateArea && isUnread
+              ? 'bg-emerald-500/12 text-emerald-600'
+              : 'bg-slate-800 text-slate-400';
             return (
               <div
                 key={n.id}
                 className={`flex items-start gap-3 px-4 py-3.5 ${isUnread ? 'bg-cyan-500/5' : ''}`}
               >
-                <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${iconStyle}`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">

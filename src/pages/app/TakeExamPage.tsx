@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowRight, X, ZoomIn, Trophy, AlertCircle, ArrowLeft
+  ArrowRight, X, ZoomIn, Trophy, AlertCircle, ArrowLeft, CircleCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getExamById, getExamQuestions, startExamAttempt, getAttemptAnswers,
-  saveAttemptAnswer, getUserAssignments, isExamActive, createNotification
+  saveAttemptAnswer, getUserAssignments, isExamActive, createNotification, getAreas, getThemes
 } from '../../services/firebaseService';
 import { finishAndGradeAttempt } from '../../services/gradingService';
-import { Exam, ExamQuestion } from '../../types';
+import { Exam, ExamQuestion, Area, Theme } from '../../types';
 
 // Cache local (por navegador/dispositivo) da alternativa selecionada na
 // questão atual, ainda NÃO confirmada em Firestore (isso só acontece ao
@@ -62,6 +62,8 @@ export const TakeExamPage: React.FC = () => {
 
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [themes, setThemes] = useState<Theme[]>([]);
   const [attemptId, setAttemptId] = useState<string>('');
   const [currentAlt, setCurrentAlt] = useState<"A" | "B" | "C" | "D" | null>(null);
   // Mapa examQuestionId → alternativa salva (mesmo para questões que ainda
@@ -120,6 +122,9 @@ export const TakeExamPage: React.FC = () => {
 
         setAttemptId(attId);
         setQuestions(examQuestions);
+
+        getAreas().then(setAreas).catch(() => {});
+        getThemes().then(setThemes).catch(() => {});
 
         // Retomando uma tentativa em andamento: avança automaticamente para
         // a primeira questão ainda não respondida (não é possível voltar).
@@ -299,29 +304,45 @@ export const TakeExamPage: React.FC = () => {
     );
   }
 
-  const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
+  const areaName = areas.find(a => a.id === currentQ.areaId)?.name;
+  const themeName = themes.find(t => t.id === currentQ.themeId)?.name;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 py-6 pb-24">
+    <div className="max-w-3xl mx-auto pb-32">
 
-      {/* Top: nome da prova centralizado + indicador de progresso em pizza */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2.5 py-px">
-        <div />
-        <h2 className="text-base font-bold text-[#050f41] leading-tight truncate text-center">
-          {exam?.name || 'Simulado Ortopedia'}
-        </h2>
-        <div className="flex items-center justify-end shrink-0">
-          <div
-            className="w-8 h-8 rounded-full transition-[background] duration-300"
-            style={{
-              background: `conic-gradient(#14b8a6 0deg ${progressPercent * 3.6}deg, #1e293b ${progressPercent * 3.6}deg 360deg)`
-            }}
-          />
+      {/* Topo fixo: módulo/contador de questões à esquerda, chip da área/tema
+          à direita, barra de progresso segmentada — um segmento por questão
+          já respondida (substitui o antigo indicador em pizza). */}
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur pt-3 pb-2.5 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 truncate">
+              {exam?.name || 'Simulado Ortopedia'}
+            </p>
+            <p className="text-sm font-bold text-[#050f41]">
+              Questão {currentIndex + 1} <span className="text-slate-400 font-semibold">de {questions.length}</span>
+            </p>
+          </div>
+          {(areaName || themeName) && (
+            <span className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 text-[10px] font-bold truncate max-w-[45%]">
+              {themeName || areaName}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1">
+          {questions.map((q, idx) => (
+            <div
+              key={q.id}
+              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                idx <= currentIndex && (savedAlt[q.id] || (idx === currentIndex && currentAlt)) ? 'bg-emerald-500' : 'bg-slate-800'
+              }`}
+            />
+          ))}
         </div>
       </div>
 
       {/* Question Content Box */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl mt-4">
 
         {/* Enunciado */}
         <p className="text-base sm:text-lg font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">
@@ -331,8 +352,8 @@ export const TakeExamPage: React.FC = () => {
         {/* Image Preview se houver — centralizada na página; clique amplia em modal */}
         {currentQ.imageUrl && (
           <div className="mb-6 flex justify-center">
-            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 max-w-md">
-              <div className="relative group cursor-pointer" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
+            <div className="relative group cursor-pointer max-w-md" onClick={() => setPreviewImageUrl(currentQ.imageUrl)}>
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                 <img
                   src={currentQ.imageUrl}
                   alt="Imagem da questão"
@@ -341,11 +362,11 @@ export const TakeExamPage: React.FC = () => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
-                <div className="absolute inset-0 bg-[#050f41]/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
-                  <ZoomIn className="w-4 h-4" />
-                  <span>Clique para ampliar</span>
-                </div>
               </div>
+              <span className="absolute right-3 bottom-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#050f41]/85 text-white text-[11px] font-semibold">
+                <ZoomIn className="w-3.5 h-3.5" />
+                ampliar
+              </span>
             </div>
           </div>
         )}
@@ -361,20 +382,21 @@ export const TakeExamPage: React.FC = () => {
               <button
                 key={letter}
                 onClick={() => handleSelectOption(letter)}
-                className={`w-full p-4 rounded-xl border text-left flex items-start gap-3.5 transition-all ${
+                className={`w-full p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
                   isSelected
-                    ? 'bg-teal-500/15 border-teal-500/60 text-[#050f41] shadow-md shadow-teal-500/10'
+                    ? 'bg-emerald-500/10 border-emerald-500 text-[#050f41] shadow-md shadow-emerald-500/10'
                     : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:text-[#050f41]'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
                   isSelected
-                    ? 'bg-teal-500 text-slate-950 shadow-sm'
+                    ? 'bg-emerald-500 text-white shadow-sm'
                     : 'bg-slate-800 text-slate-400 border border-slate-700'
                 }`}>
                   {letter}
                 </div>
-                <span className="text-sm sm:text-base leading-relaxed font-normal flex-1">{text}</span>
+                <span className={`text-sm sm:text-base leading-relaxed flex-1 ${isSelected ? 'font-semibold' : 'font-normal'}`}>{text}</span>
+                {isSelected && <CircleCheck className="w-[18px] h-[18px] text-emerald-500 shrink-0" />}
               </button>
             );
           })}
@@ -382,31 +404,27 @@ export const TakeExamPage: React.FC = () => {
 
       </div>
 
-      {/* Avançar (sem opção de voltar) — FAB verde só com ícone, que só
-          aparece depois que uma alternativa é selecionada; fixo no canto
-          inferior direito para ficar sempre alcançável, sem ocupar espaço
-          fixo no fluxo da página. */}
-      {currentAlt !== null && (
-        isLastQuestion ? (
+      {/* Barra de ação inferior fixa — substitui o antigo FAB. Habilita
+          "Avançar"/"Finalizar" só depois de marcar uma alternativa; não é
+          possível voltar a uma questão já respondida. */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur border-t border-slate-800">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="min-w-0 hidden sm:block">
+            <p className="text-[11px] font-semibold text-slate-400 truncate">
+              {currentAlt ? `Alternativa ${currentAlt} marcada` : 'Selecione uma alternativa'}
+            </p>
+            <p className="text-[11px] text-slate-500">Não é possível voltar depois de avançar.</p>
+          </div>
           <button
             onClick={handleAdvance}
-            disabled={submitting}
-            className="fixed bottom-6 left-6 right-6 z-40 flex items-center justify-center gap-2 h-14 rounded-2xl bg-red-500 text-white font-bold text-base hover:bg-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-red-500/30"
+            disabled={submitting || currentAlt === null}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 h-12 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-sm transition-colors"
           >
-            Finalizar
+            {isLastQuestion ? 'Finalizar' : 'Avançar'}
+            <ArrowRight className="w-4 h-4" />
           </button>
-        ) : (
-          <button
-            onClick={handleAdvance}
-            disabled={submitting}
-            title="Próxima Questão"
-            aria-label="Próxima Questão"
-            className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/30"
-          >
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        )
-      )}
+        </div>
+      </div>
 
       {/* Modal de Imagem */}
       {previewImageUrl && (
