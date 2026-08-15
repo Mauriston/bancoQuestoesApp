@@ -319,7 +319,7 @@ Livros citáveis no gabarito.
 | `status` | `'draft'\|'published'\|'archived'` | Na prática, criada já como `published` |
 | `active` | boolean | **Visibilidade real.** Nasce `false`; ausente = ativa (compatibilidade) |
 | `questionCount` | number | |
-| `shuffleQuestions` | boolean | Embaralha a ordem das questões **por candidato**, de forma determinística a partir do `attemptId` (ver `orderQuestionsForAttempt`). Ausente/`false` = ordem de elaboração |
+| `shuffleQuestions` | boolean | Embaralha a ordem das questões **por candidato, só durante a execução**, de forma determinística a partir do `attemptId` (ver `orderQuestionsForAttempt`). Ausente/`false` = ordem de elaboração |
 | `showCommentsAfterFinish` | boolean | `!== false` libera gabarito e comentários na revisão |
 | `allowReviewAfterFinish` | boolean | `!== false` libera a revisão questão a questão. A nota e as análises de desempenho são **sempre** exibidas |
 | `createdBy` | string | → `users/{id}` |
@@ -344,7 +344,7 @@ O padrão `campo !== false` é intencional: documentos antigos sem o campo são 
 
 **Não copia** `sourceExam`, `groupId`, `areaName`, `themeName`. Por isso `ExamResultPage` e `ExamViewPage` chamam `getQuestionsByIds()` para exibir o chip de origem.
 
-**A ordem embaralhada não é persistida.** Com `shuffleQuestions` ligado, a sequência que cada candidato vê é derivada em tempo de execução a partir do `attemptId` (`orderQuestionsForAttempt`), não gravada no banco. Como o embaralhamento é determinístico, a mesma sequência é reproduzida na retomada da prova e no relatório final sem nenhum campo adicional.
+**A ordem embaralhada não é persistida.** Com `shuffleQuestions` ligado, a sequência que cada candidato responde é derivada em tempo de execução a partir do `attemptId` (`orderQuestionsForAttempt`), não gravada no banco — e o embaralhamento ser determinístico é o que garante a mesma sequência ao retomar a prova, sem nenhum campo adicional. O relatório do candidato e a visualização do admin usam sempre `orderIndex`.
 
 Reescrita completa a cada `updateExamContent()` — os IDs `eq_N` são reatribuídos em sequência.
 

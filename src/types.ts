@@ -135,8 +135,10 @@ export interface Exam {
   // quem já tinha provas publicadas antes dessa funcionalidade existir.
   active?: boolean;
   questionCount: number;
-  // Embaralha a ordem das questões por candidato, de forma determinística a
-  // partir do attemptId — ver orderQuestionsForAttempt() em firebaseService.
+  // Embaralha a ordem das questões por candidato durante a execução da prova,
+  // de forma determinística a partir do attemptId — ver
+  // orderQuestionsForAttempt() em firebaseService. Não afeta o relatório nem
+  // a visualização do admin, que seguem a ordem de elaboração.
   // Ausente/false = todos respondem na ordem de elaboração da prova.
   shuffleQuestions?: boolean;
   // Libera gabarito e comentários no relatório pós-prova. Ausente = liberado

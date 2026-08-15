@@ -56,7 +56,7 @@ Este README cobre visão geral, operação e deploy. Os detalhes vivem em três 
 |---|---|
 | **Home** | Saudação, carrossel de provas pendentes (ao vivo) e atalhos para todas as seções |
 | **Provas** | Lista de provas atribuídas e ativas; atualiza sozinha quando o admin publica ou ativa uma |
-| **Execução de prova** | Modo tela cheia, uma questão por vez, **sem voltar**, com rascunho salvo localmente e retomada automática de onde parou. Se a prova estiver configurada para embaralhar, cada candidato recebe uma ordem própria — estável entre retomadas |
+| **Execução de prova** | Modo tela cheia, uma questão por vez, **sem voltar**, com rascunho salvo localmente e retomada automática de onde parou. Se a prova estiver configurada para embaralhar, cada candidato responde numa ordem própria — estável entre retomadas |
 | **Relatório** | Nota, desempenho por Área, por Grupo (TEOT) e por Tema, mais a revisão questão a questão com gabarito, comentários, mídia e referência bibliográfica |
 | **Histórico** | Todas as tentativas, com nota colorida e ícone por faixa de desempenho |
 | **Desempenho** | Ranking geral, taxa de acerto, evolução por prova, radar "você × colegas", donuts por Área e por Grupo, ranking de temas e os 5 temas críticos |
@@ -365,7 +365,7 @@ Ambos se ligam ao **Tema**, que pertence a uma área e a um grupo.
 2. **Publicação** (`createAndPublishExam`) → cria `exams` (nascendo **inativa**), **congela** as questões em `exams/{id}/questions` e cria uma `examAssignment` por candidato — tudo em `writeBatch` comitado em blocos de ~400 operações.
 3. **Ativação** pelo admin → a prova passa a aparecer para os candidatos; notificação `exam_activated`.
 4. **Convite** (opcional) → link direto de WhatsApp com o `assignmentId`, marcando `invitedAt`.
-5. **Início** (`startExamAttempt`) → em `runTransaction`, reaproveita a tentativa em andamento ou cria uma nova, e resolve a **ordem de apresentação** das questões (embaralhada por candidato quando `shuffleQuestions` está ligado — determinística a partir do `attemptId`, portanto estável na retomada e reproduzida no relatório).
+5. **Início** (`startExamAttempt`) → em `runTransaction`, reaproveita a tentativa em andamento ou cria uma nova, e resolve a **ordem de execução** das questões (embaralhada por candidato quando `shuffleQuestions` está ligado — determinística a partir do `attemptId`, portanto estável na retomada).
 6. **Respostas** → um documento por questão em `attempts/{id}/answers`, gravado a cada "Avançar".
 7. **Correção** (`finishAndGradeAttempt`) → trava o status em `grading`, compara com o gabarito, calcula a nota e soma em `userStats` — tudo em transação, à prova de clique duplo e abas simultâneas.
 8. **Exclusão** → `deleteExam()` e `deleteAttempt()` limpam dados órfãos e **revertem** o que a tentativa somou nas estatísticas.
@@ -378,7 +378,7 @@ O assistente expõe três opções na Etapa 1 — e apenas essas três, porque s
 
 | Opção | Padrão | Efeito |
 |---|---|---|
-| **Embaralhar ordem das questões para cada candidato** | desligado | Cada residente responde numa ordem própria, derivada do `attemptId`. A ordem se mantém se ele retomar a prova e é reproduzida no relatório final |
+| **Embaralhar ordem das questões para cada candidato** | desligado | Cada residente responde numa ordem própria, derivada do `attemptId`, que se mantém se ele retomar a prova. Vale **só durante a execução** — o relatório e a visualização do admin seguem a ordem de elaboração |
 | **Permitir revisão questão a questão após finalizar** | ligado | Desmarcado, o candidato vê apenas a nota e o desempenho por área/tema/grupo |
 | **Exibir gabarito e comentários na revisão** | ligado | Depende da opção anterior; inclui alternativa correta, comentário, mídia e referência bibliográfica |
 

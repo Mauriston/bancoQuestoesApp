@@ -468,19 +468,19 @@ export async function getExamQuestions(examId: string): Promise<ExamQuestion[]> 
   return questions.sort((a, b) => (a.orderIndex || a.order || 0) - (b.orderIndex || b.order || 0));
 }
 
-// Ordem em que as questões devem ser apresentadas a UMA tentativa específica.
-// Com `shuffleQuestions` ligado na prova, cada candidato recebe uma ordem
-// própria, embaralhada de forma determinística a partir do attemptId — logo:
+// Ordem em que as questões são apresentadas durante a EXECUÇÃO de uma
+// tentativa. Com `shuffleQuestions` ligado na prova, cada candidato recebe
+// uma ordem própria, embaralhada de forma determinística a partir do
+// attemptId — logo:
 //   - candidatos diferentes veem ordens diferentes (attemptId é único);
 //   - o mesmo candidato reencontra a MESMA ordem ao retomar a prova, o que é
 //     essencial porque TakeExamPage retoma pela primeira questão sem resposta
-//     dessa sequência;
-//   - o relatório final (ExamResultPage) reproduz a ordem que o candidato de
-//     fato respondeu, sem precisar persistir nada a mais no Firestore.
-// Com a opção desligada, todos veem a ordem original de elaboração.
+//     dessa sequência; sem isso, o ponto de retomada saltaria a cada abertura.
+// Com a opção desligada, todos respondem na ordem de elaboração.
 //
-// A ordem de elaboração (`orderIndex`) continua sendo a ordem canônica para o
-// admin (ExamViewPage) — é a prova como ela foi montada.
+// Vale SÓ para a execução: o relatório do candidato (ExamResultPage) e a
+// visualização do admin (ExamViewPage) sempre usam a ordem de elaboração
+// (`orderIndex`), que é a ordem canônica da prova.
 export function orderQuestionsForAttempt(
   questions: ExamQuestion[],
   exam: Exam | null | undefined,
