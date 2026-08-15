@@ -135,10 +135,18 @@ export interface Exam {
   // quem já tinha provas publicadas antes dessa funcionalidade existir.
   active?: boolean;
   questionCount: number;
+  // Embaralha a ordem das questões por candidato durante a execução da prova,
+  // de forma determinística a partir do attemptId — ver
+  // orderQuestionsForAttempt() em firebaseService. Não afeta o relatório nem
+  // a visualização do admin, que seguem a ordem de elaboração.
+  // Ausente/false = todos respondem na ordem de elaboração da prova.
   shuffleQuestions?: boolean;
-  shuffleAlternatives?: boolean;
-  showResultAfterFinish?: boolean;
+  // Libera gabarito e comentários no relatório pós-prova. Ausente = liberado
+  // (mesmo padrão `!== false` de `active`, por compatibilidade com provas
+  // gravadas antes do campo existir).
   showCommentsAfterFinish?: boolean;
+  // Libera a revisão questão a questão no relatório pós-prova. A nota e as
+  // análises de desempenho são sempre exibidas, independentemente disto.
   allowReviewAfterFinish?: boolean;
   createdBy: string;
   createdAt?: any;

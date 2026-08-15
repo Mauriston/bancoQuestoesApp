@@ -321,6 +321,7 @@ Uma prova só pode ser editada enquanto está **inativa e sem nenhuma tentativa 
 
 `TakeExamPage` implementa um fluxo **sem retorno**:
 
+- A **ordem das questões** vem pronta de `startExamAttempt()`. Com `shuffleQuestions` ligado na prova, `orderQuestionsForAttempt()` a embaralha de forma **determinística a partir do `attemptId`** — ver [Ordem das questões](#ordem-das-questões) abaixo.
 - Não há botão "voltar" — o residente avança questão a questão.
 - Não é possível avançar sem escolher uma alternativa; logo, não é possível terminar com questões em branco.
 - Na última questão, "Finalizar" salva a resposta e dispara a correção.
@@ -328,6 +329,25 @@ Uma prova só pode ser editada enquanto está **inativa e sem nenhuma tentativa 
 - **Retomada**: ao reabrir uma tentativa `in_progress`, a tela pula para a primeira questão sem resposta e hidrata a seleção a partir do Firestore ou do rascunho local.
 - A notificação `exam_started` só dispara quando não há nenhuma resposta salva — ou seja, na primeira abertura, não a cada retomada.
 - Uma prova desativada pelo admin não pode ser **iniciada**, mas quem já está com ela `started` não é interrompido.
+
+### Ordem das questões
+
+A prova tem uma **ordem canônica** — a de elaboração, gravada em `orderIndex` na cópia congelada. É a ordem usada em todo lugar: no relatório do candidato (`ExamResultPage`) e na visualização do admin (`ExamViewPage`).
+
+O embaralhamento é **exclusivo do momento da execução**. Quando `shuffleQuestions` está ligado, cada candidato responde numa ordem própria, derivada de um Fisher-Yates com PRNG semeado pelo `attemptId` (`shuffleArrayWithSeed` em `utils/helpers.ts`, aplicado por `orderQuestionsForAttempt` em `firebaseService.ts`). A ordem **não é persistida**.
+
+| Requisito | Como o `attemptId` como semente resolve |
+|---|---|
+| Ordens diferentes entre candidatos | `attemptId` é único por tentativa |
+| **Mesma ordem ao retomar a prova** | A semente não muda — e isso é obrigatório, porque a retomada localiza "a primeira questão sem resposta" **dentro da sequência apresentada**; uma ordem instável embaralharia o ponto de retomada a cada abertura |
+
+**Há um único ponto de consumo:** `startExamAttempt()`. Nenhuma outra tela chama `orderQuestionsForAttempt()` — se uma nova precisar da ordem de execução, é essa a função a usar; caso contrário, `getExamQuestions()` já devolve a ordem canônica.
+
+Efeito colateral aceito: com o embaralhamento ligado, a numeração "Questão N" do relatório **não corresponde** à que o candidato viu durante a prova. É deliberado — o relatório é material de estudo e segue a prova como ela foi montada.
+
+Estatísticas por questão (`getExamQuestionStats`) são indexadas por `examQuestionId`, portanto indiferentes à ordem de apresentação.
+
+> **Alternativas rejeitadas:** embaralhar na publicação daria a mesma ordem a todos; `Math.random()` a cada render quebraria a retomada; persistir o array de ordem em cada tentativa resolveria, mas custa uma escrita e um campo a mais para reproduzir algo que uma função pura já dá de graça.
 
 ---
 

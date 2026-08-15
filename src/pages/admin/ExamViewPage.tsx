@@ -369,8 +369,6 @@ export const ExamViewPage: React.FC = () => {
         examData: {
           name: exam.name,
           shuffleQuestions: exam.shuffleQuestions,
-          shuffleAlternatives: exam.shuffleAlternatives,
-          showResultAfterFinish: exam.showResultAfterFinish,
           showCommentsAfterFinish: exam.showCommentsAfterFinish,
           allowReviewAfterFinish: exam.allowReviewAfterFinish
         },

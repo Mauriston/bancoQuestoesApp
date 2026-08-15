@@ -15,8 +15,6 @@ export const examCreateSchema = z.object({
   name: z.string().min(3, "Nome da prova deve ter no mínimo 3 caracteres"),
   durationMinutes: z.number().min(0).optional(),
   shuffleQuestions: z.boolean().default(false),
-  shuffleAlternatives: z.boolean().default(false),
-  showResultAfterFinish: z.boolean().default(true),
   showCommentsAfterFinish: z.boolean().default(true),
   allowReviewAfterFinish: z.boolean().default(true),
   assignedUserIds: z.array(z.string()).min(1, "Selecione pelo menos um usuário ou 'Todos'")

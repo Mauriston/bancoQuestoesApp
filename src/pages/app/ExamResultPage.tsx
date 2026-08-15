@@ -41,6 +41,10 @@ export const ExamResultPage: React.FC = () => {
         const examData = await getExamById(att.examId);
         setExam(examData);
         
+        // Sempre na ordem de elaboração da prova (`orderIndex`), mesmo quando
+        // `shuffleQuestions` está ligado: o embaralhamento existe só para o
+        // momento de execução. O relatório é material de estudo e segue a
+        // ordem canônica da prova, igual à que o admin vê em ExamViewPage.
         const examQs = await getExamQuestions(att.examId);
         setQuestions(examQs);
 
