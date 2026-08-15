@@ -4,7 +4,7 @@ import {
   CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
-import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
+import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences, orderQuestionsForAttempt } from '../../services/firebaseService';
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme, Reference } from '../../types';
 import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
@@ -41,7 +41,14 @@ export const ExamResultPage: React.FC = () => {
         const examData = await getExamById(att.examId);
         setExam(examData);
         
-        const examQs = await getExamQuestions(att.examId);
+        // Mesma ordem em que o candidato respondeu — com `shuffleQuestions`
+        // ligado, a numeração "Questão N" do relatório precisa bater com o
+        // que ele viu durante a prova (ver orderQuestionsForAttempt).
+        const examQs = orderQuestionsForAttempt(
+          await getExamQuestions(att.examId),
+          examData,
+          attemptId
+        );
         setQuestions(examQs);
 
         const userAns = await getAttemptAnswers(attemptId);

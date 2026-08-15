@@ -10,7 +10,7 @@ import {
    ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
    VideotecaItem, AulaItem, MaterialViewLog, Sabatina, SabatinaViewLog, AppNotification, NotificationAudience
  } from '../types';
-import { normalizeText, generateId } from '../utils/helpers';
+import { normalizeText, generateId, shuffleArrayWithSeed } from '../utils/helpers';
 
 // --- USERS ---
 
@@ -468,6 +468,28 @@ export async function getExamQuestions(examId: string): Promise<ExamQuestion[]> 
   return questions.sort((a, b) => (a.orderIndex || a.order || 0) - (b.orderIndex || b.order || 0));
 }
 
+// Ordem em que as questões devem ser apresentadas a UMA tentativa específica.
+// Com `shuffleQuestions` ligado na prova, cada candidato recebe uma ordem
+// própria, embaralhada de forma determinística a partir do attemptId — logo:
+//   - candidatos diferentes veem ordens diferentes (attemptId é único);
+//   - o mesmo candidato reencontra a MESMA ordem ao retomar a prova, o que é
+//     essencial porque TakeExamPage retoma pela primeira questão sem resposta
+//     dessa sequência;
+//   - o relatório final (ExamResultPage) reproduz a ordem que o candidato de
+//     fato respondeu, sem precisar persistir nada a mais no Firestore.
+// Com a opção desligada, todos veem a ordem original de elaboração.
+//
+// A ordem de elaboração (`orderIndex`) continua sendo a ordem canônica para o
+// admin (ExamViewPage) — é a prova como ela foi montada.
+export function orderQuestionsForAttempt(
+  questions: ExamQuestion[],
+  exam: Exam | null | undefined,
+  attemptId: string
+): ExamQuestion[] {
+  if (!exam?.shuffleQuestions || !attemptId) return questions;
+  return shuffleArrayWithSeed(questions, attemptId);
+}
+
 export async function createAndPublishExam(params: {
   examData: Omit<Exam, 'id' | 'createdAt' | 'updatedAt' | 'publishedAt'>;
   questions: Question[];
@@ -576,8 +598,7 @@ export async function createAndPublishExam(params: {
 export async function updateExamContent(params: {
   examId: string;
   examData: Pick<Exam,
-    'name' | 'shuffleQuestions' | 'shuffleAlternatives' |
-    'showResultAfterFinish' | 'showCommentsAfterFinish' | 'allowReviewAfterFinish'
+    'name' | 'shuffleQuestions' | 'showCommentsAfterFinish' | 'allowReviewAfterFinish'
   >;
   questions: Question[];
 }): Promise<void> {
@@ -1002,7 +1023,10 @@ export async function startExamAttempt(assignmentId: string, userId: string, exa
     return newAttemptId;
   });
 
-  return { attemptId, examQuestions };
+  // A ordem só pode ser resolvida depois da transação, porque depende do
+  // attemptId (ver orderQuestionsForAttempt) — inclusive quando a tentativa
+  // é reaproveitada, e é justamente aí que a estabilidade importa.
+  return { attemptId, examQuestions: orderQuestionsForAttempt(examQuestions, exam, attemptId) };
 }
 
 export async function saveAttemptAnswer(

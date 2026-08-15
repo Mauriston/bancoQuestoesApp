@@ -403,6 +403,26 @@ O *scrim* é `bg-slate-100/80` — ou seja, **navy a 80%** com desfoque (token i
 
 Mesma estrutura com `emerald` (sucesso) e `amber` (atenção).
 
+### Checkbox de configuração
+
+Usado no grupo de opções da prova (Etapa 1 do assistente). Rótulo em uma linha e **explicação do efeito** logo abaixo, em `text-[10px] text-slate-500` — a opção diz o que faz sem exigir que o admin descubra testando:
+
+```jsx
+<label className="flex items-start gap-2 text-slate-300 cursor-pointer">
+  <input type="checkbox" className="mt-0.5 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0" />
+  <span>
+    Embaralhar ordem das questões para cada candidato
+    <span className="block text-[10px] text-slate-500">
+      Cada residente recebe uma ordem própria, que se mantém a mesma se ele retomar a prova.
+    </span>
+  </span>
+</label>
+```
+
+`items-start` + `mt-0.5` no input alinham a caixa com a **primeira linha** do rótulo, não com o centro do bloco.
+
+**Opção dependente:** quando uma configuração só faz sentido com outra ligada, ela é desabilitada (`disabled`, `opacity-50`, rótulo em `text-slate-500`) e a explicação **muda** para dizer de que ela depende — em vez de simplesmente sumir ou ficar clicável sem efeito.
+
 ### Barra de filtros
 
 No **desktop (≥ lg)** vira uma coluna lateral fixa (`lg:w-72 xl:w-80`, `sticky top-20`) ao lado do conteúdo. No **mobile** fica acima da lista, `sticky`, e **some ao rolar para baixo** (`useHideOnScroll`).

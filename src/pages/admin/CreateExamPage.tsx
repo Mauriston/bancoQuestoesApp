@@ -29,8 +29,6 @@ export const CreateExamPage: React.FC = () => {
   // Step 1: Basic info
   const [name, setName] = useState('');
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
-  const [shuffleAlternatives, setShuffleAlternatives] = useState(false);
-  const [showResultAfterFinish, setShowResultAfterFinish] = useState(true);
   const [showCommentsAfterFinish, setShowCommentsAfterFinish] = useState(true);
   const [allowReviewAfterFinish, setAllowReviewAfterFinish] = useState(true);
 
@@ -106,8 +104,6 @@ export const CreateExamPage: React.FC = () => {
           } else {
             setName(exam.name);
             setShuffleQuestions(!!exam.shuffleQuestions);
-            setShuffleAlternatives(!!exam.shuffleAlternatives);
-            setShowResultAfterFinish(exam.showResultAfterFinish !== false);
             setShowCommentsAfterFinish(exam.showCommentsAfterFinish !== false);
             setAllowReviewAfterFinish(exam.allowReviewAfterFinish !== false);
 
@@ -249,8 +245,6 @@ export const CreateExamPage: React.FC = () => {
           status: 'published',
           questionCount: selectedQuestions.length,
           shuffleQuestions,
-          shuffleAlternatives,
-          showResultAfterFinish,
           showCommentsAfterFinish,
           allowReviewAfterFinish,
           createdBy: currentUser.id
@@ -280,8 +274,6 @@ export const CreateExamPage: React.FC = () => {
         examData: {
           name,
           shuffleQuestions,
-          shuffleAlternatives,
-          showResultAfterFinish,
           showCommentsAfterFinish,
           allowReviewAfterFinish
         },
@@ -375,33 +367,54 @@ export const CreateExamPage: React.FC = () => {
             />
           </div>
           
-          <div className="space-y-2 pt-2 border-t border-slate-800">
-            <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+          {/* Só configurações que de fato mudam o comportamento da prova. A
+              nota e as análises de desempenho são sempre exibidas ao final —
+              não há opção para escondê-las. */}
+          <div className="space-y-3 pt-2 border-t border-slate-800">
+            <label className="flex items-start gap-2 text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
                 checked={shuffleQuestions}
                 onChange={(e) => setShuffleQuestions(e.target.checked)}
-                className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                className="mt-0.5 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
               />
-              <span>Embaralhar ordem das questões para cada candidato</span>
+              <span>
+                Embaralhar ordem das questões para cada candidato
+                <span className="block text-[10px] text-slate-500">
+                  Cada residente recebe uma ordem própria, que se mantém a mesma se ele retomar a prova.
+                </span>
+              </span>
             </label>
-            <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+            <label className="flex items-start gap-2 text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
-                checked={showResultAfterFinish}
-                onChange={(e) => setShowResultAfterFinish(e.target.checked)}
-                className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                checked={allowReviewAfterFinish}
+                onChange={(e) => setAllowReviewAfterFinish(e.target.checked)}
+                className="mt-0.5 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
               />
-              <span>Exibir nota e resultado imediatamente após finalizar</span>
+              <span>
+                Permitir revisão questão a questão após finalizar
+                <span className="block text-[10px] text-slate-500">
+                  Desmarcado, o candidato vê apenas a nota e o desempenho por área/tema.
+                </span>
+              </span>
             </label>
-            <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+            <label className={`flex items-start gap-2 cursor-pointer ${allowReviewAfterFinish ? 'text-slate-300' : 'text-slate-500 cursor-not-allowed'}`}>
               <input
                 type="checkbox"
                 checked={showCommentsAfterFinish}
+                disabled={!allowReviewAfterFinish}
                 onChange={(e) => setShowCommentsAfterFinish(e.target.checked)}
-                className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0"
+                className="mt-0.5 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0 disabled:opacity-50"
               />
-              <span>Exibir comentários e gabarito na revisão pós-prova</span>
+              <span>
+                Exibir gabarito e comentários na revisão
+                <span className="block text-[10px] text-slate-500">
+                  {allowReviewAfterFinish
+                    ? 'Inclui a alternativa correta, o comentário, a mídia e a referência bibliográfica.'
+                    : 'Depende da revisão questão a questão estar liberada.'}
+                </span>
+              </span>
             </label>
           </div>
 

@@ -56,7 +56,7 @@ Este README cobre visão geral, operação e deploy. Os detalhes vivem em três 
 |---|---|
 | **Home** | Saudação, carrossel de provas pendentes (ao vivo) e atalhos para todas as seções |
 | **Provas** | Lista de provas atribuídas e ativas; atualiza sozinha quando o admin publica ou ativa uma |
-| **Execução de prova** | Modo tela cheia, uma questão por vez, **sem voltar**, com rascunho salvo localmente e retomada automática de onde parou |
+| **Execução de prova** | Modo tela cheia, uma questão por vez, **sem voltar**, com rascunho salvo localmente e retomada automática de onde parou. Se a prova estiver configurada para embaralhar, cada candidato recebe uma ordem própria — estável entre retomadas |
 | **Relatório** | Nota, desempenho por Área, por Grupo (TEOT) e por Tema, mais a revisão questão a questão com gabarito, comentários, mídia e referência bibliográfica |
 | **Histórico** | Todas as tentativas, com nota colorida e ícone por faixa de desempenho |
 | **Desempenho** | Ranking geral, taxa de acerto, evolução por prova, radar "você × colegas", donuts por Área e por Grupo, ranking de temas e os 5 temas críticos |
@@ -365,12 +365,24 @@ Ambos se ligam ao **Tema**, que pertence a uma área e a um grupo.
 2. **Publicação** (`createAndPublishExam`) → cria `exams` (nascendo **inativa**), **congela** as questões em `exams/{id}/questions` e cria uma `examAssignment` por candidato — tudo em `writeBatch` comitado em blocos de ~400 operações.
 3. **Ativação** pelo admin → a prova passa a aparecer para os candidatos; notificação `exam_activated`.
 4. **Convite** (opcional) → link direto de WhatsApp com o `assignmentId`, marcando `invitedAt`.
-5. **Início** (`startExamAttempt`) → em `runTransaction`, reaproveita a tentativa em andamento ou cria uma nova.
+5. **Início** (`startExamAttempt`) → em `runTransaction`, reaproveita a tentativa em andamento ou cria uma nova, e resolve a **ordem de apresentação** das questões (embaralhada por candidato quando `shuffleQuestions` está ligado — determinística a partir do `attemptId`, portanto estável na retomada e reproduzida no relatório).
 6. **Respostas** → um documento por questão em `attempts/{id}/answers`, gravado a cada "Avançar".
 7. **Correção** (`finishAndGradeAttempt`) → trava o status em `grading`, compara com o gabarito, calcula a nota e soma em `userStats` — tudo em transação, à prova de clique duplo e abas simultâneas.
 8. **Exclusão** → `deleteExam()` e `deleteAttempt()` limpam dados órfãos e **revertem** o que a tentativa somou nas estatísticas.
 
 O **congelamento** existe para que editar ou excluir uma questão do banco nunca altere uma prova já entregue.
+
+### Configurações de prova
+
+O assistente expõe três opções na Etapa 1 — e apenas essas três, porque são exatamente as que têm efeito:
+
+| Opção | Padrão | Efeito |
+|---|---|---|
+| **Embaralhar ordem das questões para cada candidato** | desligado | Cada residente responde numa ordem própria, derivada do `attemptId`. A ordem se mantém se ele retomar a prova e é reproduzida no relatório final |
+| **Permitir revisão questão a questão após finalizar** | ligado | Desmarcado, o candidato vê apenas a nota e o desempenho por área/tema/grupo |
+| **Exibir gabarito e comentários na revisão** | ligado | Depende da opção anterior; inclui alternativa correta, comentário, mídia e referência bibliográfica |
+
+A **nota e as análises de desempenho são sempre exibidas** ao final — não há opção para escondê-las. As alternativas **nunca** são embaralhadas.
 
 ---
 
@@ -557,7 +569,7 @@ A interface segue uma paleta institucional clara. A decisão estrutural mais imp
 | **Índice de *collection group*** | `getExamsContainingQuestion()` pode exigir um índice criado manualmente no console (o erro traz o link). |
 | **Leituras de coleção inteira** | Várias telas carregam todas as questões / tentativas / estatísticas. Adequado à escala atual, não a uma ordem de grandeza maior. |
 | **`questionCount` não é mantido** | Gravado como `0` na importação e nunca atualizado; hoje não é lido por nenhuma tela. `recalc-question-counts.mjs` reconcilia. |
-| **Configurações de prova sem efeito** | `shuffleQuestions`, `shuffleAlternatives` e `showResultAfterFinish` são persistidos mas não aplicados na execução. Só `showCommentsAfterFinish` e `allowReviewAfterFinish` têm efeito real. |
+| **Campos descontinuados em provas antigas** | `shuffleAlternatives` e `showResultAfterFinish` foram removidos do código, mas continuam gravados em provas criadas antes disso. São ignorados na leitura — resíduo inofensivo, sem migração. |
 | **Cronograma em código** | Os 19 eventos vivem em `src/constants.ts`; alterá-los exige editar e publicar. |
 | **Coleção `groups` sem rotina de criação** | Precisa existir previamente no Firestore; nenhum script do repositório a popula. |
 | **Duas identidades cromáticas** | As telas de entrada usam verde `#05413b` + âmbar; o produto usa teal SBOT + navy. Ver [`design.md`](design.md#divergências-conhecidas). |

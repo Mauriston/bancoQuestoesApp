@@ -319,15 +319,15 @@ Livros citáveis no gabarito.
 | `status` | `'draft'\|'published'\|'archived'` | Na prática, criada já como `published` |
 | `active` | boolean | **Visibilidade real.** Nasce `false`; ausente = ativa (compatibilidade) |
 | `questionCount` | number | |
-| `shuffleQuestions` | boolean | ⚠️ persistido, **não aplicado** na execução |
-| `shuffleAlternatives` | boolean | ⚠️ persistido, **não aplicado**; sem campo no formulário |
-| `showResultAfterFinish` | boolean | Persistido; a tela de resultado é exibida sempre |
-| `showCommentsAfterFinish` | boolean | **Aplicado** — `!== false` libera gabarito/comentários |
-| `allowReviewAfterFinish` | boolean | **Aplicado** — `!== false` libera a revisão questão a questão |
+| `shuffleQuestions` | boolean | Embaralha a ordem das questões **por candidato**, de forma determinística a partir do `attemptId` (ver `orderQuestionsForAttempt`). Ausente/`false` = ordem de elaboração |
+| `showCommentsAfterFinish` | boolean | `!== false` libera gabarito e comentários na revisão |
+| `allowReviewAfterFinish` | boolean | `!== false` libera a revisão questão a questão. A nota e as análises de desempenho são **sempre** exibidas |
 | `createdBy` | string | → `users/{id}` |
 | `createdAt` / `updatedAt` / `publishedAt` | Timestamp | |
 
 O padrão `campo !== false` é intencional: documentos antigos sem o campo são tratados como habilitados. Vale também para `isExamActive()`.
+
+> **Campos descontinuados.** `shuffleAlternatives` e `showResultAfterFinish` existiram no tipo e no formulário, mas nunca chegaram a ser aplicados na execução. Foram removidos do código: embaralhar alternativas não é um comportamento desejado, e a nota é sempre exibida ao final. Provas gravadas antes dessa limpeza **ainda têm os dois campos no Firestore** — são simplesmente ignorados na leitura (o tipo `Exam` não os declara mais). Como `updateExamContent()` grava com `merge: true`, eles persistem mesmo em provas editadas depois. É resíduo inofensivo; limpá-los exigiria uma passagem com `deleteField()`, que não foi feita por não haver ganho prático.
 
 ### `exams/{examId}/questions` *(subcoleção)* — ID = `eq_1`, `eq_2`, …
 
@@ -340,9 +340,11 @@ O padrão `campo !== false` é intencional: documentos antigos sem o campo são 
 | `originalQuestionId` | string | → `questions/{id}` |
 | `areaId` / `themeId` | string | Copiados; alimentam a análise por área/tema da tentativa |
 | `statement`, `alternatives`, `imageUrl` | | Copiados |
-| `orderIndex` / `order` | number | 1-based, duplicados por compatibilidade |
+| `orderIndex` / `order` | number | 1-based, duplicados por compatibilidade. É a **ordem canônica** (de elaboração), sempre usada pelo admin |
 
 **Não copia** `sourceExam`, `groupId`, `areaName`, `themeName`. Por isso `ExamResultPage` e `ExamViewPage` chamam `getQuestionsByIds()` para exibir o chip de origem.
+
+**A ordem embaralhada não é persistida.** Com `shuffleQuestions` ligado, a sequência que cada candidato vê é derivada em tempo de execução a partir do `attemptId` (`orderQuestionsForAttempt`), não gravada no banco. Como o embaralhamento é determinístico, a mesma sequência é reproduzida na retomada da prova e no relatório final sem nenhum campo adicional.
 
 Reescrita completa a cada `updateExamContent()` — os IDs `eq_N` são reatribuídos em sequência.
 
@@ -613,11 +615,10 @@ Registradas para que não sejam "descobertas" de novo:
 | 1 | `areas.questionCount` / `themes.questionCount` gravados como `0` e nunca atualizados | Nenhum hoje (não são lidos por nenhuma tela). Corrigível com `recalc-question-counts.mjs`. |
 | 2 | `UserStats.streakDays`, `areaStats`, `topicStats` declarados em `types.ts`, nunca gravados | Ruído no tipo. |
 | 3 | `Question.dificuldade` e `QuestionAnswer.solutionText` sem interface de edição | `solutionText` chega apenas pelos importadores. |
-| 4 | `Exam.shuffleQuestions` / `shuffleAlternatives` persistidos e **não aplicados** | A prova sai sempre na ordem de `orderIndex`. Configuração sem efeito. |
-| 5 | `Exam.showResultAfterFinish` persistido; a tela de resultado é exibida sempre | Só `showCommentsAfterFinish` e `allowReviewAfterFinish` têm efeito real. |
-| 6 | IDs de tema globais (`theme_<nome>`, sem escopo de área) | Temas homônimos em áreas diferentes colidiriam. |
-| 7 | Logs de visualização não deduplicados | O contador conta aberturas, não pessoas (a lista de nomes é deduplicada no cliente). |
-| 8 | Materiais/sabatinas excluídos deixam logs de visualização órfãos | Contadores não somam para itens inexistentes; ocupa espaço. |
-| 9 | `videotecaItems`/`aulaItems` antigos ainda com `themeId` singular no Firestore | Coberto na leitura por `normalizeThemeIds()`. |
-| 10 | Denormalizações (`areaName`, `userName`, `examName`) não são ressincronizadas ao renomear a origem | Registros antigos exibem o nome antigo; a UI tem *fallbacks*. |
-| 11 | `groups` não é criada por nenhuma rotina do repositório | Precisa existir previamente; `applyThemeGroups()` reporta nomes sem correspondência em `unknownGroups`. |
+| 4 | `Exam.shuffleAlternatives` / `showResultAfterFinish` ainda presentes em documentos antigos | Campos removidos do código; ignorados na leitura. Ver a nota em [`exams`](#exams). |
+| 5 | IDs de tema globais (`theme_<nome>`, sem escopo de área) | Temas homônimos em áreas diferentes colidiriam. |
+| 6 | Logs de visualização não deduplicados | O contador conta aberturas, não pessoas (a lista de nomes é deduplicada no cliente). |
+| 7 | Materiais/sabatinas excluídos deixam logs de visualização órfãos | Contadores não somam para itens inexistentes; ocupa espaço. |
+| 8 | `videotecaItems`/`aulaItems` antigos ainda com `themeId` singular no Firestore | Coberto na leitura por `normalizeThemeIds()`. |
+| 9 | Denormalizações (`areaName`, `userName`, `examName`) não são ressincronizadas ao renomear a origem | Registros antigos exibem o nome antigo; a UI tem *fallbacks*. |
+| 10 | `groups` não é criada por nenhuma rotina do repositório | Precisa existir previamente; `applyThemeGroups()` reporta nomes sem correspondência em `unknownGroups`. |
