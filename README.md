@@ -1,36 +1,84 @@
 # Banco de Questões TEOT — HMA 2027
 
-Aplicação web para estudo, simulados e gestão de banco de questões voltada à preparação para o **TEOT** (Título de Especialista em Ortopedia e Traumatologia) e provas correlatas (SBOT, TARO), organizada segundo a árvore de áreas/temas da especialidade.
+Aplicação web de estudo, simulados e gestão de banco de questões para a preparação do **TEOT** (Título de Especialista em Ortopedia e Traumatologia) e provas correlatas (**TARO**, SBOT), organizada segundo a árvore oficial de áreas e temas da especialidade.
 
-O app tem dois "lados":
+O produto tem dois lados:
 
-- **Área do candidato (`/app/*`)** — o residente/candidato responde provas atribuídas a ele, acompanha histórico e desempenho por área/tema.
-- **Área administrativa (`/admin/*`)** — um administrador cadastra questões (com gabarito protegido), monta e publica provas, atribui provas a usuários, acompanha tentativas e gerencia usuários.
+- **Área do residente (`/app/*`)** — responde as provas atribuídas, acompanha histórico e desempenho por área/tema/grupo, assiste aos materiais da Videoteca e das Aulas, revê as Sabatinas, consulta o cronograma do treinamento e as estatísticas históricas de TEOT/TARO.
+- **Área administrativa (`/admin/*`)** — cadastra questões com gabarito, monta e publica provas, atribui e convida candidatos, acompanha tentativas e resultados ao vivo, gerencia usuários e importa conteúdo em massa.
 
-Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authentication, Firestore, Storage e Hosting) — não há banco de dados ou servidor de aplicação próprios em produção.
+Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authentication, Firestore, Storage e Hosting) — não existe servidor de aplicação, API própria ou Cloud Function neste repositório.
 
-> Nome do produto exibido na UI: **"Treinamento TEOT HMA 2027"** (ver `index.html` / `metadata.json`).
+> Nome exibido: **TEOT HMA 2027** — *"O ano da vitória 🏆"*
+
+---
+
+## Documentação
+
+Este README cobre visão geral, operação e deploy. Os detalhes vivem em três documentos dedicados:
+
+| Documento | Conteúdo |
+|---|---|
+| [`architecture.md`](architecture.md) | Camadas, mapa de módulos, fluxos ponta a ponta, tempo real, transações, limitações estruturais |
+| [`database.md`](database.md) | Modelo de dados completo: 18 coleções + 3 subcoleções, campos, IDs, índices, Storage, Regras, cascatas |
+| [`design.md`](design.md) | Sistema de design: tokens (e a escala invertida), tipografia, componentes, padrões de tela, movimento |
 
 ---
 
 ## Sumário
 
-1. [Stack tecnológica](#stack-tecnológica)
-2. [Arquitetura em alto nível](#arquitetura-em-alto-nível)
-3. [Estrutura de pastas](#estrutura-de-pastas)
-4. [Design system (paleta e tipografia)](#design-system-paleta-e-tipografia)
-5. [Firebase — visão geral do projeto](#firebase--visão-geral-do-projeto)
-6. [Firebase Authentication](#firebase-authentication)
-7. [Firestore — modelo de dados](#firestore--modelo-de-dados)
-8. [Firebase Storage — imagens das questões](#firebase-storage--imagens-das-questões)
-9. [Regras de Segurança (Firestore/Storage)](#regras-de-segurança-firestorestorage)
-10. [Firebase Hosting e deploy (CI/CD)](#firebase-hosting-e-deploy-cicd)
-11. [Rotas da aplicação](#rotas-da-aplicação)
-12. [Variáveis de ambiente e configuração](#variáveis-de-ambiente-e-configuração)
-13. [Rodando localmente](#rodando-localmente)
-14. [Scripts npm/bun](#scripts-npmbun)
-15. [Pontos de atenção / dívidas técnicas conhecidas](#pontos-de-atenção--dívidas-técnicas-conhecidas)
-16. [Histórico relevante recente](#histórico-relevante-recente)
+1. [Funcionalidades](#funcionalidades)
+2. [Stack tecnológica](#stack-tecnológica)
+3. [Arquitetura em alto nível](#arquitetura-em-alto-nível)
+4. [Estrutura de pastas](#estrutura-de-pastas)
+5. [Rodando localmente](#rodando-localmente)
+6. [Scripts npm/bun](#scripts-npmbun)
+7. [Variáveis de ambiente](#variáveis-de-ambiente)
+8. [Projeto Firebase](#projeto-firebase)
+9. [Autenticação e perfis](#autenticação-e-perfis)
+10. [Rotas da aplicação](#rotas-da-aplicação)
+11. [Modelo de dados (resumo)](#modelo-de-dados-resumo)
+12. [Imagens de questões](#imagens-de-questões)
+13. [Importação de conteúdo](#importação-de-conteúdo)
+14. [Scripts de manutenção](#scripts-de-manutenção)
+15. [Regras de Segurança](#regras-de-segurança)
+16. [Deploy (CI/CD)](#deploy-cicd)
+17. [Design system](#design-system)
+18. [Pontos de atenção e dívidas técnicas](#pontos-de-atenção-e-dívidas-técnicas)
+
+---
+
+## Funcionalidades
+
+### Residente
+
+| Recurso | Descrição |
+|---|---|
+| **Home** | Saudação, carrossel de provas pendentes (ao vivo) e atalhos para todas as seções |
+| **Provas** | Lista de provas atribuídas e ativas; atualiza sozinha quando o admin publica ou ativa uma |
+| **Execução de prova** | Modo tela cheia, uma questão por vez, **sem voltar**, com rascunho salvo localmente e retomada automática de onde parou |
+| **Relatório** | Nota, desempenho por Área, por Grupo (TEOT) e por Tema, mais a revisão questão a questão com gabarito, comentários, mídia e referência bibliográfica |
+| **Histórico** | Todas as tentativas, com nota colorida e ícone por faixa de desempenho |
+| **Desempenho** | Ranking geral, taxa de acerto, evolução por prova, radar "você × colegas", donuts por Área e por Grupo, ranking de temas e os 5 temas críticos |
+| **Sabatinas** | Apresentações do Google Slides agrupadas por data, com visualização em tela cheia e download em PDF |
+| **Cronograma** | Calendário mensal e agenda dos 19 encontros do treinamento |
+| **TEOT/TARO** | Estatísticas históricas do banco: questões por ano, áreas e temas mais cobrados, com filtros por prova, ano e área |
+| **Extras** | Videoteca (YouTube) e Aulas (Canva/Google Slides), com marcação de "visto" e badge de não vistos |
+| **Notificações** | Feed de eventos + pop-ups em tempo real + badge de não lidas |
+| **Ajustes** | Foto de perfil, telefone/WhatsApp e troca de e-mail/senha |
+
+### Administrador
+
+| Recurso | Descrição |
+|---|---|
+| **Dashboard** | Ranking geral com drill-down por usuário, evolução do desempenho médio, desempenho por Área e por Grupo, 4 KPIs, últimas tentativas e exportação CSV — tudo ao vivo |
+| **Banco de Questões** | CRUD completo, filtros por fonte/área/tema/texto, gabarito visível na lista, upload e remoção de imagem, pré-visualização com "já utilizada em" |
+| **Provas** | Assistente em 4 etapas (dados → seleção → atribuição → revisão), edição de provas inativas e sem tentativas, ativar/desativar, exclusão em cascata |
+| **Visão da prova** | Distribuição por área e tema com filtros cruzados, taxa de acerto por questão, tabela de respostas enviadas ao vivo, adicionar candidatos e **convidar por WhatsApp** |
+| **Resultados** | Todas as tentativas de todos os candidatos, com busca e exclusão (revertendo as estatísticas) |
+| **Usuários** | Cadastro, ativar/inativar, mudar perfil, excluir, foto, telefone e página de detalhe com desempenho e histórico |
+| **Importar** | Banco de questões (JSON), grupos TEOT dos temas, imagens em lote e materiais via CSV |
+| **Sabatinas / Extras** | Mesmas telas do residente, com criação, edição, exclusão e contadores de visualização |
 
 ---
 
@@ -38,325 +86,134 @@ Todo o backend é **serverless**, provido inteiramente pelo **Firebase** (Authen
 
 | Camada | Tecnologia |
 |---|---|
-| Framework UI | React 18 + TypeScript |
+| UI | React 18 + TypeScript 5.7 |
 | Roteamento | React Router DOM v7 (`BrowserRouter`) |
-| Build/Bundler | Vite 6 (`@vitejs/plugin-react`) |
-| Estilo | Tailwind CSS v4 (`@tailwindcss/vite`) |
+| Build | Vite 6 (`@vitejs/plugin-react`) |
+| Estilo | Tailwind CSS v4 (`@tailwindcss/vite`), tokens via `@theme` |
+| Animação | framer-motion 13 |
 | Ícones | lucide-react |
-| Gráficos | recharts |
-| Validação | zod |
-| Backend/dados | Firebase (Auth, Firestore, Storage, Hosting) |
-| Gerenciador de pacotes | Bun (usado no CI); `bun.lock` versionado |
-| Hospedagem | Firebase Hosting (SPA estática) |
-| CI/CD | GitHub Actions (`.github/workflows/deploy.yml`) |
+| Gráficos | recharts 2 |
+| CSV | papaparse |
+| Validação | zod 4 |
+| Backend | Firebase 12 (Auth, Firestore, Storage, Hosting) |
+| Scripts | firebase-admin 13 (Node ESM) |
+| Pacotes | Bun (lockfile oficial: `bun.lock`) |
+| CI/CD | GitHub Actions → Firebase Hosting |
+
+---
 
 ## Arquitetura em alto nível
 
 ```
 ┌───────────────────────────┐        ┌──────────────────────────────────────┐
-│   Navegador (SPA React)   │        │        Projeto Firebase                │
-│                            │        │  gen-lang-client-0316191622            │
-│  index.html → main.tsx    │        │                                        │
-│  → App → AuthProvider     │──────▶ │  Auth        (login admin/candidato)   │
-│  → AppRoutes               │        │  Firestore   (dados da aplicação)      │
-│                            │        │  Storage     (imagens das questões)    │
-└───────────────────────────┘        │  Hosting     (serve o build estático)  │
-                                       └──────────────────────────────────────┘
+│   Navegador (SPA React)   │        │   Projeto Firebase                   │
+│                           │        │   gen-lang-client-0316191622         │
+│  index.html → main.tsx    │        │                                      │
+│  → App → AuthProvider     │───────▶│   Auth       login admin/candidato   │
+│  → AppRoutes              │        │   Firestore  dados (banco NOMEADO)   │
+│     ├─ UserLayout         │        │   Storage    imagens e avatares      │
+│     └─ AdminLayout        │        │   Hosting    serve o build estático  │
+└───────────────────────────┘        └──────────────────────────────────────┘
 ```
 
-O app é um SPA **100% estático**: `vite build` gera `dist/`, e o Firebase Hosting serve esse diretório, redirecionando qualquer rota para `index.html` (roteamento fica todo no cliente, via React Router). Todo acesso a dados é feito **diretamente do navegador** para o Firestore/Storage através do SDK cliente do Firebase (`firebase` npm package) — **não existe nenhum servidor de aplicação próprio**, nem em desenvolvimento nem em produção. Não há API intermediária, backend Node/Express, nem função serverless custom neste repositório.
+O app é um SPA **100% estático**: `vite build` gera `dist/`, o Firebase Hosting serve esse diretório e redireciona qualquer rota para `index.html` (o roteamento é todo no cliente). Todo acesso a dados sai **direto do navegador** para o Firestore/Storage pelo SDK cliente. **Não há API intermediária nem Cloud Functions.**
+
+Detalhes completos — fluxos, transações, tempo real e limitações — em [`architecture.md`](architecture.md).
+
+---
 
 ## Estrutura de pastas
 
 ```
 bancoQuestoesApp/
-├── .github/workflows/deploy.yml   # CI: build + deploy no Firebase Hosting (push em main)
-├── firebase.json                  # Config do Firebase Hosting/Firestore/Storage
-├── firestore.rules                # Regras de Segurança do Firestore (ver seção dedicada)
-├── storage.rules                  # Regras de Segurança do Storage (ver seção dedicada)
-├── .firebaserc                    # Projeto Firebase padrão (gen-lang-client-0316191622)
-├── firebase-applet-config.json    # Config pública do Firebase Web App (apiKey, projectId, etc.)
-├── vite.config.ts                 # Build do frontend (React + Tailwind)
-├── index.html                     # Entry HTML (com capturador global de erros)
-├── metadata.json                  # Metadados do app (nome, descrição)
-├── arvore_temas.json              # Árvore estática de áreas/temas de ortopedia (usada em ImportPage como banco padrão para importação)
-├── .env.example                   # Modelo de variáveis de ambiente
-├── scripts/
-│   └── import-question-images.mjs # Importador em lote de imagens para o Storage (ver seção Firebase Storage)
+├── .github/workflows/deploy.yml   # CI: build + deploy no Hosting (push em main)
+├── firebase.json                  # Hosting + apontamento das regras
+├── .firebaserc                    # Projeto padrão
+├── firebase-applet-config.json    # Config pública do Web App
+├── firestore.rules                # Regras do Firestore (não publicadas pelo CI)
+├── storage.rules                  # Regras do Storage (idem)
+├── index.html                     # Entry HTML: fontes, PWA, OG, captura global de erros
+├── vite.config.ts                 # React + Tailwind v4
+├── metadata.json                  # Nome e descrição do app
+├── arvore_temas.json              # Árvore oficial: 11 áreas, ~336 temas
+├── public/
+│   ├── manifest.webmanifest       # PWA (sem service worker)
+│   ├── icons/                     # Ícones 192/512/maskable/apple-touch
+│   └── social-preview.png         # Prévia de compartilhamento (1200×630)
+├── design/icons/                  # Logos institucionais (fonte de marca)
+├── reference/
+│   ├── areas_grupos_temas.json    # Árvore Área → Grupo TEOT → Temas
+│   ├── arvore_temas_subareas.json # Árvore antiga por subárea (histórico)
+│   └── livros_referencia.csv      # Livros citáveis no gabarito
+├── scripts/                       # 8 utilitários Node (firebase-admin)
 └── src/
-    ├── main.tsx                   # Bootstrap do React (ReactDOM.createRoot)
-    ├── App.tsx                    # BrowserRouter + AuthProvider + AppRoutes
-    ├── index.css                  # `@import "tailwindcss"` + estilos globais
-    ├── routes/AppRoutes.tsx       # Definição de todas as rotas e guards de acesso
-    ├── contexts/AuthContext.tsx   # Estado de sessão/usuário atual (React Context)
-    ├── layouts/                   # UserLayout (candidato) e AdminLayout (admin)
+    ├── main.tsx  App.tsx  index.css
+    ├── routes/AppRoutes.tsx       # Rotas + guards de acesso
+    ├── contexts/AuthContext.tsx   # Sessão e usuário atual
+    ├── layouts/                   # UserLayout, AdminLayout
     ├── pages/
-    │   ├── HomePage.tsx, AdminLoginPage.tsx, UnauthorizedPage.tsx
-    │   ├── app/                   # Telas do candidato: provas, tentativa, resultado, histórico, desempenho
-    │   └── admin/                 # Telas do admin: dashboard, usuários, questões, importação, provas, tentativas
-    ├── components/                # QuestionImage e QuestionPreviewModal (únicos componentes reutilizáveis em uso)
+    │   ├── HomePage · AdminLoginPage · RegisterPage · UnauthorizedPage
+    │   ├── ExtrasPage · SabatinasPage · NotificationsPage   (compartilhadas)
+    │   ├── app/                   # Home, Provas, Prova, Resultado, Histórico,
+    │   │                          # Desempenho, Estatísticas, Cronograma, Ajustes
+    │   └── admin/                 # Home, Dashboard, Usuários, Questões, Provas,
+    │                              # Resultados, Importar, Imagens em Lote
+    ├── components/                # 13 componentes reutilizáveis
+    ├── hooks/                     # useUnreadNotifications, useUnseenExtrasCount,
+    │                              # useHideOnScroll
     ├── services/
-    │   ├── firebase.ts            # Inicialização do Firebase App/Auth/Firestore/Storage
-    │   ├── firebaseService.ts     # Toda a camada de acesso a dados (Firestore + Storage)
-    │   ├── authService.ts         # Login admin e de candidato (email/senha), cadastro público e troca de credenciais
-    │   ├── gradingService.ts      # Correção de provas e atualização de estatísticas agregadas
-    │   └── importService.ts       # Importação em massa de banco de questões via JSON
-    ├── firebase/config.ts         # Reexporta app/auth/db/storage/firebaseConfig para o resto do app
-    ├── schemas/index.ts           # Schemas Zod (validação de payloads, ex.: importação)
-    ├── types.ts                   # Definições de tipos TypeScript do domínio (fonte única — ver histórico)
-    └── utils/helpers.ts           # normalizeText, generateId, shuffleArray, formatDate, exportToCSV...
+    │   ├── firebase.ts            # Init do SDK (banco nomeado + overrides)
+    │   ├── firebaseService.ts     # Toda a camada de dados (CRUD + subscriptions)
+    │   ├── authService.ts         # Login, cadastro, troca de credenciais
+    │   ├── gradingService.ts      # Correção + agregação de estatísticas
+    │   └── importService.ts       # Importação em massa (JSON + grupos)
+    ├── firebase/config.ts         # Reexport de app/auth/db/storage
+    ├── schemas/index.ts           # Schemas Zod
+    ├── types.ts                   # Fonte única de tipos do domínio
+    ├── constants.ts               # Fontes de prova, cronograma, chips
+    └── utils/                     # helpers, mediaUrls, fileShare
 ```
 
-## Design system (paleta e tipografia)
+---
 
-A interface segue um sistema de design institucional próprio, com fundo predominantemente branco/claro, tipografia condensada em destaques e três cores-base:
+## Rodando localmente
 
-| Papel | Cor | Uso |
-|---|---|---|
-| Dominante | `#050F41` (azul institucional) | Texto primário, navegação, cabeçalhos, botões de ação principal |
-| Acento de alta visibilidade | `#FAB932` (âmbar/dourado) | Destaques pontuais, estado ativo em navegação sobre fundo escuro, badges — nunca como texto sobre fundo branco |
-| Acento positivo | `#079551` (verde) | Confirmações, respostas corretas, indicadores de progresso |
-
-Implementação: em vez de recolorir cada componente individualmente, `src/index.css` redefine os *tokens* de cor do Tailwind v4 via `@theme` (`--color-slate-*`, `--color-teal-*`, `--color-amber-*`, `--color-emerald-*`, `--color-cyan-*`, `--color-red-*`), de forma que toda a aplicação passe a usar essa paleta automaticamente a partir das mesmas classes utilitárias já existentes no código (`bg-slate-900`, `text-teal-400` etc.). A escala `slate` é deliberadamente invertida em relação ao Tailwind padrão (950 = claro/fundo, 100 = escuro/texto) porque o app já usava esses tokens como "texto claro sobre fundo escuro"; aqui a mesma relação passa a produzir "texto escuro sobre fundo claro".
-
-Alguns elementos de *chrome* (cabeçalho e barra lateral de `UserLayout`/`AdminLayout`, telas de entrada como `HomePage`/`AdminLoginPage`, *backdrops* de modal e do visualizador de imagem em tela cheia) usam a cor institucional explicitamente (`bg-[#050f41]`) em vez do token remapeado, porque essas áreas devem permanecer escuras propositalmente (marca/navegação e *scrims* de modal), diferentemente do restante do conteúdo, que é claro.
-
-Tipografia: **Montserrat** (via Google Fonts) é a fonte principal para corpo de texto, formulários, tabelas e a maioria dos títulos; **Bebas Neue** (condensada) é usada apenas em `<h1>` — títulos curtos e de destaque — com Montserrat como *fallback* automático caso a fonte não carregue. Ver `index.html` (`<link>` do Google Fonts) e `src/index.css` (`--font-sans`, `--font-display`).
-
-## Firebase — visão geral do projeto
-
-| Item | Valor |
-|---|---|
-| **Project ID** | `gen-lang-client-0316191622` |
-| **Auth Domain** | `gen-lang-client-0316191622.firebaseapp.com` |
-| **App ID (Web)** | `1:1001740918051:web:5d931926acb0883d160096` |
-| **Firestore Database ID** | `ai-studio-treinamentoteoti-380df538-23a0-4430-8321-7124c54a45e6` (⚠️ **não é** o banco `(default)`) |
-| **Storage Bucket** | `gen-lang-client-0316191622.firebasestorage.app` |
-| **Hosting (URL pública)** | `https://gen-lang-client-0316191622.web.app` |
-
-A configuração pública do Web App fica versionada em **`firebase-applet-config.json`** na raiz do repo e é importada por `src/services/firebase.ts`:
-
-```ts
-import firebaseConfigJson from "../../firebase-applet-config.json";
-
-// VITE_FIREBASE_* (ver .env.example) funcionam como overrides opcionais —
-// se não definidas, cai no config commitado abaixo.
-export const firebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
-  // ...
-};
-
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
-export const db = getFirestore(app, firestoreDatabaseId); // banco nomeado, não o (default)
-export const storage = getStorage(app);
-```
-
-> A `apiKey` do Firebase Web App **não é secreta** por design (ela apenas identifica o projeto ao SDK cliente) — a segurança real dos dados é garantida pelas **Regras de Segurança** do Firestore/Storage, agora versionadas em `firestore.rules`/`storage.rules` (ver [seção dedicada](#regras-de-segurança-firestorestorage)).
-
-## Firebase Authentication
-
-O app usa um modelo **híbrido** de identidade, combinando Firebase Auth com um cadastro de usuários próprio no Firestore (coleção `users`):
-
-- **Candidatos (`role: "user"`)** fazem login com e-mail/senha reais (`HomePage` → `authService.loginUserWithPassword`), usando `signInWithEmailAndPassword`. O app busca o documento em `users` pelo e-mail informado, confere `active`, autentica no Firebase e vincula o `authUid` retornado ao documento (se ainda não vinculado). Se o e-mail não corresponder a nenhum usuário cadastrado, a UI oferece um link para `/cadastro` (`RegisterPage`), que cria o usuário já com `active: false` — o acesso só é liberado depois que um admin o ativa em `UsersPage`. Candidatos podem trocar seu e-mail/senha em `/app/settings` (`SettingsPage` → `authService.updateOwnCredentials`, que reautentica com a senha atual antes de aplicar a troca).
-- **Administradores (`role: "admin"`)** fazem login com e-mail/senha reais (`AdminLoginPage`/card "Área restrita" na `HomePage` → `authService.loginAdminWithPassword`), usando `signInWithEmailAndPassword`. Há lógica de auto-bootstrap: se o e-mail ainda não existir no Firebase Auth, o app tenta criar a conta na hora (`createUserWithEmailAndPassword`) e, se não existir documento correspondente em `users`, cria um automaticamente com `role: "admin"`.
-- `firebaseService.ensureAdminUserExists()` roda automaticamente ao carregar o módulo de serviços e garante a existência de um admin "seed" (`usr_mauriston_admin`, e-mail `mauriston@oncoortopedia.com`) na coleção `users`.
-- `AuthContext` (`src/contexts/AuthContext.tsx`) é a fonte de verdade do usuário logado na UI: ele lê o `userId` da sessão local, busca o documento correspondente em `users` no Firestore, e também escuta `onAuthStateChanged` do Firebase Auth para re-sincronizar.
-- `AppRoutes.tsx` implementa dois *route guards*: `UserProtectedRoute` (exige `currentUser.active`) e `AdminProtectedRoute` (exige adicionalmente `role === "admin"`), redirecionando para `/`, `/inactive` ou `/unauthorized` conforme o caso.
-- Usuários que já existiam em `users` **antes** dessa mudança para login por senha não têm nenhuma conta no Firebase Auth associada — rode `npm run setup:user-passwords` (`scripts/setup-user-passwords.mjs`) uma vez para criar essas contas com a senha padrão `123456` (redefinível depois pelo próprio usuário em `/app/settings`) e vincular o `authUid` de cada uma. Ver o cabeçalho do script para pré-requisitos de credencial.
-
-> Ou seja: o Firebase Auth garante que toda sessão tenha um `request.auth` válido perante as Regras de Segurança, mas a **autorização de negócio** (quem é admin, quem está ativo) é decidida pelo documento em `users` no Firestore, não por *custom claims* do Firebase Auth.
-
-## Firestore — modelo de dados
-
-Banco: `ai-studio-treinamentoteoti-380df538-23a0-4430-8321-7124c54a45e6` (Firestore em modo Native, banco nomeado — todo acesso no código passa esse ID explicitamente para `getFirestore(app, firestoreDatabaseId)`).
-
-### Coleções de topo
-
-| Coleção | Documento representa | Principais campos |
-|---|---|---|
-| `users` | Usuário (candidato ou admin) | `name`, `email`, `role` (`user`\|`admin`), `active`, `authUid?` |
-| `areas` | Área da especialidade (ex.: Ortopedia Pediátrica) | `name`, `normalizedName`, `questionCount`, `active` |
-| `themes` | Tema dentro de uma área | `areaId`, `name`, `normalizedName`, `questionCount`, `active` |
-| `questions` | Questão (**pública**, sem gabarito) | `areaId`, `themeId`, `sourceExam`, `statement`, `alternatives{A,B,C,D}`, `imageUrl`, `active` |
-| `questionAnswers` | Gabarito/comentário da questão (**doc ID = questionId**) | `correctAlternative`, `solutionText`, `comments` — **separado de `questions` de propósito**, para permitir Regras de Segurança que escondem o gabarito do candidato antes de ele responder |
-| `exams` | Prova/simulado | `name`, `status` (`draft`\|`published`\|`archived`), `active` (visibilidade — provas nascem `false`), `questionCount`, `shuffleQuestions`, `shuffleAlternatives`, `showResultAfterFinish`, `showCommentsAfterFinish`, `allowReviewAfterFinish`, `createdBy` |
-| `exams/{examId}/questions` | **Subcoleção**: cópia "congelada" das questões selecionadas no momento da publicação da prova | mesmos campos de `Question` + `orderIndex`/`order` — congelar evita que editar/excluir uma questão original quebre provas já publicadas |
-| `examAssignments` | Atribuição de uma prova a um usuário específico | `examId`, `userId`, `status` (`available`\|`started`\|`completed`), `attemptId?` |
-| `attempts` | Tentativa de um usuário numa prova | `examId`, `assignmentId`, `userId`, `status` (`in_progress`\|`grading`\|`completed`), `correctAnswers`, `wrongAnswers`, `unansweredQuestions`, `scorePercentage` |
-| `attempts/{attemptId}/answers` | **Subcoleção**: cada resposta marcada pelo candidato | `examQuestionId`, `originalQuestionId`, `selectedAlternative`, `isCorrect` (preenchido só na correção), `areaId`, `themeId` |
-| `userStats` | Estatística agregada por usuário (**doc ID = userId**) | `totalSolved`, `totalCorrect`, `overallScorePercentage`, `areas{ [areaId]: {solved,correct} }`, `themes{ [themeId]: {...} }` |
-| `adminLogs` | Log de ações administrativas | `adminId`, `adminName`, `action`, `details`, `timestamp` |
-| `imports` | Histórico de importações em massa de questões via JSON | `importedBy`, `totalAreas`, `totalThemes`, `totalQuestions`, `createdQuestions`, `errors[]`, `status` |
-
-### Fluxo de vida de uma prova (ponta a ponta)
-
-1. **Admin cadastra questões** (`QuestionsPage`) → grava em `questions` (público) + `questionAnswers` (gabarito protegido), opcionalmente enviando uma imagem para o **Storage** (`uploadQuestionImage`).
-2. **Admin monta e publica uma prova** (`CreateExamPage` → `firebaseService.createAndPublishExam`):
-   - Cria o documento em `exams` (nasce com `active: false` — só fica visível ao candidato depois que o admin ativa explicitamente em `ExamsListPage`).
-   - Copia as questões selecionadas para a subcoleção `exams/{examId}/questions` (congelamento — protege a prova contra futuras edições nas questões originais).
-   - Cria um documento em `examAssignments` para cada usuário-alvo (ou para todos os usuários ativos com `role !== "admin"`, se "todos" for escolhido).
-   - Tudo isso é feito em `writeBatch`, respeitando o limite de 500 operações por lote do Firestore (o código comita em blocos de ~400).
-3. **Candidato inicia a prova** (`TakeExamPage` → `firebaseService.startExamAttempt`): dentro de uma `runTransaction`, reaproveita uma tentativa `in_progress` existente ou cria uma nova em `attempts`, atualizando a `examAssignment` para `status: "started"`. A transação evita que cliques duplicados/abas simultâneas criem duas tentativas para a mesma atribuição.
-4. **Candidato responde** cada questão → `saveAttemptAnswer` grava/atualiza um doc em `attempts/{id}/answers/{examQuestionId}` a cada seleção (sem revelar o gabarito, que fica em `questionAnswers` e só é lido no back-office de correção).
-5. **Candidato finaliza** → `gradingService.finishAndGradeAttempt`:
-   - Reivindica a correção atomicamente (`status: "in_progress" → "grading"`) para impedir dupla-contagem em caso de clique duplo/duas abas.
-   - Compara cada resposta com `questionAnswers` (gabarito), grava `isCorrect` em cada resposta, calcula `scorePercentage`.
-   - Atualiza `attempts` para `status: "completed"` e a `examAssignment` correspondente para `status: "completed"`.
-   - Atualiza `userStats/{userId}` (agregado geral + por área + por tema) dentro de outra `runTransaction`.
-6. **Exclusão em cascata**: `deleteExam()` e `deleteAttempt()` fazem limpeza best-effort de dados órfãos (questões congeladas, `examAssignments`, `attempts`/`answers`) e revertem o que uma tentativa completada havia somado em `userStats` (`subtractFromUserStats`), para que o dashboard e "Meu Desempenho" não fiquem inflados após exclusões administrativas.
-
-### Importação em massa
-
-`ImportPage` (admin) aceita um JSON no formato de `arvore_temas.json`-like (`{ dados: [{ Área, temas: [{ Tema, questoes: [...] }] }] }`, com várias variações de capitalização suportadas) e usa `importService.importQuestionBankJson` para popular `areas`, `themes`, `questions` e `questionAnswers` em lote, registrando o resultado em `imports`.
-
-## Firebase Storage — imagens das questões
-
-Bucket: **`gen-lang-client-0316191622.firebasestorage.app`**.
-
-Existem hoje **duas origens/convenções de caminho** para imagens no bucket, refletindo a migração de "URLs externas" para "Storage nativo":
-
-1. **`question-images/{questionId}/{timestamp}.{ext}`** — caminho **canônico**, gerado automaticamente pelo upload feito na UI administrativa (`firebaseService.uploadQuestionImage`, usado em `QuestionsPage`). O admin escolhe um arquivo de imagem ao criar/editar uma questão, o app faz `uploadBytes` para esse caminho e grava a `getDownloadURL()` resultante no campo `imageUrl` do documento em `questions`.
-2. **`imagens_questoes/{PROVA}/{ARQUIVO}`** (ex.: `imagens_questoes/TEOT_ANATOMIA_2024/TEOT-2024-ANATOMIA-Q01.jpeg`) — convenção usada para **lotes de imagens enviados em conjunto** ao Storage (fora do fluxo de upload individual da UI), como parte da migração das questões que antes referenciavam imagens hospedadas em serviços externos (Imgur, Flickr) via URL direta no campo `imageUrl`. Esse caminho é alimentado tanto pela tela admin **Imagens em Lote** quanto por `scripts/import-question-images.mjs` (ver abaixo) — ambos já cuidam de gravar a URL pública correspondente no campo `imageUrl` de cada `question`, não é mais necessário fazer esse casamento manualmente.
-
-> **Recomendação de uso**: para adicionar/editar a imagem de **uma** questão, use o fluxo 1 (upload pela UI de `QuestionsPage`). Para importar um **lote** de imagens já rotuladas por questão (ex.: uma prova inteira escaneada e recortada em uma imagem por questão), use a tela admin **Imagens em Lote** (`/admin/images`) — ou, para lotes muito grandes/automação fora do navegador, `scripts/import-question-images.mjs`.
-
-### Importação em lote de imagens — UI admin (`/admin/images`, `BulkImagesPage`)
-
-Tela do painel administrativo (item **"Imagens em Lote"** na barra lateral) para importar várias imagens de uma vez sem precisar de terminal nem credenciais além do próprio login de admin:
-
-1. Informa a **fonte** (nome da prova/origem — ex. "TEOT 2024", "TARO 2022", "BANCO PRÓPRIO"; aceita qualquer valor, as sugestões são só atalhos), usada como subpasta em `imagens_questoes/{fonte}/...`.
-2. Seleciona uma **pasta inteira** do computador (`<input type="file" webkitdirectory>`) contendo as imagens.
-3. Cada arquivo precisa se chamar exatamente `<idDaQuestão>.jpeg`/`.jpg`/`.png` — o próprio nome do arquivo (sem extensão) é usado como o ID do documento em `questions` a atualizar; arquivos com outra extensão são ignorados. Não há passo de mapeamento separado como no script — a relação é 100% pelo nome do arquivo.
-4. Ao confirmar, cada imagem é enviada via `firebaseService.uploadBatchQuestionImage` (SDK cliente, sujeito às mesmas Regras de Segurança da sessão do admin — não ao Admin SDK) e o resultado (vinculada / questão não encontrada / erro) é listado arquivo a arquivo, com um resumo final. Um registro é gravado em `adminLogs` ao final da execução.
-
-Diferença para o script Node: a tela roda inteiramente no navegador com a sessão do admin logado (mais simples para quem não usa terminal, mas sujeita ao mesmo timeout/estabilidade de uma aba de navegador aberta durante todo o lote); o script usa o Admin SDK localmente (mais robusto para lotes muito grandes, mas exige gerar e manusear uma Service Account Key).
-
-### Importação em lote de imagens — script Node (`scripts/import-question-images.mjs`)
-
-Script Node (`firebase-admin`) que envia um conjunto de arquivos de imagem para `imagens_questoes/{PROVA}/{arquivo}` e atualiza o campo `imageUrl` de cada `questions/{id}` correspondente, a partir de um arquivo de mapeamento `{ "<questionId>": "<nomeDoArquivo>" }`.
+Pré-requisitos: **Node.js 20+** (o CI usa 24) e, preferencialmente, [Bun](https://bun.sh) — `bun.lock` é o lockfile oficial (`npm`/`yarn` funcionam, mas gerarão lockfiles próprios).
 
 ```bash
-npm install   # garante a dependência firebase-admin (devDependency)
-
-# Pré-visualizar sem gravar nada:
-npm run import:images -- --prova TEOT_TEORICA_2022 --dir ./imagens --map ./mapeamento.json --dry-run --key ./service-account.json
-
-# Executar de verdade:
-npm run import:images -- --prova TEOT_TEORICA_2022 --dir ./imagens --map ./mapeamento.json --key ./service-account.json
+bun install        # ou: npm install
+bun run dev        # Vite dev server → http://localhost:5173
+bun run lint       # tsc --noEmit (type-check)
+bun run build      # gera dist/
+bun run preview    # serve dist/ para conferência antes do deploy
 ```
 
-Requer credenciais de administrador do projeto Firebase (`firebase login` local, ou uma Service Account Key baixada do Console do Firebase e passada via `--key`/`GOOGLE_APPLICATION_CREDENTIALS`) — **nunca versione essa chave no repositório**. Detalhes completos de uso no cabeçalho do próprio arquivo.
+**Nenhum arquivo `.env` é necessário** — a configuração do Firebase já está em `firebase-applet-config.json`. O ambiente local aponta para o **projeto de produção**; não há projeto de staging configurado (as variáveis `VITE_FIREBASE_*` existem justamente para permitir criar um).
 
-Independentemente da origem, todo campo `imageUrl` do domínio é tratado como uma **URL absoluta e pronta para uso** (`<img src={question.imageUrl}>`), consumida diretamente em:
+---
 
-- `TakeExamPage` e `ExamResultPage` (tela do candidato) — `<img>` simples com clique para ampliar em modal.
-- `QuestionImage.tsx` (componente reutilizável usado no back-office: `QuestionPreviewModal` e `ExamViewPage` do admin) — inclui *fallback* visual (`onError`) com link "Abrir link da imagem" caso o carregamento falhe.
+## Scripts npm/bun
 
-> **CORS do bucket**: como as imagens do Storage são carregadas via tag `<img>` comum (não via SDK do Storage), o navegador as busca como um recurso cross-origin normal. `storage.rules` (ver abaixo) libera leitura pública desses dois caminhos propositalmente, exatamente para que esse carregamento via `<img>` funcione sem autenticação.
+| Script | Comando | Descrição |
+|---|---|---|
+| `dev` | `vite` | Servidor de desenvolvimento com hot reload |
+| `build` | `vite build` | Bundle de produção em `dist/` — único passo do deploy |
+| `preview` | `vite preview` | Serve `dist/` localmente |
+| `lint` | `tsc --noEmit` | Checagem de tipos (não emite arquivos) |
+| `import:images` | `node scripts/import-question-images.mjs` | Importa imagens de questões em lote |
+| `setup:user-passwords` | `node scripts/setup-user-passwords.mjs` | Cria contas no Auth para usuários legados |
 
-## Regras de Segurança (Firestore/Storage)
+Os demais scripts em `scripts/` são executados diretamente com `node` — ver [Scripts de manutenção](#scripts-de-manutenção).
 
-Até recentemente, as Regras de Segurança do Firestore e do Storage **não estavam versionadas neste repositório** — existiam só no console do Firebase, fora de qualquer revisão de código ou histórico auditável. Isso agora está corrigido: `firestore.rules` e `storage.rules` foram adicionados na raiz do projeto e referenciados em `firebase.json` (chaves `firestore.rules` e `storage.rules`, com `firestore.database` apontando para o banco nomeado do projeto).
+---
 
-**Importante**: esses arquivos foram escritos a partir do comportamento observado no código (quais telas leem/escrevem cada coleção, e se isso acontece antes ou depois de qualquer login) — **não foram extraídos das regras hoje publicadas** no console do Firebase, já que este ambiente de desenvolvimento não tem acesso às credenciais do projeto para fazer esse `diff`. Antes do primeiro `firebase deploy --only firestore:rules,storage:rules`, é preciso comparar manualmente estes arquivos com o que está publicado hoje — o deploy do Hosting (CI) continua rodando com `--only hosting` e **não** publica essas regras automaticamente, então adicioná-las aqui não muda nada em produção até alguém rodar esse deploy deliberadamente.
+## Variáveis de ambiente
 
-A política adotada nos dois arquivos é a linha de base alcançável hoje, dada a arquitetura atual do app: **qualquer leitura/escrita exige uma sessão do Firebase Auth** (`request.auth != null`), com exceções propositais para acesso público:
-
-- Coleção `users` no Firestore — leitura pública porque o login (`HomePage`) precisa achar o documento pelo e-mail **antes** de qualquer sessão do Firebase Auth existir, e o cadastro público (`/cadastro`) precisa checar e-mail duplicado do mesmo jeito. `create` também é público, mas só quando o payload já nasce com `active == false` e `role == 'user'` — qualquer outra combinação (admin cadastrando alguém, ativar/promover um usuário, vincular `authUid`) exige uma sessão já autenticada.
-- Caminhos `question-images/**` e `imagens_questoes/**` no Storage — as imagens são carregadas via `<img src>` comum, inclusive em telas que podem abrir sem sessão prévia.
-
-Duas limitações arquiteturais **não são resolvidas só por essas regras** (documentadas em detalhe nos comentários de `firestore.rules`):
-
-1. **O gabarito é lido do navegador.** `gradingService.ts` roda inteiramente no cliente — não há Cloud Function fazendo a correção. Isso significa que qualquer sessão autenticada consegue, tecnicamente, ler `questionAnswers/{questionId}` de **qualquer** questão via SDK, não só da questão que está sendo respondida no momento. Resolver isso de verdade exigiria mover a correção para uma Cloud Function que seja a única com permissão de leitura sobre `questionAnswers`.
-2. **Não há isolamento real por dono do documento nas regras.** `examAssignments.userId`, `attempts.userId` etc. guardam o ID interno do app (`users/{id}`), não `request.auth.uid`. Desde a migração para login por e-mail/senha, `loginUserWithPassword` passou a persistir esse vínculo (`authUid` gravado no documento do usuário a cada login), mas as regras ainda não usam esse vínculo para restringir acesso — continua sendo possível, hoje, qualquer sessão autenticada ler/escrever tentativas de qualquer usuário. Corrigir isso de verdade exigiria usar `get()` nas regras para conferir esse `authUid` contra `request.auth.uid`.
-
-## Firebase Hosting e deploy (CI/CD)
-
-`firebase.json`:
-
-```json
-{
-  "hosting": {
-    "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
-  },
-  "firestore": {
-    "database": "ai-studio-treinamentoteoti-380df538-23a0-4430-8321-7124c54a45e6",
-    "rules": "firestore.rules"
-  },
-  "storage": {
-    "rules": "storage.rules"
-  }
-}
-```
-
-- `public: "dist"` — a Hosting serve exatamente o que `vite build` gera em `dist/` (HTML + JS/CSS com hash + assets).
-- O `rewrite` `"**" → "/index.html"` é o padrão de SPA: qualquer caminho sem correspondência de arquivo estático real cai no `index.html`, e o React Router assume o roteamento no cliente. Arquivos estáticos existentes em `dist/` (JS, CSS, favicon etc.) têm prioridade sobre esse rewrite — comportamento padrão do Firebase Hosting.
-- As chaves `firestore`/`storage` apontam para os arquivos de regras (ver seção anterior) — elas só são usadas quando alguém roda `firebase deploy --only firestore:rules,storage:rules` manualmente; o workflow de CI não as toca.
-- `.firebaserc` fixa o projeto padrão (`gen-lang-client-0316191622`), então `firebase deploy` não precisa de `--project` quando rodado localmente com o CLI autenticado (o workflow de CI passa `--project` explicitamente por segurança/clareza).
-
-**Deploy automático** (`.github/workflows/deploy.yml`), disparado a cada `push` na branch **`main`**:
-
-1. Checkout do repositório.
-2. Setup de Node 24 e Bun.
-3. `bun install`.
-4. `bun run build` (→ `vite build`, gera `dist/`).
-5. Instala `firebase-tools` globalmente.
-6. `firebase deploy --only hosting --project gen-lang-client-0316191622`, autenticado via secret `FIREBASE_TOKEN` do repositório.
-
-> O deploy é `--only hosting` propositalmente: o projeto **não tem uma pasta `functions/`** (nenhuma Cloud Function foi escrita), então `--only functions,hosting` falharia de imediato — o Firebase CLI recusa alvos que não existem no projeto. As regras de Firestore/Storage (`firestore.rules`/`storage.rules`) também não fazem parte deste deploy automático — ver ressalva na seção anterior.
-
-## Rotas da aplicação
-
-Definidas em `src/routes/AppRoutes.tsx`, todas client-side (React Router).
-
-### Públicas
-
-| Rota | Página |
-|---|---|
-| `/` | `HomePage` — login de candidato (e-mail/senha) + acesso "Área restrita" do admin |
-| `/cadastro` | `RegisterPage` — cadastro público de candidato (nasce inativo, aguardando aprovação do admin) |
-| `/admin/login` | `AdminLoginPage` — login de administrador (e-mail/senha) |
-| `/unauthorized` | Usuário autenticado sem permissão de admin |
-| `/inactive` | Usuário/candidato desativado pelo admin |
-
-### Candidato — `UserProtectedRoute` (exige sessão ativa)
-
-| Rota | Página |
-|---|---|
-| `/app` | Redireciona para `/app/exams` |
-| `/app/exams` | `ExamsPage` — provas atribuídas ao candidato |
-| `/app/exams/:assignmentId` | `TakeExamPage` — realização da prova |
-| `/app/attempts/:attemptId/result` | `ExamResultPage` — resultado/correção |
-| `/app/history` | `HistoryPage` — histórico de tentativas |
-| `/app/performance` | `PerformancePage` — desempenho por área/tema |
-| `/app/settings` | `SettingsPage` — troca de e-mail/senha do próprio candidato |
-
-### Administração — `AdminProtectedRoute` (exige sessão ativa + `role === "admin"`)
-
-| Rota | Página |
-|---|---|
-| `/admin` | Redireciona para `/admin/dashboard` |
-| `/admin/dashboard` | `DashboardPage` |
-| `/admin/users`, `/admin/users/:userId` | Gestão de usuários |
-| `/admin/questions` | `QuestionsPage` — CRUD de questões + upload de imagem |
-| `/admin/images` | `BulkImagesPage` — importação em lote de imagens de questões (ver [Firebase Storage](#firebase-storage--imagens-das-questões)) |
-| `/admin/import` | `ImportPage` — importação em massa via JSON |
-| `/admin/exams`, `/admin/exams/new`, `/admin/exams/:examId` | Listagem, criação e visualização de provas |
-| `/admin/attempts` | `AttemptsPage` — tentativas de todos os candidatos |
-
-`*` cai em `NotFoundPage`.
-
-## Variáveis de ambiente e configuração
-
-Ver `.env.example`:
+Ver `.env.example`. Todas são **opcionais**:
 
 ```bash
-# Overrides opcionais da config do Firebase (default: firebase-applet-config.json).
-# Defina estas variáveis só se quiser apontar o build para outro projeto
-# Firebase (ex.: um ambiente de staging separado).
+# Overrides da config do Firebase (default: firebase-applet-config.json).
+# Defina só para apontar o build para outro projeto (ex.: staging).
 VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_API_KEY=...
@@ -364,66 +221,349 @@ VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_FIRESTORE_DATABASE_ID=...
 
-# Credenciais sugeridas para o primeiro admin (não há script de bootstrap que as consuma automaticamente)
+# Sugestão de credenciais do primeiro admin — nenhum script as consome automaticamente
 FIRST_ADMIN_NAME=...
 FIRST_ADMIN_EMAIL=...
 FIRST_ADMIN_PASSWORD=...
 ```
 
-`VITE_FIREBASE_*` já são lidas de verdade por `src/services/firebase.ts` (`import.meta.env.VITE_FIREBASE_*`), como overrides opcionais sobre o `firebase-applet-config.json` commitado — se não definidas, o app usa normalmente a config do projeto padrão.
+`VITE_FIREBASE_*` são lidas de verdade por `src/services/firebase.ts`, com *fallback* no JSON versionado.
 
-No CI (GitHub Actions), o único secret consumido é `FIREBASE_TOKEN` (autenticação do `firebase-tools` para o deploy do Hosting).
+No CI, o único secret consumido é **`FIREBASE_SERVICE_ACCOUNT`** (o JSON de uma Service Account com permissão de deploy no Hosting).
 
-## Rodando localmente
+---
 
-Pré-requisitos: Node.js 20+ (o CI usa Node 24) e, preferencialmente, [Bun](https://bun.sh) (o `bun.lock` é o lockfile oficial do repositório; `npm`/`yarn` também funcionam, mas gerarão seus próprios lockfiles).
+## Projeto Firebase
 
-```bash
-# Instalar dependências
-bun install        # ou: npm install
+| Item | Valor |
+|---|---|
+| **Project ID** | `gen-lang-client-0316191622` |
+| **Auth Domain** | `gen-lang-client-0316191622.firebaseapp.com` |
+| **App ID (Web)** | `1:1001740918051:web:5d931926acb0883d160096` |
+| **Firestore Database ID** | `ai-studio-treinamentoteoti-380df538-23a0-4430-8321-7124c54a45e6` ⚠️ **não é o `(default)`** |
+| **Storage Bucket** | `gen-lang-client-0316191622.firebasestorage.app` |
+| **URL pública** | `https://gen-lang-client-0316191622.web.app` |
 
-# Ambiente de desenvolvimento (Vite dev server em http://localhost:5173)
-bun run dev         # ou: npm run dev
+A configuração pública fica em `firebase-applet-config.json`, importada por `src/services/firebase.ts`:
 
-# Type-check (sem emitir arquivos)
-bun run lint         # ou: npm run lint
+```ts
+export const firebaseConfig = {
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
+  // ...
+};
 
-# Build de produção (gera dist/)
-bun run build         # ou: npm run build
-
-# Servir o build de produção localmente, para conferência antes do deploy
-bun run preview         # ou: npm run preview
+export const app     = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const auth    = getAuth(app);
+export const db      = getFirestore(app, firestoreDatabaseId); // banco NOMEADO
+export const storage = getStorage(app);
 ```
 
-Nenhum arquivo `.env` é necessário para o Firebase funcionar em desenvolvimento — a config já está em `firebase-applet-config.json`.
+> A `apiKey` do Web App **não é secreta** por design — ela apenas identifica o projeto para o SDK. A segurança real vem das [Regras de Segurança](#regras-de-segurança).
 
-## Scripts npm/bun
+---
 
-Definidos em `package.json`:
+## Autenticação e perfis
 
-| Script | Comando | Descrição |
+Modelo **híbrido**: o Firebase Auth prova *quem você é*; o documento em `users` decide *o que você pode*.
+
+- **Residentes (`role: "user"`)** — login com e-mail/senha reais na tela inicial. O app acha o documento em `users` pelo e-mail, confere `active`, autentica no Firebase e vincula o `authUid`. E-mail sem cadastro → a UI oferece `/cadastro`.
+- **Cadastro público (`/cadastro`)** — cria o usuário com `active: false`, **sem** iniciar sessão. O acesso só é liberado depois que um admin ativa o usuário em `/admin/users`.
+- **Administradores (`role: "admin"`)** — login pelo card "Área restrita" da tela inicial ou por `/admin/login`. Há bootstrap automático: se a conta ainda não existir no Firebase Auth, é criada; se não houver documento correspondente, também. Falha de rede **não** libera acesso.
+- **Admin semente** — `usr_mauriston_admin` / `mauriston@oncoortopedia.com`, garantido no carregamento do módulo de serviços.
+- **Troca de credenciais** — o próprio usuário altera e-mail e senha em Ajustes, reautenticando com a senha atual.
+- **Usuários anteriores ao login por senha** não têm conta no Auth. Rode `npm run setup:user-passwords` uma vez para criá-las com a senha padrão `123456` (o usuário troca depois em Ajustes) e vincular o `authUid`.
+
+Os guards ficam em `AppRoutes.tsx`: `UserProtectedRoute` (exige sessão ativa) e `AdminProtectedRoute` (exige adicionalmente `role === "admin"`), redirecionando para `/`, `/inactive` ou `/unauthorized`.
+
+---
+
+## Rotas da aplicação
+
+Todas client-side (React Router), definidas em `src/routes/AppRoutes.tsx`.
+
+### Públicas
+
+| Rota | Página |
+|---|---|
+| `/` | `HomePage` — splash + login do residente + acesso "Área restrita" |
+| `/cadastro` | `RegisterPage` — cadastro público (nasce inativo) |
+| `/admin/login` | `AdminLoginPage` |
+| `/unauthorized` | Autenticado sem permissão de admin |
+| `/inactive` | Usuário desativado |
+| `*` | `NotFoundPage` |
+
+### Residente — `UserProtectedRoute`
+
+| Rota | Página |
+|---|---|
+| `/app` | → `/app/home` |
+| `/app/home` | Home com atalhos e provas pendentes |
+| `/app/exams` | Provas atribuídas |
+| `/app/exams/:assignmentId` | Execução da prova (tela cheia) |
+| `/app/attempts/:attemptId/result` | Relatório da tentativa |
+| `/app/history` | Histórico de tentativas |
+| `/app/performance` | Desempenho e ranking |
+| `/app/sabatinas` | Sabatinas |
+| `/app/cronograma` | Cronograma do treinamento |
+| `/app/exam-stats` | Estatísticas TEOT/TARO |
+| `/app/extras` | Videoteca e Aulas |
+| `/app/settings` | Ajustes do perfil |
+| `/app/notifications` | Notificações |
+
+### Administração — `AdminProtectedRoute`
+
+| Rota | Página |
+|---|---|
+| `/admin` | → `/admin/home` |
+| `/admin/home` | Atalhos do painel |
+| `/admin/dashboard` | Dashboard analítico |
+| `/admin/questions` | Banco de questões |
+| `/admin/exams` | Lista de provas |
+| `/admin/exams/new` | Assistente de criação |
+| `/admin/exams/:examId/edit` | Edição (só prova inativa e sem tentativas) |
+| `/admin/exams/:examId` | Visão detalhada da prova |
+| `/admin/attempts` | Resultados de todos os candidatos |
+| `/admin/users` · `/admin/users/:userId` | Usuários e detalhe |
+| `/admin/import` | Importações (JSON, grupos, imagens, CSV) |
+| `/admin/images` | → `/admin/import` (a tela foi incorporada lá) |
+| `/admin/sabatinas` · `/admin/extras` | Mesmas telas do residente, em modo de gestão |
+| `/admin/exam-stats` | Estatísticas TEOT/TARO |
+| `/admin/settings` · `/admin/notifications` | Perfil e notificações |
+
+---
+
+## Modelo de dados (resumo)
+
+**18 coleções de topo + 3 subcoleções.** Referência completa — campos, tipos, IDs, índices e cascatas — em [`database.md`](database.md).
+
+| Coleção | Representa |
+|---|---|
+| `users` | Candidato ou administrador |
+| `areas` · `themes` · `groups` | Taxonomia: área, tema e grupo oficial TEOT |
+| `reference` | Livros citáveis no gabarito |
+| `questions` | Questão pública (**sem** gabarito) |
+| `questionAnswers` | Gabarito, comentário e referência (**ID = questionId**) |
+| `exams` + `exams/{id}/questions` | Prova e a cópia **congelada** das questões |
+| `examAssignments` | Atribuição prova ↔ candidato |
+| `attempts` + `attempts/{id}/answers` | Tentativa e respostas |
+| `userStats` | Agregado de desempenho (**ID = userId**) |
+| `videotecaItems` · `aulaItems` · `materialViewLogs` | Extras e visualizações |
+| `sabatinas` · `sabatinaViewLogs` | Sabatinas e visualizações |
+| `notifications` · `notificationReads` | Feed de eventos e marcador "lido até" |
+| `adminLogs` · `imports` | Auditoria |
+
+### Duas hierarquias paralelas — não confunda
+
+- **Área** (`areas`) — região anatômica/especialidade (Mão, Joelho, Coluna…). É o que **filtra questões** no banco e na criação de provas.
+- **Grupo** (`groups`) — agrupamento oficial do TEOT (Anatomia, Ciência Básica, Ortopedia Adulto, Ortopedia Infantil, Trauma Adulto, Trauma Infantil, Oncologia Ortopédica). Um grupo **cruza várias áreas** e serve **exclusivamente para estatísticas** — nunca filtra questões.
+
+Ambos se ligam ao **Tema**, que pertence a uma área e a um grupo.
+
+### Ciclo de vida de uma prova
+
+1. **Cadastro das questões** → `questions` (público) + `questionAnswers` (gabarito).
+2. **Publicação** (`createAndPublishExam`) → cria `exams` (nascendo **inativa**), **congela** as questões em `exams/{id}/questions` e cria uma `examAssignment` por candidato — tudo em `writeBatch` comitado em blocos de ~400 operações.
+3. **Ativação** pelo admin → a prova passa a aparecer para os candidatos; notificação `exam_activated`.
+4. **Convite** (opcional) → link direto de WhatsApp com o `assignmentId`, marcando `invitedAt`.
+5. **Início** (`startExamAttempt`) → em `runTransaction`, reaproveita a tentativa em andamento ou cria uma nova.
+6. **Respostas** → um documento por questão em `attempts/{id}/answers`, gravado a cada "Avançar".
+7. **Correção** (`finishAndGradeAttempt`) → trava o status em `grading`, compara com o gabarito, calcula a nota e soma em `userStats` — tudo em transação, à prova de clique duplo e abas simultâneas.
+8. **Exclusão** → `deleteExam()` e `deleteAttempt()` limpam dados órfãos e **revertem** o que a tentativa somou nas estatísticas.
+
+O **congelamento** existe para que editar ou excluir uma questão do banco nunca altere uma prova já entregue.
+
+---
+
+## Imagens de questões
+
+Bucket: `gen-lang-client-0316191622.firebasestorage.app`. Três caminhos, três casos de uso:
+
+| Caminho | Origem |
+|---|---|
+| `question-images/{questionId}/{timestamp}.{ext}` | Upload individual pela UI (Banco de Questões) |
+| `imagens_questoes/{fonte}/{arquivo}` | Lote por prova (tela Importar ou script) |
+| `user-avatars/{userId}/{timestamp}.{ext}` | Foto de perfil |
+
+O campo `imageUrl` guarda sempre a **URL absoluta** (`getDownloadURL()`), consumida por `<img src>` comum — por isso a leitura desses caminhos é pública nas Regras do Storage.
+
+**Recomendação:** para **uma** questão, use o upload da UI (ou o botão de câmera na listagem, que aceita colar `Ctrl+V`). Para um **lote**, use a seção "Atualizar Imagens de Questões em Lote" em `/admin/import` — ou, para lotes muito grandes, o script Node.
+
+### Lote pela UI (`/admin/import`)
+
+1. Informe a **fonte** (ex.: `TEOT 2024`) — vira a subpasta em `imagens_questoes/{fonte}/`.
+2. Selecione a **pasta inteira** do computador.
+3. Cada arquivo precisa se chamar exatamente `<idDaQuestão>.jpeg` / `.jpg` / `.png` — o nome **é** o mapeamento. Outras extensões são ignoradas.
+4. O resultado é listado arquivo a arquivo (vinculada / questão não encontrada / erro), com resumo final e registro em `adminLogs`.
+
+### Lote por script
+
+```bash
+npm install
+
+# Pré-visualizar sem gravar:
+npm run import:images -- --prova TEOT_TEORICA_2022 --dir ./imagens \
+  --map ./mapeamento.json --dry-run --key ./service-account.json
+
+# Executar:
+npm run import:images -- --prova TEOT_TEORICA_2022 --dir ./imagens \
+  --map ./mapeamento.json --key ./service-account.json
+```
+
+O mapeamento é um JSON `{ "<questionId>": "<nomeDoArquivo>" }`. Exige credencial de administrador do projeto.
+
+---
+
+## Importação de conteúdo
+
+Tudo concentrado em **`/admin/import`**:
+
+| Seção | Entrada | Efeito |
 |---|---|---|
-| `dev` | `vite` | Sobe o servidor de desenvolvimento do Vite (hot reload) |
-| `build` | `vite build` | Gera o bundle estático de produção em `dist/` (é o único passo executado no deploy real) |
-| `preview` | `vite preview` | Serve `dist/` localmente, para conferir o build de produção antes do deploy |
-| `lint` | `tsc --noEmit` | Checagem de tipos TypeScript, sem produzir saída |
-| `import:images` | `node scripts/import-question-images.mjs` | Importação em lote de imagens de questões para o Storage (ver [Firebase Storage](#firebase-storage--imagens-das-questões)) |
+| **Banco de Questões (JSON)** | Arquivo ou a árvore integrada (`arvore_temas.json`) | Cria `areas`, `themes`, `questions` e `questionAnswers` em lote, com barra de progresso e log em `imports` |
+| **Grupos (TEOT) dos Temas** | Arquivo ou `reference/areas_grupos_temas.json` | Grava `groupId`/`groupName` nos temas existentes e propaga às questões. **Não cria** áreas, temas, questões ou grupos; reporta o que não casou |
+| **Imagens em Lote** | Pasta de imagens | Ver seção anterior |
+| **Videoteca / Aulas (CSV)** | CSV com `titulo, area, tema, url` | Cadastra vários materiais de uma vez; múltiplos temas separados por `;` |
 
-## Pontos de atenção / dívidas técnicas conhecidas
+O formato aceito pelo importador JSON é `{ dados: [{ Área, temas: [{ Tema, questoes: [...] }] }] }`, com várias variações de capitalização suportadas.
 
-Os itens abaixo foram identificados numa revisão anterior e já foram endereçados; ficam registrados aqui como referência do que foi decidido e por quê.
+---
 
-1. ~~`npm start` estava quebrado~~ — **resolvido**: o app nunca teve (nem precisa de) um servidor Node/Express em produção — o Firebase Hosting já serve o `dist/` estático diretamente. O `server.ts` (Express, usado só localmente para modo dev + endpoint de geração de questões por IA) foi removido por completo junto com a funcionalidade de IA (ver item 6). `dev` agora roda o Vite diretamente (`vite`) e existe um script `preview` (`vite preview`) para conferir o build de produção localmente — sem depender de Express/Node custom nem de um passo de bundling que não existia mais.
-2. ~~Dois arquivos de tipos do domínio divergentes~~ — **resolvido**: `src/types/index.ts` nunca era de fato importado por nenhum módulo (toda importação usava o caminho relativo `../types`, que a resolução de módulos do TypeScript/Node satisfaz primeiro com o arquivo `types.ts`, antes de considerar o diretório `types/`) — ou seja, era código morto. Ele foi removido, e `src/types.ts` passou a ser a única fonte de tipos do domínio. De quebra, os campos "legados" do tipo `Question` (`area`, `tema`, `enunciado`, `opcoes`, `respostaCorreta`, `explicacao`, `pontosChave`, `referencia`) e os tipos `AreaTema`, `QuizAttempt`, `SavedQuestion`, `Flashcard`, `QuestionAnswerLog` também saíram — existiam só para dar suporte ao protótipo de "quiz livre com IA" removido no item 6.
-3. ~~Regras de Segurança do Firestore/Storage não versionadas~~ — **resolvido**: ver [seção dedicada](#regras-de-segurança-firestorestorage) acima (`firestore.rules`/`storage.rules`). Continuam existindo duas limitações arquiteturais que as regras sozinhas não resolvem (gabarito lido do cliente; sem isolamento real por dono do documento) — documentadas na mesma seção.
-4. ~~Duas convenções de caminho de imagem no Storage sem importador único~~ — **parcialmente resolvido**: `question-images/{questionId}/...` (upload individual pela UI) e `imagens_questoes/{PROVA}/...` (lotes por prova) continuam coexistindo — são casos de uso genuinamente diferentes, não um bug —, mas agora existe `scripts/import-question-images.mjs` para popular o segundo caminho de forma consistente (upload + `imageUrl` sempre no mesmo passo, sem casamento manual). Ver [Firebase Storage](#firebase-storage--imagens-das-questões).
-5. ~~`VITE_FIREBASE_*` vestigiais~~ — **resolvido**: `src/services/firebase.ts` agora lê `import.meta.env.VITE_FIREBASE_*` como overrides reais sobre `firebase-applet-config.json`, permitindo apontar um build para outro projeto Firebase (ex.: staging) só com variáveis de ambiente, sem editar código.
-6. ~~Geração de questões por IA (`GEMINI_API_KEY`/`server.ts`)~~ — **removida por completo**, a pedido: nunca esteve disponível no app publicado (só funcionava localmente via `server.ts`/Express, que não roda em produção), então mantinha código morto e uma dependência (`@google/genai`) sem uso real. Foram removidos: `server.ts`; `POST /api/generate-questions`; a dependência `@google/genai`, `express` e `@types/express`; a variável `GEMINI_API_KEY` (`.env.example`, `.github/workflows/deploy.yml`); `MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API` (`metadata.json`); e todo o cluster de UI que só existia para consumir esse endpoint e nunca esteve conectado a nenhuma rota real do app (`QuizEngine.tsx`, `QuizResultView.tsx`, `StatsView.tsx`, `FlashcardsView.tsx`, `SavedQuestionsView.tsx`, `ArvoreTemasView.tsx`, `Header.tsx` e `src/data/prebakedQuestions.ts` — nenhum desses componentes era importado por `AppRoutes.tsx` ou por qualquer página em uso). As dependências `canvas-confetti` e `tsx`, usadas apenas por esse mesmo cluster morto, também saíram do `package.json`.
-7. **`vite.config.ts` precisa manter o plugin `tailwindcss()` registrado.** Uma regressão anterior removeu esse plugin do array `plugins`, quebrando toda a geração de classes utilitárias do Tailwind no build de produção (o CSS gerado passava a conter a diretiva `@tailwind utilities;` **não processada**, resultando em uma tela sem nenhum estilo aplicado). Já corrigido, mas fica registrado como algo a não repetir.
+## Scripts de manutenção
 
-## Histórico relevante recente
+Em `scripts/`, todos com `--dry-run` e exigindo credencial de administrador do Firebase — `firebase login` na mesma máquina **ou** uma Service Account Key via `--key` / `GOOGLE_APPLICATION_CREDENTIALS`.
 
-- **Migração de imagens de questões de URLs externas (Imgur/Flickr) para Firebase Storage nativo.** Motivação: URLs externas são frágeis (podem expirar, sofrer *hotlinking block*, sumir) e não versionam CORS/permissões de forma previsível. Passou a existir upload direto para o bucket `gen-lang-client-0316191622.firebasestorage.app`, tanto via UI administrativa (`uploadQuestionImage`, path `question-images/{questionId}/...`) quanto via upload manual em lote (path `imagens_questoes/{PROVA}/...`, ex. o lote `TEOT_ANATOMIA_2024`). O componente `QuestionImage.tsx` foi refeito nesse processo para lidar com esses casos e com *fallback* visual em caso de falha de carregamento.
-- **Regressão e correção: tela em branco na URL de Hosting.** Durante essa mesma leva de mudanças, uma refatoração de `vite.config.ts` (*"Refactor Vite configuration for deployment"*) removeu por engano o plugin `@tailwindcss/vite`, enquanto `src/index.css` continuava dependendo dele (`@import "tailwindcss";`, sintaxe do Tailwind v4). O build passava sem erros, mas o CSS de produção saía sem nenhuma classe utilitária real — o app renderizava (React montava normalmente), porém completamente sem estilo/layout, dando a impressão de "tela branca". A correção reintroduziu o plugin em `vite.config.ts` e também endureceu o capturador global de erros em `index.html` (passou a registrar o listener de `error` em fase de *capture*, capaz de detectar falhas de carregamento de `<script>`, que não se propagam em fase de *bubbling*).
-- **Pasta local `public/imagens_questoes/...`** (imagens que chegaram a ser versionadas dentro do próprio projeto Vite, servidas como arquivos estáticos do build) foi removida do repositório após a migração para o Storage — deixou de fazer sentido manter imagens versionadas no bundle do frontend quando elas já vivem no Storage.
-- **Remoção da geração de questões por IA e do código morto associado**, e das demais dívidas técnicas então identificadas: unificação dos tipos do domínio em `src/types.ts`, versionamento inicial de `firestore.rules`/`storage.rules`, e ativação real dos overrides `VITE_FIREBASE_*`. Ver item a item na seção [Pontos de atenção](#pontos-de-atenção--dívidas-técnicas-conhecidas) acima.
+> ⚠️ **Nunca versione a Service Account Key** nem a envie por canal que fique registrado — ela dá acesso total de administrador ao projeto.
+
+| Script | O que faz |
+|---|---|
+| `import-question-images.mjs` | Lote de imagens → Storage + `imageUrl` |
+| `import-questions-csv.mjs` | Importa questões via CSV; resolve área/grupo/tema/referência por nome; cria tema ausente; **pula enunciados duplicados** |
+| `import-references.mjs` | Popula `reference` a partir de `reference/livros_referencia.csv` (idempotente) |
+| `setup-user-passwords.mjs` | Cria contas no Auth para usuários legados e vincula `authUid` |
+| `recalc-question-counts.mjs` | Recalcula `questionCount` de áreas e temas com consultas de agregação |
+| `split-source-exam.mjs` | Deriva `sourceExamName` / `sourceExamYear` de `sourceExam` |
+| `fix-question-area-id.mjs` | Corrige `areaId` gravado com o **nome** da área |
+| `fix-question-theme-id.mjs` | Corrige `themeId` inválido e ressincroniza os campos derivados do tema |
+
+Todos apontam explicitamente para o banco nomeado. Cada arquivo tem um cabeçalho detalhado com pré-requisitos e exemplos.
+
+---
+
+## Regras de Segurança
+
+`firestore.rules` e `storage.rules` estão versionadas na raiz e referenciadas em `firebase.json`.
+
+**Política:** qualquer leitura/escrita exige sessão do Firebase Auth (`request.auth != null`), com exceções deliberadas:
+
+- **`users` é publicamente legível** — o login precisa achar o documento pelo e-mail *antes* de existir sessão, e o cadastro público precisa checar duplicidade. `create` sem sessão é permitido apenas quando `active == false && role == 'user'`.
+- **`areas` e `themes`** são legíveis publicamente (taxonomia não sensível).
+- **Caminhos de imagem no Storage** têm leitura pública, porque as imagens carregam por `<img src>` comum. A escrita exige sessão e valida tipo (`image/*`) e tamanho (10 MB para questões, 5 MB para avatares).
+
+O bloco final nega tudo que não estiver listado — **criar uma coleção nova sem adicionar um `match` faz todas as operações falharem em produção**.
+
+> ⚠️ **Duas ressalvas importantes.**
+> 1. Estes arquivos foram escritos a partir do comportamento observado no código, **não** extraídos do console do Firebase. Compare com o publicado antes do primeiro `firebase deploy --only firestore:rules,storage:rules`.
+> 2. **O CI não publica as regras** — o deploy automático é só do Hosting.
+
+Duas limitações que as regras sozinhas não resolvem (detalhadas em [`architecture.md`](architecture.md#limitações-arquiteturais-conhecidas)):
+
+1. **O gabarito é lido pelo navegador.** A correção roda no cliente, então qualquer sessão autenticada consegue ler `questionAnswers` de qualquer questão pelo SDK. Resolver exige mover a correção para uma Cloud Function.
+2. **Não há isolamento por dono.** `attempts.userId` e afins guardam o ID interno do app, não `request.auth.uid` — as regras não têm como comparar.
+
+---
+
+## Deploy (CI/CD)
+
+### `firebase.json`
+
+```jsonc
+{
+  "hosting": {
+    "site": "gen-lang-client-0316191622",
+    "public": "dist",
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [{
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    }]
+  },
+  "firestore": { "database": "ai-studio-treinamentoteoti-...", "rules": "firestore.rules" },
+  "storage":   { "rules": "storage.rules" }
+}
+```
+
+- `public: "dist"` — o Hosting serve exatamente o que o `vite build` gera.
+- O rewrite `** → /index.html` é o padrão SPA; arquivos estáticos reais têm prioridade.
+- `no-cache` em `/index.html` garante que uma publicação nova não fique presa em cache enquanto os assets com hash mudam.
+- As chaves `firestore`/`storage` só são usadas em deploy manual de regras.
+
+### Workflow (`.github/workflows/deploy.yml`)
+
+Dispara em `push` na **`main`** (e manualmente por `workflow_dispatch`):
+
+1. Checkout
+2. Node 24
+3. Bun
+4. `bun install`
+5. `bun run build`
+6. `FirebaseExtended/action-hosting-deploy@v0` → canal `live`, autenticando pelo secret **`FIREBASE_SERVICE_ACCOUNT`**
+
+> A autenticação foi migrada de `FIREBASE_TOKEN` (descontinuado pelo Firebase, e cujo token expirou) para a action oficial com Service Account. O deploy cobre **apenas o Hosting**: o projeto não tem pasta `functions/`, e as regras de Firestore/Storage exigem deploy deliberado.
+
+---
+
+## Design system
+
+Resumo — detalhamento completo em [`design.md`](design.md).
+
+A interface segue uma paleta institucional clara. A decisão estrutural mais importante: em vez de recolorir centenas de classes, `src/index.css` **redefine os tokens do Tailwind v4** via `@theme`.
+
+> ⚠️ **A escala `slate` está invertida.** `bg-slate-950` é o fundo **claro** da página, `bg-slate-900` é **branco** (card) e `text-slate-100` é o texto **navy escuro**. Trocar `text-slate-100` por `text-slate-900` deixa o texto branco sobre branco.
+
+| Papel | Cor | Uso |
+|---|---|---|
+| Marca (residente) | `#1e8c7c` teal | Botões, atalhos, seleção |
+| Acento administrativo | `#2f9c8c` cyan | Menu ativo, tabs, ações |
+| Texto e *chrome* | `#2c3a47` navy | Texto primário e faixa de navegação |
+| Verde de entrada | `#05413b` | Fundo das telas de login/cadastro e barra inferior mobile |
+| Positivo / negativo / atenção | `#1e8c3f` / `#c7362f` / `#f05400` | Estados funcionais |
+
+**Escala de desempenho** (regra única em `utils/helpers.ts`): `< 50%` vermelho `#E20018` · `50–59%` amarelo `#FFCB70` · `≥ 60%` verde `#079551`.
+
+**Tipografia:** **Nunito Sans** (corpo) e **Poppins** (`h1`–`h3`), via Google Fonts.
+
+**PWA:** manifest, ícones e meta tags — instalável, **sem service worker** (portanto sem offline).
+
+---
+
+## Pontos de atenção e dívidas técnicas
+
+### Resolvidas (registradas para contexto)
+
+1. ~~`npm start` quebrado~~ — o app nunca precisou de servidor Node em produção. O `server.ts` (Express + endpoint de IA) foi removido; `dev` roda o Vite direto e existe `preview` para conferir o build.
+2. ~~Tipos do domínio duplicados~~ — `src/types/index.ts` era código morto e foi removido; `src/types.ts` é a fonte única.
+3. ~~Regras de Segurança não versionadas~~ — `firestore.rules` e `storage.rules` estão no repositório (com as ressalvas acima).
+4. ~~Geração de questões por IA~~ — removida por completo, junto com a dependência `@google/genai`, o Express e todo o cluster de UI que nunca esteve conectado a uma rota real.
+5. ~~`VITE_FIREBASE_*` vestigiais~~ — hoje são overrides reais sobre `firebase-applet-config.json`.
+6. ~~Deploy com `FIREBASE_TOKEN`~~ — migrado para a action oficial com Service Account.
+
+### Ativas
+
+| Item | Situação |
+|---|---|
+| **`vite.config.ts` precisa manter o plugin `tailwindcss()`** | Removê-lo produz um build "bem-sucedido" com CSS sem nenhuma utilitária — a app renderiza **sem estilo algum**. Já aconteceu uma vez. |
+| **Gabarito lido pelo cliente** | Sem Cloud Function, qualquer sessão autenticada pode ler `questionAnswers` pelo SDK. |
+| **Sem isolamento por dono nas Regras** | `authUid` é persistido, mas as regras ainda não o usam para restringir acesso. |
+| **Índice de *collection group*** | `getExamsContainingQuestion()` pode exigir um índice criado manualmente no console (o erro traz o link). |
+| **Leituras de coleção inteira** | Várias telas carregam todas as questões / tentativas / estatísticas. Adequado à escala atual, não a uma ordem de grandeza maior. |
+| **`questionCount` não é mantido** | Gravado como `0` na importação e nunca atualizado; hoje não é lido por nenhuma tela. `recalc-question-counts.mjs` reconcilia. |
+| **Configurações de prova sem efeito** | `shuffleQuestions`, `shuffleAlternatives` e `showResultAfterFinish` são persistidos mas não aplicados na execução. Só `showCommentsAfterFinish` e `allowReviewAfterFinish` têm efeito real. |
+| **Cronograma em código** | Os 19 eventos vivem em `src/constants.ts`; alterá-los exige editar e publicar. |
+| **Coleção `groups` sem rotina de criação** | Precisa existir previamente no Firestore; nenhum script do repositório a popula. |
+| **Duas identidades cromáticas** | As telas de entrada usam verde `#05413b` + âmbar; o produto usa teal SBOT + navy. Ver [`design.md`](design.md#divergências-conhecidas). |
+| **Sem testes automatizados** | Não há suíte de testes; `tsc --noEmit` é a única verificação estática. |
+| **Sem service worker** | O PWA é instalável, mas não funciona offline. |
+
+---
+
+*Desenvolvido por Mauriston Martins.*
