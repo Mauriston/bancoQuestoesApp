@@ -225,6 +225,35 @@ async function renderPdf(html: string): Promise<Buffer> {
   }
 }
 
+// Remove caracteres problemáticos em nome de arquivo (Windows inclusive,
+// já que o relatório pode ser aberto em qualquer SO) e colapsa espaços —
+// mesmo critério de toSafeFileName em src/utils/fileShare.ts.
+function sanitizeForFileName(value: string): string {
+  return value.trim().replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, ' ');
+}
+
+// DD-MM-AAAA_HHhMM no fuso de Brasília — evita ":" (inválido em nome de
+// arquivo no Windows) e ainda assim fica legível a olho nu.
+function formatTimestampForFileName(iso: string | undefined): string {
+  const date = iso ? new Date(iso) : new Date();
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
+  return `${get('day')}-${get('month')}-${get('year')}_${get('hour')}h${get('minute')}`;
+}
+
+function buildReportFileName(reportData: ExamReportData): string {
+  const timestamp = formatTimestampForFileName(reportData.completedAt);
+  return `${sanitizeForFileName(reportData.userName)} - ${sanitizeForFileName(reportData.examName)} - ${timestamp}.pdf`;
+}
+
 export const generateExamReportPdf = onCall(
   { region: 'us-central1', memory: '1GiB', timeoutSeconds: 300, cpu: 1 },
   async request => {
@@ -258,7 +287,7 @@ export const generateExamReportPdf = onCall(
 
     return {
       url,
-      fileName: `Relatorio - ${reportData.examName} - ${reportData.userName}.pdf`,
+      fileName: buildReportFileName(reportData),
     };
   }
 );
