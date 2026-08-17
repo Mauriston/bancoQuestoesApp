@@ -110,6 +110,7 @@ body{
 }
 .btn:hover{background:var(--teal-700)}
 .btn:focus-visible{outline:2px solid var(--teal-500);outline-offset:3px}
+.btn:disabled{background:var(--grey-300);color:var(--grey-600);cursor:progress}
 .desk{padding:28px 16px 56px;display:flex;justify-content:center}
 .stage{transform-origin:top center}
 .sheets{display:flex;flex-direction:column;align-items:center;gap:22px;width:var(--sheet-w)}
@@ -473,7 +474,11 @@ const REPORT_SCRIPT = `
   var MIN_FIT = 0.62;
 
   function fitOne(fit) {
-    var available = fit.parentElement.clientHeight;
+    // Pequena folga (1.5%) para absorver diferenças de subpixel entre a
+    // medição em tela e o motor de paginação de impressão — sem isso, uma
+    // página que "encosta" exatamente no limite às vezes transborda 1-2px
+    // na hora de imprimir e gera uma página extra quase em branco.
+    var available = fit.parentElement.clientHeight * 0.985;
     if (!available) return;
 
     function heightAt(scale) {
@@ -547,9 +552,47 @@ const REPORT_SCRIPT = `
       });
     });
 
+    // Primeira passada, imediata: já deixa a prévia utilizável enquanto
+    // imagens/fontes ainda carregam. É só um ponto de partida — a passada
+    // que decide o botão de imprimir é a de baixo, depois que tudo
+    // (imagens da questão, mídia do comentário, miniatura do YouTube e as
+    // fontes Poppins/Nunito Sans) tiver de fato terminado de carregar.
+    // Sem isso, imprimir logo que a aba abre mede a altura da página com
+    // conteúdo "faltando" (imagem ainda não ocupa espaço, texto ainda no
+    // fallback do sistema) e o PDF sai com conteúdo cortado/transbordando
+    // para páginas extras — mesmo que a pré-visualização em tela pareça OK.
     layoutThemesBlocks(sheets);
     fitSheets(sheets);
     scaleStage();
+
+    waitUntilReadyToPrint(sheets);
+  }
+
+  function waitUntilReadyToPrint(sheets) {
+    var btn = document.getElementById("print-btn");
+    var hint = document.getElementById("print-hint");
+    btn.disabled = true;
+    btn.textContent = "Preparando relatório…";
+
+    var imgPromises = Array.prototype.map.call(sheets.querySelectorAll("img"), function (img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function (resolve) {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      });
+    });
+    var fontsPromise = document.fonts ? document.fonts.ready : Promise.resolve();
+
+    Promise.all(imgPromises.concat([fontsPromise])).then(function () {
+      // Imagens e fontes prontas: reajusta com as medidas finais antes de
+      // liberar a impressão.
+      layoutThemesBlocks(sheets);
+      fitSheets(sheets);
+      scaleStage();
+      btn.disabled = false;
+      btn.textContent = "Salvar em PDF";
+      if (hint) hint.hidden = false;
+    });
   }
 
   var SHEET_PX = 794;
@@ -568,11 +611,15 @@ const REPORT_SCRIPT = `
   }
 
   window.addEventListener("resize", scaleStage);
-  document.fonts && document.fonts.ready.then(function () {
+
+  // Rede de segurança: mesmo com o botão travado até tudo carregar, o
+  // usuário pode imprimir pelo atalho do navegador (Ctrl/Cmd+P) ou pelo
+  // menu do botão direito a qualquer momento — beforeprint roda bem antes
+  // do diálogo abrir e dá tempo de reajustar com as medidas atuais.
+  window.addEventListener("beforeprint", function () {
     var sheets = document.getElementById("sheets");
     layoutThemesBlocks(sheets);
     fitSheets(sheets);
-    scaleStage();
   });
 
   document.getElementById("print-btn").addEventListener("click", function () {
@@ -583,7 +630,7 @@ const REPORT_SCRIPT = `
 })();
 `;
 
-function buildReportDocument(data: ExamReportData): string {
+export function buildReportDocument(data: ExamReportData): string {
   const iconUrl = `${window.location.origin}/icons/icon-512.png`;
   const script = REPORT_SCRIPT
     .replace('__ICON__', iconUrl)
@@ -607,8 +654,8 @@ function buildReportDocument(data: ExamReportData): string {
     <p class="toolbar__meta" id="toolbar-meta"></p>
   </div>
   <div class="toolbar__actions">
-    <p class="hint">A4 retrato &middot; margens “Nenhuma” &middot; gráficos de fundo ativados</p>
-    <button class="btn" type="button" id="print-btn">Salvar em PDF</button>
+    <p class="hint" id="print-hint" hidden>No diálogo, use margens “Nenhuma” e desative “Cabeçalhos e rodapés”</p>
+    <button class="btn" type="button" id="print-btn" disabled>Preparando relatório…</button>
   </div>
 </div>
 <main class="desk">
