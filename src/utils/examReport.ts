@@ -178,6 +178,8 @@ body{
 .themes td.is-muted{color:var(--grey-600)}
 .themes__pct{font:var(--weight-bold) var(--size-caption)/1 var(--font-display);font-variant-numeric:tabular-nums}
 .themes__frac{font:var(--weight-regular) var(--size-meta)/1 var(--font-body);color:var(--grey-500);font-variant-numeric:tabular-nums}
+.themes-wrap--split{display:flex;gap:28px}
+.themes-wrap--split .themes-col{flex:1;min-width:0}
 .qpage{padding:16px var(--sheet-pad) var(--sheet-pad)}
 .qpage .section-title{margin-bottom:20px}
 .qhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -323,22 +325,43 @@ const REPORT_SCRIPT = `
       '</div>';
   }
 
-  function performanceSheet(d, pageNo) {
-    var areas = d.areaBreakdown || [];
-    var groups = d.groupBreakdown || [];
-    var themes = d.themeBreakdown || [];
-
-    var themeRows = themes.map(function (t) {
+  function themesTable(list) {
+    var rows = list.map(function (t) {
       return '' +
         '<tr>' +
           '<td>' + esc(t.name) + '</td>' +
-          '<td class="is-muted">' + esc(t.groupName) + '</td>' +
           '<td>' +
             '<span class="themes__pct" style="color:' + scoreColor(t.accuracy) + '">' + t.accuracy + '%</span>' +
             '<span class="themes__frac"> (' + t.correct + '/' + t.total + ')</span>' +
           '</td>' +
         '</tr>';
     }).join('');
+    return '' +
+      '<table class="themes">' +
+        '<thead><tr><th scope="col">Tema</th><th scope="col">Aproveitamento</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
+  }
+
+  // Layout padrão (uma tabela). Quando não cabe inteira na página, o layout
+  // é trocado para duas colunas lado a lado, cada uma com sua própria
+  // tabela — ver layoutThemesBlocks, chamado depois do primeiro render.
+  function themesWrapHtml(list, twoCol) {
+    if (!twoCol || list.length < 2) {
+      return '<div class="themes-wrap">' + themesTable(list) + '</div>';
+    }
+    var mid = Math.ceil(list.length / 2);
+    return '' +
+      '<div class="themes-wrap themes-wrap--split">' +
+        '<div class="themes-col">' + themesTable(list.slice(0, mid)) + '</div>' +
+        '<div class="themes-col">' + themesTable(list.slice(mid)) + '</div>' +
+      '</div>';
+  }
+
+  function performanceSheet(d, pageNo) {
+    var areas = d.areaBreakdown || [];
+    var groups = d.groupBreakdown || [];
+    var themes = d.themeBreakdown || [];
 
     return '' +
       '<section class="sheet">' +
@@ -360,11 +383,10 @@ const REPORT_SCRIPT = `
             groups.map(function (g) { return barRow(g.groupName, g.accuracy, true); }).join('') +
           '</div>' : '') +
 
-          (themes.length ? '<h2 class="section-title">Desempenho por temas</h2>' +
-          '<table class="themes">' +
-            '<thead><tr><th scope="col">Tema</th><th scope="col">Grupo</th><th scope="col">Aproveitamento</th></tr></thead>' +
-            '<tbody>' + themeRows + '</tbody>' +
-          '</table>' : '') +
+          (themes.length ? '<div class="themes-block" data-themes="' + esc(JSON.stringify(themes)) + '">' +
+            '<h2 class="section-title">Desempenho por temas</h2>' +
+            themesWrapHtml(themes, false) +
+          '</div>' : '') +
         '</div></div></div>' +
         runfoot(pageNo) +
       '</section>';
@@ -479,6 +501,26 @@ const REPORT_SCRIPT = `
     root.querySelectorAll(".fit").forEach(fitOne);
   }
 
+  // Se a tabela de Temas (com todas as linhas numa só coluna) não couber na
+  // área útil da página, troca para duas colunas lado a lado antes de
+  // recorrer ao encolhimento proporcional de fitOne — assim a tabela some
+  // menos e continua legível em provas com muitos temas.
+  function layoutThemesBlocks(root) {
+    root.querySelectorAll(".themes-block").forEach(function (block) {
+      var fit = block.closest(".fit");
+      if (!fit) return;
+      var available = fit.parentElement.clientHeight;
+      if (!available || fit.scrollHeight <= available) return;
+
+      var themes;
+      try { themes = JSON.parse(block.getAttribute("data-themes")); } catch (e) { return; }
+      if (!themes || themes.length < 2) return;
+
+      var wrap = block.querySelector(".themes-wrap");
+      if (wrap) wrap.outerHTML = themesWrapHtml(themes, true);
+    });
+  }
+
   function renderRelatorio(d) {
     var questions = d.questions || [];
     var page = 1;
@@ -505,6 +547,7 @@ const REPORT_SCRIPT = `
       });
     });
 
+    layoutThemesBlocks(sheets);
     fitSheets(sheets);
     scaleStage();
   }
@@ -526,7 +569,9 @@ const REPORT_SCRIPT = `
 
   window.addEventListener("resize", scaleStage);
   document.fonts && document.fonts.ready.then(function () {
-    fitSheets(document.getElementById("sheets"));
+    var sheets = document.getElementById("sheets");
+    layoutThemesBlocks(sheets);
+    fitSheets(sheets);
     scaleStage();
   });
 
