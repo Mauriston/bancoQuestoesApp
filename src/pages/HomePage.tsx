@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -29,8 +29,19 @@ const brandEntrance = (delay: number) => ({
 });
 
 export const HomePage: React.FC = () => {
-  const { userLogin, adminLogin } = useAuth();
+  const { userLogin, adminLogin, currentUser, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Sessão (usuário ou admin) fica salva no localStorage/Firebase Auth entre
+  // fechamentos do app — ver authService.ts (SESSION_KEY) e a persistência
+  // padrão do Firebase Auth (browserLocalPersistence). Esta tela é o ponto
+  // de entrada ("/"), então ela é quem decide se já existe sessão válida e
+  // pula direto para a home certa, em vez de sempre reexibir o login.
+  useEffect(() => {
+    if (!loading && currentUser) {
+      navigate(currentUser.role === 'admin' ? '/admin/home' : '/app/home', { replace: true });
+    }
+  }, [loading, currentUser, navigate]);
 
   const [stage, setStage] = useState<Stage>('splash');
   const [cardMode, setCardMode] = useState<CardMode>('user');
@@ -81,6 +92,17 @@ export const HomePage: React.FC = () => {
       setAdminSubmitting(false);
     }
   };
+
+  // Enquanto a sessão salva ainda está sendo verificada, ou já foi
+  // encontrada uma válida (redirecionamento acima em andamento), evita
+  // piscar a tela de login antes de mandar o usuário para sua home.
+  if (loading || currentUser) {
+    return (
+      <div className="min-h-screen bg-[#05413b] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div
