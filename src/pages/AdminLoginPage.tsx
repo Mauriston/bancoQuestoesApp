@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Mail, Lock, ArrowLeft, AlertCircle } from 'lucide-react';
@@ -9,8 +9,16 @@ import { useAuth } from '../contexts/AuthContext';
 const SMOOTH_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export const AdminLoginPage: React.FC = () => {
-  const { adminLogin } = useAuth();
+  const { adminLogin, currentUser, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Mesma lógica de HomePage: se já existe sessão de admin salva, pula
+  // direto para /admin/home em vez de reexibir o formulário de login.
+  useEffect(() => {
+    if (!loading && currentUser) {
+      navigate('/admin/home', { replace: true });
+    }
+  }, [loading, currentUser, navigate]);
 
   const [email, setEmail] = useState('mauriston@oncoortopedia.com');
   const [password, setPassword] = useState('');
@@ -31,6 +39,14 @@ export const AdminLoginPage: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  if (loading || currentUser) {
+    return (
+      <div className="min-h-screen bg-[#05413b] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#05413b] text-white flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
