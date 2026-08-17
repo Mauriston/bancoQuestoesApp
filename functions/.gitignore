@@ -1,0 +1,6 @@
+node_modules/
+lib/
+src/_shared/
+*.log
+.env
+.env.*

@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 import firebaseConfigJson from "../../firebase-applet-config.json";
 
 // As variáveis VITE_FIREBASE_* (ver .env.example) são overrides opcionais:
@@ -33,5 +34,8 @@ export const db = getFirestore(app, firestoreDatabaseId);
 
 // Initialize Storage Service
 export const storage = getStorage(app);
+
+// Cloud Functions (ex.: generateExamReportPdf — ver functions/src/index.ts)
+export const functions = getFunctions(app);
 
 export default app;
