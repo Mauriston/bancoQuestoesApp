@@ -226,6 +226,34 @@ export interface AttemptAnswer {
   answeredAt?: any;
 }
 
+// Cópia pré-montada de tudo que ExamResultPage precisa além do próprio
+// documento de Attempt — questões, respostas, gabaritos/comentários,
+// origem das questões, áreas/temas e referências. Guardada em
+// attempts/{attemptId}/resultSnapshot/data (ver
+// buildAttemptResultSnapshot/saveAttemptResultSnapshot em
+// firebaseService.ts) para que abrir o relatório de uma prova já
+// finalizada não precise refazer ~8 leituras (incluindo, antes desta
+// funcionalidade, uma leitura de gabarito POR QUESTÃO) toda vez. Gerada
+// automaticamente ao finalizar a prova (finishAndGradeAttempt, em
+// gradingService.ts); para tentativas mais antigas sem esse snapshot,
+// ExamResultPage recorre à busca completa e grava o snapshot no final,
+// como cache lento.
+export interface AttemptResultSnapshot {
+  examAllowReviewAfterFinish?: boolean;
+  examShowCommentsAfterFinish?: boolean;
+  questions: ExamQuestion[];
+  answers: AttemptAnswer[];
+  // Chaveado por originalQuestionId, igual ao retorno de getQuestionAnswersByIds.
+  answerKeys: Record<string, QuestionAnswer>;
+  // Chaveado por originalQuestionId — mesmo propósito de sourceExamById em
+  // ExamResultPage.tsx (chip de origem ao lado de "Questão X").
+  sourceExamById: Record<string, string>;
+  areas: Area[];
+  themes: Theme[];
+  references: Reference[];
+  createdAt?: any;
+}
+
 export interface AreaStat {
   areaId: string;
   areaName?: string;

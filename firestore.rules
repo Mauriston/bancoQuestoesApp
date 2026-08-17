@@ -109,6 +109,16 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if isSignedIn();
       }
+
+      // Cópia pré-montada de tudo que ExamResultPage precisa pra exibir o
+      // relatório da tentativa (ver AttemptResultSnapshot em types.ts) —
+      // gravada tanto ao finalizar a prova (finishAndGradeAttempt, no
+      // navegador) quanto, como cache lento, na primeira visita de uma
+      // tentativa antiga sem snapshot ainda.
+      match /resultSnapshot/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
     }
 
     match /userStats/{userId} {
