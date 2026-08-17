@@ -204,6 +204,13 @@ export interface Attempt {
   wrongAnswers?: number;
   unansweredQuestions?: number;
   scorePercentage?: number;
+  // Preenchidos pela Cloud Function generateExamReportPdf (ver
+  // functions/src/index.ts) na primeira geração do relatório em PDF dessa
+  // tentativa. Presentes = o botão "Baixar PDF" de ExamResultPage vira "Ver
+  // PDF" e aponta direto para reportPdfUrl, sem gerar de novo.
+  reportPdfUrl?: string;
+  reportPdfFileName?: string;
+  reportPdfGeneratedAt?: any;
 }
 
 export interface AttemptAnswer {

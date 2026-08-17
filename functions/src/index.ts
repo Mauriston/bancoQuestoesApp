@@ -19,7 +19,7 @@
 // nova, é o mesmo modelo de acesso já em vigor no resto do app.
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
-import { FieldPath, getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { randomUUID } from 'node:crypto';
 import puppeteer from 'puppeteer-core';
@@ -254,6 +254,18 @@ function buildReportFileName(reportData: ExamReportData): string {
   return `${sanitizeForFileName(reportData.userName)} - ${sanitizeForFileName(reportData.examName)} - ${timestamp}.pdf`;
 }
 
+// Content-Disposition com fallback ASCII + extensão UTF-8 (RFC 6266) — nomes
+// reais têm acentos (ex.: "Mário Ivo"), e um Content-Disposition não-ASCII
+// sem essa extensão é inválido/ignorado por vários clientes HTTP.
+function buildContentDisposition(fileName: string): string {
+  const asciiFallback = fileName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/"/g, "'");
+  return `inline; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+}
+
 export const generateExamReportPdf = onCall(
   { region: 'us-central1', memory: '1GiB', timeoutSeconds: 300, cpu: 1 },
   async request => {
@@ -266,18 +278,47 @@ export const generateExamReportPdf = onCall(
       throw new HttpsError('invalid-argument', 'attemptId é obrigatório.');
     }
 
+    const attemptRef = db.collection('attempts').doc(attemptId);
+    const attemptSnap = await attemptRef.get();
+    if (!attemptSnap.exists) {
+      throw new HttpsError('not-found', 'Tentativa não encontrada.');
+    }
+
+    // Já foi gerado antes: devolve a mesma URL salva, sem rodar o Chromium
+    // de novo. No frontend, o botão "Baixar PDF" vira "Ver PDF" assim que
+    // reportPdfUrl existe e passa a abrir essa URL direto, sem chamar esta
+    // função de novo — este é só o reforço equivalente no servidor, para o
+    // caso de a função ainda ser chamada (ex.: estado desatualizado no
+    // cliente).
+    const existing = attemptSnap.data() as Attempt;
+    if (existing.reportPdfUrl && existing.reportPdfFileName) {
+      return { url: existing.reportPdfUrl, fileName: existing.reportPdfFileName };
+    }
+
     const reportData = await fetchExamReportData(attemptId);
     const html = buildReportDocument(reportData, REPORT_ICON_URL);
     const pdfBuffer = await renderPdf(html);
 
+    const fileName = buildReportFileName(reportData);
     const filePath = `exam-reports/${attemptId}/relatorio.pdf`;
     const downloadToken = randomUUID();
     const file = bucket.file(filePath);
     await file.save(pdfBuffer, {
       contentType: 'application/pdf',
       metadata: {
-        cacheControl: 'private, max-age=0, no-cache',
-        metadata: { firebaseStorageDownloadTokens: downloadToken },
+        // Imutável: uma vez gerado, o PDF de uma tentativa nunca é
+        // reescrito (ver short-circuit acima), então pode ficar em cache
+        // por muito tempo sem risco de servir conteúdo desatualizado.
+        cacheControl: 'private, max-age=31536000, immutable',
+        contentDisposition: buildContentDisposition(fileName),
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+          attemptId,
+          examName: reportData.examName,
+          userName: reportData.userName,
+          completedAt: reportData.completedAt || '',
+          generatedAt: new Date().toISOString(),
+        },
       },
     });
 
@@ -285,9 +326,15 @@ export const generateExamReportPdf = onCall(
       `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}` +
       `/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
 
-    return {
-      url,
-      fileName: buildReportFileName(reportData),
-    };
+    await attemptRef.set(
+      {
+        reportPdfUrl: url,
+        reportPdfFileName: fileName,
+        reportPdfGeneratedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { url, fileName };
   }
 );

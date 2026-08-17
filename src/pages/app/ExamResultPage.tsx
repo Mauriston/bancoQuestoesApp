@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download, Loader2
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download, Loader2, Eye
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
@@ -10,7 +10,7 @@ import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { scoreColorClass, scoreColorHex } from '../../utils/helpers';
-import { downloadExamReportPdf } from '../../services/examReportService';
+import { generateAndDownloadExamReportPdf, viewExamReportPdf } from '../../services/examReportService';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -198,9 +198,18 @@ export const ExamResultPage: React.FC = () => {
 
   const handleDownloadPdf = async () => {
     if (downloadingPdf || !attemptId) return;
+
+    // Já foi gerado antes (mesma tentativa): só abre pra visualização, sem
+    // chamar a Cloud Function de novo.
+    if (attempt.reportPdfUrl) {
+      viewExamReportPdf(attempt.reportPdfUrl);
+      return;
+    }
+
     setDownloadingPdf(true);
     try {
-      await downloadExamReportPdf(attemptId);
+      const { url, fileName } = await generateAndDownloadExamReportPdf(attemptId);
+      setAttempt(prev => (prev ? { ...prev, reportPdfUrl: url, reportPdfFileName: fileName } : prev));
     } catch (err) {
       console.error('Erro ao gerar o PDF do relatório:', err);
       alert('Não foi possível gerar o PDF do relatório agora. Tente novamente em instantes.');
@@ -235,6 +244,11 @@ export const ExamResultPage: React.FC = () => {
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="hidden sm:inline">Gerando PDF…</span>
+            </>
+          ) : attempt.reportPdfUrl ? (
+            <>
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Ver PDF</span>
             </>
           ) : (
             <>
