@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
@@ -10,6 +10,7 @@ import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { scoreColorClass, scoreColorHex } from '../../utils/helpers';
+import { buildExamReportData, openExamReport } from '../../utils/examReport';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -194,6 +195,22 @@ export const ExamResultPage: React.FC = () => {
 
   const score = attempt.scorePercentage || 0;
 
+  const handleDownloadPdf = () => {
+    const data = buildExamReportData({
+      attempt,
+      exam,
+      questions,
+      answers,
+      answerKeys,
+      sourceExamById,
+      references,
+      areaBreakdown,
+      groupBreakdown,
+      themeBreakdown,
+    });
+    openExamReport(data);
+  };
+
   return (
     <div className="space-y-8 pb-12">
 
@@ -210,6 +227,14 @@ export const ExamResultPage: React.FC = () => {
         {attempt.userName && (
           <span className="text-sm font-bold text-slate-300 truncate">{attempt.userName}</span>
         )}
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          className="flex items-center gap-2 px-4 h-10 rounded-full bg-teal-600 text-white text-xs font-bold hover:bg-teal-500 transition-colors shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Baixar PDF</span>
+        </button>
       </div>
 
       {/* Main KPI Banner Card */}
