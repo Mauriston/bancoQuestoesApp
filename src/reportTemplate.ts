@@ -9,7 +9,7 @@
 import { Attempt, Exam, ExamQuestion, AttemptAnswer, QuestionAnswer, Reference } from './types';
 
 export const APP_NAME = 'TEOT HMA 2027';
-export const APP_TAGLINE = 'Treinamento e banco de questões TEOT/TARO do HMA.';
+export const APP_TAGLINE = 'O ano da vitória';
 
 export interface ReportBreakdownArea {
   name: string;
