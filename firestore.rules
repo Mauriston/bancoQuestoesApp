@@ -74,6 +74,18 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Grupos oficiais TEOT (Anatomia, Ciência Básica, Ortopedia Adulto,
+    // Ortopedia Infantil, Trauma Adulto, Trauma Infantil, Oncologia
+    // Ortopédica) — faltava aqui; sem essa regra, getGroups() (usado no
+    // Dashboard admin e no cadastro de tema) caía na negação padrão no fim
+    // deste arquivo com "Missing or insufficient permissions", derrubando
+    // o Promise.all inteiro de loadReferenceData e deixando também
+    // areas/themes/nomes de usuário vazios no Dashboard.
+    match /groups/{groupId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
     match /questions/{questionId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();

@@ -19,6 +19,7 @@ export const SOURCE_EXAM_OPTIONS: string[] = [
   'TARO 2023',
   'TARO 2024',
   'TARO 2025',
+  'TARO 2026',
   'BANCO PRÓPRIO'
 ];
 
