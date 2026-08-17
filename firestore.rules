@@ -79,6 +79,15 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Livros de referência bibliográfica dos gabaritos (getReferences()) —
+    // faltava aqui; sem essa regra, qualquer leitura cai na negação padrão
+    // no fim deste arquivo, quebrando ExamResultPage (o único lugar que lê
+    // essa coleção) com "Missing or insufficient permissions".
+    match /reference/{referenceId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
     // Ver limitação (1) no cabeçalho deste arquivo.
     match /questionAnswers/{questionId} {
       allow read: if isSignedIn();
