@@ -1127,9 +1127,16 @@ export async function buildAttemptResultSnapshot(attempt: Attempt): Promise<Atte
   };
 }
 
+// O Firestore rejeita `setDoc` com campos `undefined` (comum aqui: provas
+// antigas sem `allowReviewAfterFinish`/`showCommentsAfterFinish` salvos
+// explicitamente) — grava só os campos realmente definidos.
 export async function saveAttemptResultSnapshot(attemptId: string, snapshot: AttemptResultSnapshot): Promise<void> {
   const ref = doc(db, 'attempts', attemptId, 'resultSnapshot', 'data');
-  await setDoc(ref, { ...snapshot, createdAt: serverTimestamp() });
+  const data: Record<string, unknown> = { ...snapshot, createdAt: serverTimestamp() };
+  Object.keys(data).forEach(key => {
+    if (data[key] === undefined) delete data[key];
+  });
+  await setDoc(ref, data);
 }
 
 export async function getAttemptResultSnapshot(attemptId: string): Promise<AttemptResultSnapshot | null> {
