@@ -144,7 +144,7 @@ body{
 .cover__glow--warm{top:-60px;left:-80px;background:rgba(255,203,112,.08)}
 .cover__glow--cool{bottom:-60px;right:-80px;background:rgba(7,149,81,.12)}
 .cover__inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%}
-.cover__icon{width:96px;height:96px;border-radius:22px;object-fit:contain;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.cover__icon{width:96px;height:96px;border-radius:22px;object-fit:contain;background:var(--cover-bg);box-shadow:0 12px 32px rgba(0,0,0,.35)}
 .cover__app{font:var(--weight-bold) var(--size-h1)/1.2 var(--font-display);color:var(--white);letter-spacing:.2px;margin:20px 0 4px;text-wrap:balance}
 .cover__tagline{font:var(--weight-regular) var(--size-body-sm)/var(--leading-snug) var(--font-body);color:rgba(255,255,255,.6);margin:0 0 56px}
 .cover__id{width:100%;max-width:340px;display:flex;flex-direction:column;gap:20px}
