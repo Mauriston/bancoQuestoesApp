@@ -78,7 +78,16 @@ export const ExamResultPage: React.FC = () => {
         // leitura aqui, em vez das ~8 que a página fazia sozinha
         // (incluindo, antes desta funcionalidade, uma leitura de gabarito
         // POR QUESTÃO), é o que torna a abertura do relatório imediata.
-        const snapshot = await getAttemptResultSnapshot(attemptId);
+        //
+        // Erro nessa leitura (ex.: falha transitória de rede) não pode
+        // derrubar a página inteira — cai no mesmo caminho de reconstrução
+        // usado quando simplesmente não existe snapshot ainda.
+        let snapshot: AttemptResultSnapshot | null = null;
+        try {
+          snapshot = await getAttemptResultSnapshot(attemptId);
+        } catch (err) {
+          console.error('Erro ao ler o snapshot salvo do relatório:', err);
+        }
         if (snapshot) {
           applySnapshot(snapshot);
           return;
