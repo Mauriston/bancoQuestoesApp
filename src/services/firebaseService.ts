@@ -808,6 +808,13 @@ export async function deleteExam(examId: string): Promise<void> {
         await subtractFromUserStats(attempt.userId, answers);
       }
       for (const d of answersSnap.docs) await queueDelete(d.ref);
+      // Deletar o doc pai (attempts/{id}) não apaga sozinho essa
+      // subcoleção (ver AttemptResultSnapshot em types.ts) — sem isso ela
+      // fica órfã pra sempre. O PDF salvo no Storage (se já tinha sido
+      // gerado) é limpo à parte por um gatilho do Firestore
+      // (onAttemptDeleted, em functions/src/index.ts) assim que este
+      // batch apaga o doc.
+      await queueDelete(doc(db, 'attempts', attempt.id, 'resultSnapshot', 'data'));
       await queueDelete(doc(db, 'attempts', attempt.id));
     }
 
@@ -847,6 +854,11 @@ export async function deleteAttempt(attemptId: string): Promise<void> {
       opCount = 0;
     }
   }
+  // Ver comentário equivalente em deleteExam(): a subcoleção resultSnapshot
+  // não some sozinha quando o doc pai é excluído. O PDF salvo no Storage
+  // (se já tinha sido gerado) é limpo à parte por onAttemptDeleted, em
+  // functions/src/index.ts.
+  batch.delete(doc(db, 'attempts', attemptId, 'resultSnapshot', 'data'));
   batch.delete(doc(db, 'attempts', attemptId));
   await batch.commit();
 

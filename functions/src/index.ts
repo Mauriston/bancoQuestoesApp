@@ -18,6 +18,7 @@
 // validar posse de forma confiável hoje) — não é uma regressão de segurança
 // nova, é o mesmo modelo de acesso já em vigor no resto do app.
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentUpdated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldPath, FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -266,6 +267,77 @@ function buildContentDisposition(fileName: string): string {
   return `inline; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
+interface GeneratedReportPdf {
+  url: string;
+  fileName: string;
+}
+
+// Núcleo compartilhado por dois gatilhos:
+//  - generateExamReportPdf (onCall) — quando o candidato clica "Baixar PDF";
+//  - onAttemptCompleted (gatilho do Firestore, abaixo) — automaticamente
+//    assim que a prova é corrigida, sem esperar o candidato pedir.
+// Idempotente: se a tentativa já tem reportPdfUrl salvo, devolve a mesma
+// URL sem rodar o Chromium de novo.
+async function generateAndPersistReportPdf(attemptId: string): Promise<GeneratedReportPdf> {
+  const attemptRef = db.collection('attempts').doc(attemptId);
+  const attemptSnap = await attemptRef.get();
+  if (!attemptSnap.exists) {
+    throw new HttpsError('not-found', 'Tentativa não encontrada.');
+  }
+
+  const existing = attemptSnap.data() as Attempt;
+  if (existing.reportPdfUrl && existing.reportPdfFileName) {
+    return { url: existing.reportPdfUrl, fileName: existing.reportPdfFileName };
+  }
+
+  const reportData = await fetchExamReportData(attemptId);
+  const html = buildReportDocument(reportData, REPORT_ICON_URL);
+  const pdfBuffer = await renderPdf(html);
+
+  const fileName = buildReportFileName(reportData);
+  const filePath = `exam-reports/${attemptId}/relatorio.pdf`;
+  const downloadToken = randomUUID();
+  const file = bucket.file(filePath);
+  await file.save(pdfBuffer, {
+    contentType: 'application/pdf',
+    metadata: {
+      // Imutável: uma vez gerado, o PDF de uma tentativa nunca é
+      // reescrito (ver short-circuit acima), então pode ficar em cache
+      // por muito tempo sem risco de servir conteúdo desatualizado.
+      cacheControl: 'private, max-age=31536000, immutable',
+      contentDisposition: buildContentDisposition(fileName),
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+        attemptId,
+        examName: reportData.examName,
+        userName: reportData.userName,
+        completedAt: reportData.completedAt || '',
+        generatedAt: new Date().toISOString(),
+      },
+    },
+  });
+
+  const url =
+    `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}` +
+    `/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
+
+  // Esta escrita em attempts/{attemptId} é o que faz o botão "Baixar PDF"
+  // virar "Ver PDF" no frontend (ver ExamResultPage.tsx) — e também é o
+  // que faz onAttemptCompleted (abaixo) não re-disparar a si mesmo: essa
+  // função só age quando `status` muda para 'completed', e essa escrita
+  // não mexe em `status`.
+  await attemptRef.set(
+    {
+      reportPdfUrl: url,
+      reportPdfFileName: fileName,
+      reportPdfGeneratedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { url, fileName };
+}
+
 export const generateExamReportPdf = onCall(
   { region: 'us-central1', memory: '1GiB', timeoutSeconds: 300, cpu: 1 },
   async request => {
@@ -278,63 +350,59 @@ export const generateExamReportPdf = onCall(
       throw new HttpsError('invalid-argument', 'attemptId é obrigatório.');
     }
 
-    const attemptRef = db.collection('attempts').doc(attemptId);
-    const attemptSnap = await attemptRef.get();
-    if (!attemptSnap.exists) {
-      throw new HttpsError('not-found', 'Tentativa não encontrada.');
+    return generateAndPersistReportPdf(attemptId);
+  }
+);
+
+// Pré-gera o PDF assim que a prova é corrigida (finishAndGradeAttempt, em
+// gradingService.ts, muda `status` para 'completed') — o candidato não
+// precisa mais clicar em "Baixar PDF" pra o arquivo existir; o botão já
+// abre direto o PDF salvo na primeira vez que ExamResultPage carrega. Roda
+// em background, fora do fluxo de finalização da prova no navegador, então
+// não atrasa a resposta que o candidato vê ao enviar a prova.
+export const onAttemptCompleted = onDocumentUpdated(
+  {
+    document: 'attempts/{attemptId}',
+    database: FIRESTORE_DATABASE_ID,
+    region: 'us-central1',
+    memory: '1GiB',
+    timeoutSeconds: 300,
+  },
+  async event => {
+    const before = event.data?.before.data() as Attempt | undefined;
+    const after = event.data?.after.data() as Attempt | undefined;
+    if (!after || before?.status === 'completed' || after.status !== 'completed') return;
+
+    const attemptId = event.params.attemptId;
+    try {
+      await generateAndPersistReportPdf(attemptId);
+    } catch (err) {
+      // Best-effort: se falhar, o candidato ainda consegue gerar o PDF na
+      // hora clicando em "Baixar PDF" (generateExamReportPdf acima).
+      console.error(`Erro ao pré-gerar o PDF da tentativa ${attemptId}:`, err);
     }
+  }
+);
 
-    // Já foi gerado antes: devolve a mesma URL salva, sem rodar o Chromium
-    // de novo. No frontend, o botão "Baixar PDF" vira "Ver PDF" assim que
-    // reportPdfUrl existe e passa a abrir essa URL direto, sem chamar esta
-    // função de novo — este é só o reforço equivalente no servidor, para o
-    // caso de a função ainda ser chamada (ex.: estado desatualizado no
-    // cliente).
-    const existing = attemptSnap.data() as Attempt;
-    if (existing.reportPdfUrl && existing.reportPdfFileName) {
-      return { url: existing.reportPdfUrl, fileName: existing.reportPdfFileName };
+// Limpa o PDF salvo no Storage quando a tentativa é excluída — seja
+// diretamente (deleteAttempt, ex.: admin apaga o relatório de um usuário
+// específico) ou em cascata (deleteExam, ao apagar a prova inteira, que
+// exclui todas as tentativas ligadas a ela) — ver firebaseService.ts.
+// Gatilho do Firestore em vez de lógica no cliente: cobre os dois casos
+// (e qualquer forma futura de excluir uma tentativa) com um único lugar,
+// sem depender do código que fez a exclusão lembrar de limpar o Storage.
+export const onAttemptDeleted = onDocumentDeleted(
+  {
+    document: 'attempts/{attemptId}',
+    database: FIRESTORE_DATABASE_ID,
+    region: 'us-central1',
+  },
+  async event => {
+    const attemptId = event.params.attemptId;
+    try {
+      await bucket.deleteFiles({ prefix: `exam-reports/${attemptId}/`, force: true });
+    } catch (err) {
+      console.error(`Erro ao limpar o PDF salvo da tentativa ${attemptId}:`, err);
     }
-
-    const reportData = await fetchExamReportData(attemptId);
-    const html = buildReportDocument(reportData, REPORT_ICON_URL);
-    const pdfBuffer = await renderPdf(html);
-
-    const fileName = buildReportFileName(reportData);
-    const filePath = `exam-reports/${attemptId}/relatorio.pdf`;
-    const downloadToken = randomUUID();
-    const file = bucket.file(filePath);
-    await file.save(pdfBuffer, {
-      contentType: 'application/pdf',
-      metadata: {
-        // Imutável: uma vez gerado, o PDF de uma tentativa nunca é
-        // reescrito (ver short-circuit acima), então pode ficar em cache
-        // por muito tempo sem risco de servir conteúdo desatualizado.
-        cacheControl: 'private, max-age=31536000, immutable',
-        contentDisposition: buildContentDisposition(fileName),
-        metadata: {
-          firebaseStorageDownloadTokens: downloadToken,
-          attemptId,
-          examName: reportData.examName,
-          userName: reportData.userName,
-          completedAt: reportData.completedAt || '',
-          generatedAt: new Date().toISOString(),
-        },
-      },
-    });
-
-    const url =
-      `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}` +
-      `/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
-
-    await attemptRef.set(
-      {
-        reportPdfUrl: url,
-        reportPdfFileName: fileName,
-        reportPdfGeneratedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    return { url, fileName };
   }
 );
