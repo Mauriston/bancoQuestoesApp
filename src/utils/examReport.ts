@@ -158,9 +158,11 @@ body{
 .scorecard__count{font:var(--weight-regular) var(--size-body-sm)/var(--leading-snug) var(--font-body);color:var(--grey-600);margin:6px 0 0}
 .scorecard__value{font:var(--weight-bold) 56px/1 var(--font-display);margin:0;flex-shrink:0;font-variant-numeric:tabular-nums}
 .section-title{font:var(--type-section);color:var(--teal-600);text-transform:uppercase;letter-spacing:.5px;margin:0 0 14px}
+.perf-charts{display:flex;gap:28px;margin-bottom:8px}
+.perf-charts__col{flex:1;min-width:0}
 .bars{display:flex;flex-direction:column;gap:10px;margin-bottom:26px}
-.bar{display:grid;grid-template-columns:var(--label-w,130px) 1fr 44px;align-items:center;gap:10px}
-.bar--wide{--label-w:170px}
+.bar{display:grid;grid-template-columns:var(--label-w,90px) 1fr 40px;align-items:center;gap:8px}
+.bar--wide{--label-w:100px}
 .bar__name{font:var(--weight-semibold) var(--size-caption)/var(--leading-snug) var(--font-body);color:var(--navy-900)}
 .bar__track{height:14px;background:var(--grey-100);border-radius:var(--radius-full);overflow:hidden}
 .bar__fill{height:100%;border-radius:var(--radius-full)}
@@ -376,12 +378,13 @@ const REPORT_SCRIPT = `
             '<p class="scorecard__value" style="color:' + scoreColor(d.score) + '">' + d.score + '%</p>' +
           '</div>' +
 
-          (areas.length ? '<h2 class="section-title">Desempenho por área</h2><div class="bars">' +
-            areas.map(function (a) { return barRow(a.name, a.accuracy, false); }).join('') +
-          '</div>' : '') +
-
-          (groups.length ? '<h2 class="section-title">Desempenho por grupo</h2><div class="bars">' +
-            groups.map(function (g) { return barRow(g.groupName, g.accuracy, true); }).join('') +
+          (areas.length || groups.length ? '<div class="perf-charts">' +
+            (areas.length ? '<div class="perf-charts__col"><h2 class="section-title">Desempenho por área</h2><div class="bars">' +
+              areas.map(function (a) { return barRow(a.name, a.accuracy, false); }).join('') +
+            '</div></div>' : '') +
+            (groups.length ? '<div class="perf-charts__col"><h2 class="section-title">Desempenho por grupo</h2><div class="bars">' +
+              groups.map(function (g) { return barRow(g.groupName, g.accuracy, true); }).join('') +
+            '</div></div>' : '') +
           '</div>' : '') +
 
           (themes.length ? '<div class="themes-block" data-themes="' + esc(JSON.stringify(themes)) + '">' +
