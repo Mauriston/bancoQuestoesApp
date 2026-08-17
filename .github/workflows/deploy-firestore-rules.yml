@@ -1,0 +1,29 @@
+name: Deploy Firestore Rules (manual)
+
+# Só roda quando disparado manualmente (workflow_dispatch) — de propósito
+# separado do deploy.yml (Hosting + Functions, esse sim automático em todo
+# push em main). firestore.rules já tem, no topo do arquivo, um aviso para
+# comparar com o que está publicado antes de um deploy às cegas; manter
+# esse passo manual preserva essa checagem em vez de publicar regras de
+# segurança automaticamente a cada push.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy_firestore_rules:
+    name: Publicar firestore.rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: 2. Deploy das regras do Firestore
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx firebase-tools@latest deploy --only firestore:rules --project gen-lang-client-0316191622 --non-interactive
+          rm -f "$RUNNER_TEMP/firebase-service-account.json"

@@ -1,7 +1,7 @@
 import { doc, updateDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Attempt, UserStats } from '../types';
-import { getAttemptAnswers, getQuestionAnswer } from './firebaseService';
+import { getAttemptAnswers, getQuestionAnswer, buildAttemptResultSnapshot, saveAttemptResultSnapshot } from './firebaseService';
 
 export async function finishAndGradeAttempt(
   attemptId: string
@@ -158,7 +158,7 @@ export async function finishAndGradeAttempt(
     });
   });
 
-  return {
+  const finishedAttempt: Attempt = {
     ...attempt,
     status: 'completed',
     correctAnswers: correctCount,
@@ -166,4 +166,22 @@ export async function finishAndGradeAttempt(
     unansweredQuestions: unansweredCount,
     scorePercentage
   };
+
+  // Pré-monta e salva tudo que ExamResultPage precisa pra exibir o
+  // relatório desta tentativa — assim abrir a página (seja logo em
+  // seguida, seja mais tarde a partir do Histórico) não refaz a leitura
+  // completa (exame, questões, respostas, gabaritos, referências) toda
+  // vez, só o Attempt em si. Roda aqui, dentro do "finalizando prova" que
+  // TakeExamPage já mostra, em vez de deixar pra primeira visita à página
+  // de resultado. Falha aqui não deve impedir a prova de ser finalizada —
+  // na pior hipótese, a próxima visita ao relatório cai na busca completa
+  // de sempre e grava o snapshot então, como cache lento.
+  try {
+    const snapshot = await buildAttemptResultSnapshot(finishedAttempt);
+    await saveAttemptResultSnapshot(attemptId, snapshot);
+  } catch (err) {
+    console.error('Erro ao pré-montar o relatório da tentativa:', err);
+  }
+
+  return finishedAttempt;
 }

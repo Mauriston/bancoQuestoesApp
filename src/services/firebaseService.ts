@@ -7,7 +7,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db, storage } from '../firebase/config';
 import {
    AppUser, Area, Group, Theme, Question, QuestionAnswer, Reference, Exam, ExamQuestion,
-   ExamAssignment, Attempt, AttemptAnswer, UserStats, AdminLog, ImportLog,
+   ExamAssignment, Attempt, AttemptAnswer, AttemptResultSnapshot, UserStats, AdminLog, ImportLog,
    VideotecaItem, AulaItem, MaterialViewLog, Sabatina, SabatinaViewLog, AppNotification, NotificationAudience
  } from '../types';
 import { normalizeText, generateId, shuffleArrayWithSeed } from '../utils/helpers';
@@ -1063,6 +1063,67 @@ export async function getAttemptById(attemptId: string): Promise<Attempt | null>
   const snap = await getDoc(doc(db, 'attempts', attemptId));
   if (snap.exists()) {
     return { id: snap.id, ...snap.data() } as Attempt;
+  }
+  return null;
+}
+
+// --- RELATÓRIO DA TENTATIVA (cache de ExamResultPage) ---
+
+// Busca e monta tudo que ExamResultPage precisa além do próprio Attempt —
+// mesmas leituras que a página fazia sozinha (exame, questões congeladas,
+// respostas, área/tema, origem das questões, referências), só que com o
+// gabarito/comentário de cada questão buscado em lote
+// (getQuestionAnswersByIds, particionado de 30 em 30) em vez de uma
+// leitura por questão, que era o principal motivo da demora ao abrir o
+// relatório de provas com muitas questões.
+export async function buildAttemptResultSnapshot(attempt: Attempt): Promise<AttemptResultSnapshot> {
+  const examData = await getExamById(attempt.examId);
+
+  const [examQs, userAns] = await Promise.all([
+    getExamQuestions(attempt.examId),
+    getAttemptAnswers(attempt.id),
+  ]);
+
+  const [areaList, themeList, originalQuestions] = await Promise.all([
+    getAreas(),
+    getThemes(),
+    getQuestionsByIds(examQs.map(q => q.originalQuestionId)),
+  ]);
+
+  const sourceExamById: Record<string, string> = {};
+  Object.values(originalQuestions).forEach(oq => { sourceExamById[oq.id] = oq.sourceExam; });
+
+  let answerKeys: Record<string, QuestionAnswer> = {};
+  let references: Reference[] = [];
+  if (!examData || examData.showCommentsAfterFinish !== false) {
+    [answerKeys, references] = await Promise.all([
+      getQuestionAnswersByIds(examQs.map(q => q.originalQuestionId)),
+      getReferences(),
+    ]);
+  }
+
+  return {
+    examAllowReviewAfterFinish: examData?.allowReviewAfterFinish,
+    examShowCommentsAfterFinish: examData?.showCommentsAfterFinish,
+    questions: examQs,
+    answers: userAns,
+    answerKeys,
+    sourceExamById,
+    areas: areaList,
+    themes: themeList,
+    references,
+  };
+}
+
+export async function saveAttemptResultSnapshot(attemptId: string, snapshot: AttemptResultSnapshot): Promise<void> {
+  const ref = doc(db, 'attempts', attemptId, 'resultSnapshot', 'data');
+  await setDoc(ref, { ...snapshot, createdAt: serverTimestamp() });
+}
+
+export async function getAttemptResultSnapshot(attemptId: string): Promise<AttemptResultSnapshot | null> {
+  const snap = await getDoc(doc(db, 'attempts', attemptId, 'resultSnapshot', 'data'));
+  if (snap.exists()) {
+    return snap.data() as AttemptResultSnapshot;
   }
   return null;
 }

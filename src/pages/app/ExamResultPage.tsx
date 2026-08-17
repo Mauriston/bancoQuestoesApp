@@ -4,8 +4,8 @@ import {
   CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download, Loader2, FileText
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
-import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
-import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme, Reference } from '../../types';
+import { getAttemptById, getAttemptResultSnapshot, buildAttemptResultSnapshot, saveAttemptResultSnapshot } from '../../services/firebaseService';
+import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Area, Theme, Reference, AttemptResultSnapshot } from '../../types';
 import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
@@ -16,7 +16,10 @@ export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
-  const [exam, setExam] = useState<Exam | null>(null);
+  // Único campo de Exam usado nesta página (ver seção de revisão de
+  // questões abaixo) — evita precisar do documento inteiro quando os
+  // dados vêm do snapshot pré-montado (ver AttemptResultSnapshot).
+  const [allowReview, setAllowReview] = useState(true);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, AttemptAnswer>>({});
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
@@ -43,56 +46,52 @@ export const ExamResultPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    function applySnapshot(snapshot: AttemptResultSnapshot) {
+      setAllowReview(snapshot.examAllowReviewAfterFinish !== false);
+      // Sempre na ordem de elaboração da prova (`orderIndex`), mesmo quando
+      // `shuffleQuestions` está ligado: o embaralhamento existe só para o
+      // momento de execução. O relatório é material de estudo e segue a
+      // ordem canônica da prova, igual à que o admin vê em ExamViewPage —
+      // já é a ordem em que buildAttemptResultSnapshot devolve as questões.
+      setQuestions(snapshot.questions);
+      const ansMap: Record<string, AttemptAnswer> = {};
+      snapshot.answers.forEach(a => { ansMap[a.examQuestionId] = a; });
+      setAnswers(ansMap);
+      setAnswerKeys(snapshot.answerKeys);
+      setSourceExamById(snapshot.sourceExamById);
+      setAreas(snapshot.areas);
+      setThemes(snapshot.themes);
+      setReferences(snapshot.references);
+    }
+
     async function loadResult() {
       if (!attemptId) return;
       try {
         setLoading(true);
-        
+
         const att = await getAttemptById(attemptId);
         if (!att) throw new Error("Tentativa não encontrada");
         setAttempt(att);
-        
-        const examData = await getExamById(att.examId);
-        setExam(examData);
-        
-        // Sempre na ordem de elaboração da prova (`orderIndex`), mesmo quando
-        // `shuffleQuestions` está ligado: o embaralhamento existe só para o
-        // momento de execução. O relatório é material de estudo e segue a
-        // ordem canônica da prova, igual à que o admin vê em ExamViewPage.
-        const examQs = await getExamQuestions(att.examId);
-        setQuestions(examQs);
 
-        const userAns = await getAttemptAnswers(attemptId);
-        const ansMap: Record<string, AttemptAnswer> = {};
-        userAns.forEach(a => { ansMap[a.examQuestionId] = a; });
-        setAnswers(ansMap);
-
-        const [areaList, themeList, originalQuestions] = await Promise.all([
-          getAreas(),
-          getThemes(),
-          getQuestionsByIds(examQs.map(q => q.originalQuestionId))
-        ]);
-        setAreas(areaList);
-        setThemes(themeList);
-        const sourceMap: Record<string, string> = {};
-        Object.values(originalQuestions).forEach(oq => { sourceMap[oq.id] = oq.sourceExam; });
-        setSourceExamById(sourceMap);
-
-        if (!examData || examData.showCommentsAfterFinish !== false) {
-          const keysMap: Record<string, QuestionAnswer> = {};
-          
-          const keysPromises = examQs.map(async (q) => {
-            const key = await getQuestionAnswer(q.originalQuestionId);
-            if (key) {
-              keysMap[q.originalQuestionId] = key;
-            }
-          });
-
-          await Promise.all(keysPromises);
-
-          setAnswerKeys(keysMap);
-          setReferences(await getReferences());
+        // Normalmente já pré-montado por finishAndGradeAttempt (ver
+        // gradingService.ts) assim que a prova é finalizada — uma única
+        // leitura aqui, em vez das ~8 que a página fazia sozinha
+        // (incluindo, antes desta funcionalidade, uma leitura de gabarito
+        // POR QUESTÃO), é o que torna a abertura do relatório imediata.
+        const snapshot = await getAttemptResultSnapshot(attemptId);
+        if (snapshot) {
+          applySnapshot(snapshot);
+          return;
         }
+
+        // Tentativas de antes desta funcionalidade existir não têm
+        // snapshot salvo — busca tudo do zero (mesma lógica usada ao
+        // finalizar a prova) e grava o snapshot para a próxima visita.
+        const builtSnapshot = await buildAttemptResultSnapshot(att);
+        applySnapshot(builtSnapshot);
+        saveAttemptResultSnapshot(attemptId, builtSnapshot).catch(err =>
+          console.error('Erro ao gravar o snapshot do relatório:', err)
+        );
       } catch (err) {
         console.error("Erro ao carregar resultados:", err);
       } finally {
@@ -422,7 +421,7 @@ export const ExamResultPage: React.FC = () => {
       </div>
 
       {/* Detailed Question Review List */}
-      {exam?.allowReviewAfterFinish !== false && (
+      {allowReview && (
         <section className="space-y-6">
           <h2 className="text-sm font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
