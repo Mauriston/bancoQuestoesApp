@@ -58,6 +58,10 @@ export interface ExamReportData {
   groupBreakdown: ReportBreakdownGroup[];
   themeBreakdown: ReportBreakdownTheme[];
   questions: ReportQuestion[];
+  // Momento em que o candidato concluiu a tentativa (attempt.completedAt),
+  // em ISO 8601 — usado só para nomear o arquivo do PDF (ver
+  // functions/src/index.ts), não aparece em nenhuma página do relatório.
+  completedAt?: string;
 }
 
 const REPORT_CSS = `
@@ -132,8 +136,7 @@ body{
   border-bottom:2px solid var(--border-subtle);
 }
 .runhead__exam{font:var(--weight-bold) var(--size-h5)/var(--leading-tight) var(--font-display);color:var(--navy-900);margin:0}
-.runhead__user{font:var(--weight-regular) var(--size-caption)/var(--leading-snug) var(--font-body);color:var(--grey-600);margin:2px 0 0}
-.runhead__tag{font:var(--weight-medium) var(--size-meta)/1.2 var(--font-display);color:var(--grey-500);margin:0;white-space:nowrap}
+.runhead__user{font:var(--weight-medium) var(--size-meta)/1.2 var(--font-display);color:var(--grey-500);margin:0;white-space:nowrap}
 .runfoot{flex:0 0 auto;padding:0 var(--sheet-pad) 9mm;text-align:right}
 .pageno{font:var(--weight-semibold) var(--size-caption)/1 var(--font-display);color:var(--grey-500);font-variant-numeric:tabular-nums}
 .cover{
@@ -313,14 +316,11 @@ const REPORT_SCRIPT = `
       '</section>';
   }
 
-  function runhead(d, tag) {
+  function runhead(d) {
     return '' +
       '<header class="runhead">' +
-        '<div>' +
-          '<p class="runhead__exam">' + esc(d.examName) + '</p>' +
-          '<p class="runhead__user">' + esc(d.userName) + '</p>' +
-        '</div>' +
-        (tag ? '<p class="runhead__tag">' + esc(tag) + '</p>' : '') +
+        '<p class="runhead__exam">' + esc(d.examName) + '</p>' +
+        '<p class="runhead__user">' + esc(d.userName) + '</p>' +
       '</header>';
   }
 
@@ -378,7 +378,7 @@ const REPORT_SCRIPT = `
 
     return '' +
       '<section class="sheet">' +
-        runhead(d, 'Relatório de desempenho') +
+        runhead(d) +
         '<div class="sheet__body"><div class="fit"><div class="perf">' +
           '<div class="scorecard">' +
             '<div>' +
@@ -465,7 +465,7 @@ const REPORT_SCRIPT = `
 
     return '' +
       '<section class="sheet">' +
-        runhead(d, '') +
+        runhead(d) +
         '<div class="sheet__body"><div class="fit"><div class="qpage">' +
           (first ? '<h2 class="section-title">Questões, gabaritos e comentários</h2>' : '') +
           '<div class="qhead">' +
@@ -711,6 +711,17 @@ export interface BuildExamReportArgs {
 // acontece aqui. Segue exatamente o mesmo mapeamento usado na revisão de
 // questões em tela (ver ExamResultPage.tsx), então o PDF reflete fielmente
 // o que o candidato vê.
+// `attempt.completedAt` é um Firestore Timestamp — tanto o SDK cliente
+// (firebase/firestore) quanto o Admin SDK (firebase-admin/firestore, usado
+// pela Cloud Function) expõem `.toDate()`, então essa conversão funciona
+// nos dois ambientes sem depender de qual dos dois gerou o valor.
+function timestampToIso(value: unknown): string | undefined {
+  if (value && typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().toISOString();
+  }
+  return undefined;
+}
+
 export function buildExamReportData(args: BuildExamReportArgs): ExamReportData {
   const { attempt, exam, questions, answers, answerKeys, sourceExamById, references, areaBreakdown, groupBreakdown, themeBreakdown } = args;
 
@@ -746,5 +757,6 @@ export function buildExamReportData(args: BuildExamReportArgs): ExamReportData {
     groupBreakdown,
     themeBreakdown: themeBreakdown.map(t => ({ ...t, groupName: t.groupName || '' })),
     questions: reportQuestions,
+    completedAt: timestampToIso(attempt.completedAt),
   };
 }
