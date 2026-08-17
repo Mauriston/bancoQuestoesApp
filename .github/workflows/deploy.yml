@@ -43,3 +43,23 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
           projectId: gen-lang-client-0316191622
           channelId: live
+
+      - name: 7. Instalar as dependências das Cloud Functions
+        run: npm ci --prefix functions
+
+      # Cloud Functions (geração do relatório de prova em PDF no servidor —
+      # ver functions/README.md) exigem o plano Blaze (pay-as-you-go) no
+      # projeto Firebase, e a Service Account acima precisa de permissões
+      # além das que o deploy de Hosting já usa: Cloud Functions Admin,
+      # Service Account User, Cloud Build Editor e Artifact Registry
+      # Writer/Admin — concedidas manualmente no IAM do projeto GCP. Sem
+      # isso, este passo falha com um erro claro apontando a API/permissão
+      # que falta.
+      - name: 8. Deploy das Cloud Functions
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx firebase-tools@latest deploy --only functions --project gen-lang-client-0316191622 --non-interactive
+          rm -f "$RUNNER_TEMP/firebase-service-account.json"

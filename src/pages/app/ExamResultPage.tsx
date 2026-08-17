@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download, Loader2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
@@ -10,7 +10,7 @@ import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { scoreColorClass, scoreColorHex } from '../../utils/helpers';
-import { buildExamReportData, openExamReport } from '../../utils/examReport';
+import { downloadExamReportPdf } from '../../services/examReportService';
 
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -27,6 +27,7 @@ export const ExamResultPage: React.FC = () => {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   // Filtro único (Área, Grupo TEOT ou Tema) aplicado a partir do clique nas
   // barras dos gráficos ou nas linhas da tabela de Temas. Um novo clique
@@ -195,20 +196,17 @@ export const ExamResultPage: React.FC = () => {
 
   const score = attempt.scorePercentage || 0;
 
-  const handleDownloadPdf = () => {
-    const data = buildExamReportData({
-      attempt,
-      exam,
-      questions,
-      answers,
-      answerKeys,
-      sourceExamById,
-      references,
-      areaBreakdown,
-      groupBreakdown,
-      themeBreakdown,
-    });
-    openExamReport(data);
+  const handleDownloadPdf = async () => {
+    if (downloadingPdf || !attemptId) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadExamReportPdf(attemptId);
+    } catch (err) {
+      console.error('Erro ao gerar o PDF do relatório:', err);
+      alert('Não foi possível gerar o PDF do relatório agora. Tente novamente em instantes.');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   return (
@@ -230,10 +228,20 @@ export const ExamResultPage: React.FC = () => {
         <button
           type="button"
           onClick={handleDownloadPdf}
-          className="flex items-center gap-2 px-4 h-10 rounded-full bg-teal-600 text-white text-xs font-bold hover:bg-teal-500 transition-colors shrink-0"
+          disabled={downloadingPdf}
+          className="flex items-center gap-2 px-4 h-10 rounded-full bg-teal-600 text-white text-xs font-bold hover:bg-teal-500 disabled:opacity-60 disabled:cursor-progress transition-colors shrink-0"
         >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Baixar PDF</span>
+          {downloadingPdf ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="hidden sm:inline">Gerando PDF…</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Baixar PDF</span>
+            </>
+          )}
         </button>
       </div>
 
