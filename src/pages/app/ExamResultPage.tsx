@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download, Loader2, Eye
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X, Download, Loader2, FileText
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
@@ -247,7 +247,7 @@ export const ExamResultPage: React.FC = () => {
             </>
           ) : attempt.reportPdfUrl ? (
             <>
-              <Eye className="w-4 h-4" />
+              <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">Ver PDF</span>
             </>
           ) : (
