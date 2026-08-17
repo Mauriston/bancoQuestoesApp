@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown
+  CheckCircle2, XCircle, ArrowLeft, BookOpen, BarChart3, ChevronDown, X
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { getAttemptById, getExamQuestions, getAttemptAnswers, getQuestionAnswer, getExamById, getAreas, getThemes, getQuestionsByIds, getReferences } from '../../services/firebaseService';
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Exam, Area, Theme, Reference } from '../../types';
 import { getSourceExamChipClass } from '../../constants';
@@ -27,6 +27,18 @@ export const ExamResultPage: React.FC = () => {
   const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  // Filtro único (Área, Grupo TEOT ou Tema) aplicado a partir do clique nas
+  // barras dos gráficos ou nas linhas da tabela de Temas. Um novo clique
+  // sempre substitui o filtro anterior; clique fora de qualquer barra/linha
+  // (capturado no document, já que os cliques internos chamam
+  // stopPropagation) limpa o filtro.
+  const [filter, setFilter] = useState<{ type: 'area' | 'group' | 'theme'; value: string } | null>(null);
+
+  useEffect(() => {
+    const clearOnOutsideClick = () => setFilter(null);
+    document.addEventListener('click', clearOnOutsideClick);
+    return () => document.removeEventListener('click', clearOnOutsideClick);
+  }, []);
 
   useEffect(() => {
     async function loadResult() {
@@ -100,11 +112,13 @@ export const ExamResultPage: React.FC = () => {
       map[q.areaId].total += 1;
       if (ans.isCorrect) map[q.areaId].correct += 1;
     });
-    return Object.values(map).map(a => ({
-      ...a,
-      name: areas.find(ar => ar.id === a.areaId)?.name || a.areaId,
-      accuracy: a.total > 0 ? Math.round((a.correct / a.total) * 100) : 0
-    }));
+    return Object.values(map)
+      .map(a => ({
+        ...a,
+        name: areas.find(ar => ar.id === a.areaId)?.name || a.areaId,
+        accuracy: a.total > 0 ? Math.round((a.correct / a.total) * 100) : 0
+      }))
+      .sort((a, b) => b.accuracy - a.accuracy);
   }, [questions, answers, areas]);
 
   const themeBreakdown = useMemo(() => {
@@ -122,6 +136,7 @@ export const ExamResultPage: React.FC = () => {
         return {
           ...t,
           name: theme?.name || t.themeId,
+          areaId: theme?.areaId,
           groupName: theme?.groupName,
           accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0
         };
@@ -142,8 +157,31 @@ export const ExamResultPage: React.FC = () => {
     });
     return Object.values(map)
       .map(g => ({ ...g, accuracy: g.total > 0 ? Math.round((g.correct / g.total) * 100) : 0 }))
-      .sort((a, b) => a.accuracy - b.accuracy);
+      .sort((a, b) => b.accuracy - a.accuracy);
   }, [themeBreakdown]);
+
+  // Aplica o filtro ativo (Área, Grupo TEOT ou Tema) sobre a tabela de Temas
+  // e sobre as questões exibidas na seção de revisão abaixo.
+  const filteredThemeBreakdown = useMemo(() => {
+    if (!filter || filter.type === 'theme') return themeBreakdown;
+    if (filter.type === 'area') return themeBreakdown.filter(t => t.areaId === filter.value);
+    return themeBreakdown.filter(t => t.groupName === filter.value);
+  }, [themeBreakdown, filter]);
+
+  const filteredQuestions = useMemo(() => {
+    if (!filter) return questions;
+    if (filter.type === 'area') return questions.filter(q => q.areaId === filter.value);
+    if (filter.type === 'theme') return questions.filter(q => q.themeId === filter.value);
+    const themeIdsInGroup = new Set(themes.filter(t => t.groupName === filter.value).map(t => t.id));
+    return questions.filter(q => themeIdsInGroup.has(q.themeId));
+  }, [questions, filter, themes]);
+
+  const filterLabel = useMemo(() => {
+    if (!filter) return '';
+    if (filter.type === 'area') return areas.find(a => a.id === filter.value)?.name || filter.value;
+    if (filter.type === 'theme') return themes.find(t => t.id === filter.value)?.name || filter.value;
+    return filter.value;
+  }, [filter, areas, themes]);
 
   if (loading || !attempt) {
     return (
@@ -195,9 +233,29 @@ export const ExamResultPage: React.FC = () => {
 
         {/* Desempenho por Área e Tema nesta prova — substitui os cards de
             Acertos/Erros/Sem Resposta por análises gráficas mais úteis para
-            identificar pontos fracos e alimentar sugestões futuras de estudo. */}
+            identificar pontos fracos e alimentar sugestões futuras de estudo.
+            Clicar numa barra ou numa linha de tema filtra a tabela de Temas
+            e as questões da seção abaixo; um novo clique sempre substitui o
+            filtro anterior (ver estado `filter`), e cliques fora de
+            qualquer barra/linha (capturados no document) limpam o filtro. */}
         {areaBreakdown.length > 0 && (
           <div className="mt-8 pt-6 border-t border-slate-800 space-y-6">
+            {filter && (
+              <div className="flex items-center justify-between gap-3 bg-teal-500/10 border border-teal-500/30 rounded-xl px-4 py-2">
+                <span className="text-xs text-teal-300">
+                  Filtrando por: <span className="font-bold">{filterLabel}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFilter(null); }}
+                  className="flex items-center gap-1 text-[10px] font-bold uppercase text-teal-300 hover:text-teal-100"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Limpar
+                </button>
+              </div>
+            )}
+
             <div>
               <h3 className="text-sm font-bold text-slate-100 mb-1 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-teal-400" />
@@ -205,7 +263,7 @@ export const ExamResultPage: React.FC = () => {
               </h3>
               <div className="h-56 sm:h-72 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={areaBreakdown} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
+                  <BarChart data={areaBreakdown} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 4 }}>
                     <CartesianGrid stroke="#F2F2F5" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} tick={{ fill: '#9AA2A9', fontSize: 10 }} unit="%" />
                     <YAxis type="category" dataKey="name" width={110} tick={{ fill: '#6B7680', fontSize: 11 }} />
@@ -213,10 +271,28 @@ export const ExamResultPage: React.FC = () => {
                       contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
                       formatter={(value: number) => [`${value}%`, 'Aproveitamento']}
                     />
-                    <Bar dataKey="accuracy" radius={[0, 6, 6, 0]}>
+                    <Bar
+                      dataKey="accuracy"
+                      radius={[0, 6, 6, 0]}
+                      cursor="pointer"
+                      onClick={(data: any, _index: number, event: any) => {
+                        event?.stopPropagation?.();
+                        setFilter({ type: 'area', value: data.areaId });
+                      }}
+                    >
                       {areaBreakdown.map(a => (
-                        <Cell key={a.areaId} fill={scoreColorHex(a.accuracy)} />
+                        <Cell
+                          key={a.areaId}
+                          fill={scoreColorHex(a.accuracy)}
+                          opacity={filter && filter.type === 'area' && filter.value !== a.areaId ? 0.35 : 1}
+                        />
                       ))}
+                      <LabelList
+                        dataKey="accuracy"
+                        position="right"
+                        formatter={(value: number) => `${value}%`}
+                        style={{ fill: '#CBD5E1', fontSize: 11, fontWeight: 700 }}
+                      />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -225,19 +301,42 @@ export const ExamResultPage: React.FC = () => {
 
             {groupBreakdown.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-slate-100 mb-3">Desempenho por Grupo (TEOT) nesta Prova</h3>
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {groupBreakdown.map(g => {
-                    const tone = scoreColorClass(g.accuracy);
-                    return (
-                      <div key={g.groupName} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
-                        <span className="text-slate-300 truncate">{g.groupName}</span>
-                        <span className={`font-bold shrink-0 ${tone}`}>
-                          {g.accuracy}% <span className="text-xs text-slate-500 font-normal">({g.correct}/{g.total})</span>
-                        </span>
-                      </div>
-                    );
-                  })}
+                <h3 className="text-sm font-bold text-slate-100 mb-1">Desempenho por Grupo (TEOT) nesta Prova</h3>
+                <div className="h-56 sm:h-72 w-full mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={groupBreakdown} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 4 }}>
+                      <CartesianGrid stroke="#F2F2F5" horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fill: '#9AA2A9', fontSize: 10 }} unit="%" />
+                      <YAxis type="category" dataKey="groupName" width={110} tick={{ fill: '#6B7680', fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value}%`, 'Aproveitamento']}
+                      />
+                      <Bar
+                        dataKey="accuracy"
+                        radius={[0, 6, 6, 0]}
+                        cursor="pointer"
+                        onClick={(data: any, _index: number, event: any) => {
+                          event?.stopPropagation?.();
+                          setFilter({ type: 'group', value: data.groupName });
+                        }}
+                      >
+                        {groupBreakdown.map(g => (
+                          <Cell
+                            key={g.groupName}
+                            fill={scoreColorHex(g.accuracy)}
+                            opacity={filter && filter.type === 'group' && filter.value !== g.groupName ? 0.35 : 1}
+                          />
+                        ))}
+                        <LabelList
+                          dataKey="accuracy"
+                          position="right"
+                          formatter={(value: number) => `${value}%`}
+                          style={{ fill: '#CBD5E1', fontSize: 11, fontWeight: 700 }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             )}
@@ -246,10 +345,18 @@ export const ExamResultPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-bold text-slate-100 mb-3">Temas desta Prova (do mais fraco ao mais forte)</h3>
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {themeBreakdown.map(t => {
+                  {filteredThemeBreakdown.map(t => {
                     const tone = scoreColorClass(t.accuracy);
+                    const isSelected = filter?.type === 'theme' && filter.value === t.themeId;
                     return (
-                      <div key={t.themeId} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-800/60 last:border-0">
+                      <button
+                        type="button"
+                        key={t.themeId}
+                        onClick={(e) => { e.stopPropagation(); setFilter({ type: 'theme', value: t.themeId }); }}
+                        className={`w-full flex items-center justify-between gap-3 text-sm py-1.5 px-2 -mx-2 rounded-lg border-b border-slate-800/60 last:border-0 text-left transition-colors ${
+                          isSelected ? 'bg-teal-500/10' : 'hover:bg-slate-800/40'
+                        }`}
+                      >
                         <span className="text-slate-300 truncate">
                           {t.name}
                           {t.groupName && <span className="text-slate-500 font-normal"> · {t.groupName}</span>}
@@ -257,7 +364,7 @@ export const ExamResultPage: React.FC = () => {
                         <span className={`font-bold shrink-0 ${tone}`}>
                           {t.accuracy}% <span className="text-xs text-slate-500 font-normal">({t.correct}/{t.total})</span>
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -276,7 +383,8 @@ export const ExamResultPage: React.FC = () => {
           </h2>
 
           <div className="space-y-6">
-            {questions.map((q, idx) => {
+            {filteredQuestions.map((q) => {
+              const idx = questions.indexOf(q);
               const userAns = answers[q.id];
               const key = answerKeys[q.originalQuestionId];
               const selected = userAns?.selectedAlternative;
