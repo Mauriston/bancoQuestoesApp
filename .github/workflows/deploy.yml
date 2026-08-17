@@ -55,11 +55,18 @@ jobs:
       # Writer/Admin — concedidas manualmente no IAM do projeto GCP. Sem
       # isso, este passo falha com um erro claro apontando a API/permissão
       # que falta.
+      #
+      # --force: sem isso, o primeiro deploy de uma função nova numa região
+      # ainda sem política de limpeza do Artifact Registry termina com
+      # "Functions successfully deployed but could not set up cleanup
+      # policy" e exit code 1 — a função É publicada normalmente, mas o
+      # workflow fica marcado como falho à toa. --force já assume essa
+      # política de limpeza automaticamente.
       - name: 8. Deploy das Cloud Functions
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
-          npx firebase-tools@latest deploy --only functions --project gen-lang-client-0316191622 --non-interactive
+          npx firebase-tools@latest deploy --only functions --project gen-lang-client-0316191622 --non-interactive --force
           rm -f "$RUNNER_TEMP/firebase-service-account.json"
