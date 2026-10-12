@@ -77,18 +77,12 @@ export const SabatinasPage: React.FC = () => {
     return map;
   }, [allViewLogs]);
 
-  // Agrupadas por data (ordem cronológica crescente) — cada data vira o
-  // título de uma seção da página.
-  const groupedByDate = useMemo(() => {
-    const groups: Record<string, Sabatina[]> = {};
-    sabatinas.forEach(s => {
-      if (!groups[s.date]) groups[s.date] = [];
-      groups[s.date].push(s);
-    });
-    return Object.entries(groups)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, items]) => ({ date, items: items.sort((a, b) => a.title.localeCompare(b.title)) }));
-  }, [sabatinas]);
+  // Todas numa grade única, em ordem cronológica crescente (desempate por
+  // título) — a data aparece em cada card, não mais como título de seção.
+  const sortedSabatinas = useMemo(
+    () => [...sabatinas].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title)),
+    [sabatinas]
+  );
 
   const handleOpenCreate = () => {
     setEditingItem(null);
@@ -150,14 +144,11 @@ export const SabatinasPage: React.FC = () => {
 
       {loading ? (
         <p className="text-xs text-slate-500 text-center py-10">Carregando sabatinas...</p>
-      ) : groupedByDate.length === 0 ? (
+      ) : sortedSabatinas.length === 0 ? (
         <p className="text-xs text-slate-500 italic text-center py-10">Nenhuma sabatina cadastrada ainda.</p>
       ) : (
-        groupedByDate.map(({ date, items }) => (
-          <div key={date} className="space-y-3">
-            <h2 className="text-sm font-bold text-slate-100">{formatIsoDateBr(date)}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {items.map(item => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {sortedSabatinas.map(item => {
                 const themeNames = item.themeIds
                   .map(id => themes.find(t => t.id === id)?.name)
                   .filter((n): n is string => !!n);
@@ -198,6 +189,7 @@ export const SabatinasPage: React.FC = () => {
                     </div>
                     <button onClick={() => handleOpenItem(item)} className="text-left w-full">
                       <p className="px-3 pt-3 text-sm font-bold text-slate-100 line-clamp-2 pr-24">{item.title}</p>
+                      <p className="px-3 mt-0.5 text-[11px] font-semibold text-slate-400">{formatIsoDateBr(item.date)}</p>
                       <div className="mt-2 aspect-video bg-slate-950 relative overflow-hidden">
                         {embedUrl ? (
                           // pointer-events-none faz o clique atravessar o iframe e
@@ -238,9 +230,7 @@ export const SabatinasPage: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        ))
+        </div>
       )}
 
       {modalOpen && isAdmin && (
