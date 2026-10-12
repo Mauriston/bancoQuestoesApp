@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
+import { Avatar } from '../components/Avatar';
 import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
 import { NotificationToastHost } from '../components/NotificationToastHost';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
@@ -62,15 +63,18 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             <div className="flex-1 flex items-center justify-end gap-3">
               {currentUser && (
                 <>
-                  <AvatarAccountMenu
-                    name={currentUser.name}
-                    photoUrl={currentUser.photoUrl}
-                    role={currentUser.role}
-                    unreadCount={unreadCount}
-                    settingsPath="/admin/settings"
-                    notificationsPath="/admin/notifications"
-                    triggerClassName="sm:hidden shrink-0"
-                  />
+                  <Link
+                    to="/admin/notifications"
+                    aria-label="Notificações"
+                    className="sm:hidden shrink-0 relative inline-flex"
+                  >
+                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-slate-100 leading-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </Link>
                   <AvatarAccountMenu
                     name={currentUser.name}
                     photoUrl={currentUser.photoUrl}
@@ -92,7 +96,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
               <button
                 onClick={handleLogout}
                 title="Sair do Painel"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
               >
                 <LogOut className="w-5 h-5" strokeWidth={2.5} />
                 <span className="hidden sm:inline">Sair</span>
@@ -162,6 +166,9 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             notificationsPath="/admin/notifications"
             dropUp
             align="left"
+            hideNotifications
+            onLogout={handleLogout}
+            onItemSelect={() => setMobileMenuOpen(false)}
             triggerClassName={`flex items-center gap-3 lg:justify-center lg:group-hover/sidebar:justify-start px-3.5 lg:px-0 lg:group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 w-full ${
               location.pathname.startsWith('/admin/settings') || location.pathname.startsWith('/admin/notifications')
                 ? 'bg-cyan-500/15 text-cyan-500 border border-cyan-500/40 font-semibold shadow-sm'
