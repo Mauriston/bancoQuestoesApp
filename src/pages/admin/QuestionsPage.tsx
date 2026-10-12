@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen, Plus, Search, Filter, Image as ImageIcon, Camera, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
-import { Question, Area, Theme, QuestionAnswer, Reference } from '../../types';
+import { getQuestions, getAreas, getThemes, getGroups, createTheme, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { Question, Area, Theme, Group, QuestionAnswer, Reference } from '../../types';
 import { SOURCE_EXAM_GROUPS, SourceExamGroup, getSourceExamOptionsForGroup, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
@@ -70,6 +70,13 @@ export const QuestionsPage: React.FC = () => {
 
   const [areaId, setAreaId] = useState('');
   const [themeId, setThemeId] = useState('');
+  // Cadastro rápido de tema dentro do modal ("+ Adicionar tema").
+  const [addingTheme, setAddingTheme] = useState(false);
+  const [newThemeName, setNewThemeName] = useState('');
+  const [newThemeGroupId, setNewThemeGroupId] = useState('');
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [themeError, setThemeError] = useState('');
   // Temas do formulário do modal, dependentes da área escolhida ali dentro —
   // mantidos separados de `themes` (que alimenta o filtro da listagem) para
   // que escolher uma área no modal não altere o filtro da tela por trás dele.
@@ -155,6 +162,7 @@ export const QuestionsPage: React.FC = () => {
   };
 
   const handleOpenCreateModal = async () => {
+    closeAddTheme();
     const defaultAreaId = areas[0]?.id || '';
     setEditingQId(null);
     setAreaId(defaultAreaId);
@@ -176,7 +184,43 @@ export const QuestionsPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  const closeAddTheme = () => {
+    setAddingTheme(false);
+    setNewThemeName('');
+    setNewThemeGroupId('');
+    setThemeError('');
+  };
+
+  const handleOpenAddTheme = () => {
+    setAddingTheme(true);
+    if (groups.length === 0) getGroups().then(setGroups).catch(err => console.error('Erro ao carregar grupos:', err));
+  };
+
+  const handleSaveNewTheme = async () => {
+    const name = newThemeName.trim();
+    if (!areaId || !name) return;
+    if (modalThemes.some(t => t.name.trim().toLowerCase() === name.toLowerCase())) {
+      setThemeError('Já existe um tema com esse nome nesta área.');
+      return;
+    }
+    setSavingTheme(true);
+    setThemeError('');
+    try {
+      const group = groups.find(g => g.id === newThemeGroupId);
+      const created = await createTheme({ areaId, name, groupId: group?.id, groupName: group?.name });
+      setModalThemes(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setThemes(prev => prev.some(t => t.id === created.id) || (selectedAreaId && selectedAreaId !== areaId) ? prev : [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setThemeId(created.id);
+      closeAddTheme();
+    } catch (err: any) {
+      setThemeError('Erro ao criar tema: ' + err.message);
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
   const handleOpenEditModal = async (q: Question) => {
+    closeAddTheme();
     setEditingQId(q.id);
     setAreaId(q.areaId);
     setThemeId(q.themeId);
@@ -521,6 +565,7 @@ export const QuestionsPage: React.FC = () => {
                       const newAreaId = e.target.value;
                       setAreaId(newAreaId);
                       setThemeId('');
+                      closeAddTheme();
                       getThemes(newAreaId || undefined).then(res => setModalThemes(res));
                     }}
                     required
@@ -543,6 +588,49 @@ export const QuestionsPage: React.FC = () => {
                     <option value="">{areaId ? 'Selecione o Tema' : 'Selecione a área primeiro'}</option>
                     {modalThemes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
+                  {!addingTheme ? (
+                    <button
+                      type="button"
+                      disabled={!areaId}
+                      onClick={handleOpenAddTheme}
+                      className="mt-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      + Adicionar tema
+                    </button>
+                  ) : (
+                    <div className="mt-2 p-3 rounded-xl border border-slate-800 bg-slate-950 space-y-2">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Nome do novo tema"
+                        value={newThemeName}
+                        onChange={(e) => setNewThemeName(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
+                      />
+                      <select
+                        value={newThemeGroupId}
+                        onChange={(e) => setNewThemeGroupId(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
+                      >
+                        <option value="">Grupo TEOT (opcional)</option>
+                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                      {themeError && <p className="text-[11px] text-red-400">{themeError}</p>}
+                      <div className="flex items-center justify-end gap-3">
+                        <button type="button" onClick={closeAddTheme} className="text-[11px] font-semibold text-slate-400 hover:text-slate-200">
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingTheme || !newThemeName.trim()}
+                          onClick={handleSaveNewTheme}
+                          className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 disabled:opacity-40"
+                        >
+                          {savingTheme ? 'Salvando...' : 'Salvar tema'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
