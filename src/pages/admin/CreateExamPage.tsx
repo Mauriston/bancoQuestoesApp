@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronRight, ChevronLeft, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2, ChevronDown
+  ArrowLeft, ChevronRight, ChevronLeft, FileCheck, Search, AlertCircle, Sparkles, Eye, Image as ImageIcon, XCircle, CheckCircle2, ChevronDown, ListChecks
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -135,6 +135,19 @@ export const CreateExamPage: React.FC = () => {
     const matchesSelected = !showOnlySelected || selectedQuestions.some(sq => sq.id === q.id);
     return matchesArea && matchesTheme && matchesSearch && matchesSource && matchesSelected;
   });
+
+  // "Selecionar todas as filtradas" só faz sentido com algum filtro de conteúdo
+  // ativo (o switch "apenas selecionadas" não conta: não amplia a seleção).
+  const hasContentFilter = !!(searchQuery || areaFilter || themeFilterIds.length > 0 || selectedSourceExams.length > 0);
+
+  const handleSelectAllFiltered = () => {
+    setSelectedQuestions(prev => {
+      const selectedIds = new Set(prev.map(sq => sq.id));
+      return [...prev, ...filteredQuestions.filter(q => !selectedIds.has(q.id))];
+    });
+  };
+
+  const allFilteredSelected = filteredQuestions.every(q => selectedQuestions.some(sq => sq.id === q.id));
 
   // Contagem de questões selecionadas por tema, para a tabela abaixo do
   // quadro de filtros (ver THEME_TABLE_PAGE_SIZE / themeTablePage).
@@ -562,6 +575,17 @@ export const CreateExamPage: React.FC = () => {
                       <p className="text-[11px] text-slate-400 mt-1.5">questõe{selectedQuestions.length === 1 ? '' : 's'} selecionada{selectedQuestions.length === 1 ? '' : 's'}</p>
                     </div>
                   </div>
+                  {hasContentFilter && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllFiltered}
+                      disabled={filteredQuestions.length === 0 || allFilteredSelected}
+                      className="inline-flex items-center gap-1.5 justify-center bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold py-2 px-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <ListChecks className="w-3.5 h-3.5" />
+                      <span>Selecionar todas as filtradas ({filteredQuestions.length})</span>
+                    </button>
+                  )}
                   {(searchQuery || areaFilter || themeFilterIds.length > 0 || selectedSourceExams.length > 0 || showOnlySelected) && (
                     <button
                       onClick={() => {
