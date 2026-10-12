@@ -153,6 +153,20 @@ export async function getThemes(areaId?: string): Promise<Theme[]> {
   return themes.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Cria um tema novo dentro de uma área (ex.: a partir do modal de questão).
+// groupId/groupName são opcionais; sem eles o tema só fica de fora das
+// estatísticas por grupo até ser associado a um.
+export async function createTheme(data: { areaId: string; name: string; groupId?: string; groupName?: string }): Promise<Theme> {
+  const name = data.name.trim();
+  const payload: Record<string, any> = { areaId: data.areaId, name };
+  if (data.groupId) {
+    payload.groupId = data.groupId;
+    payload.groupName = data.groupName || '';
+  }
+  const ref = await addDoc(collection(db, 'themes'), { ...payload, createdAt: serverTimestamp() });
+  return { id: ref.id, ...payload } as Theme;
+}
+
 // --- GROUPS (agrupamento TEOT: Anatomia, Ciência Básica, Ortopedia Adulto,
 // Ortopedia Infantil, Trauma Adulto, Trauma Infantil, Oncologia Ortopédica)
 // ---
