@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
+import { Avatar } from '../components/Avatar';
 import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
 import { NotificationToastHost } from '../components/NotificationToastHost';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
@@ -123,15 +124,18 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {currentUser && (
                 <>
-                  <AvatarAccountMenu
-                    name={currentUser.name}
-                    photoUrl={currentUser.photoUrl}
-                    role={currentUser.role}
-                    unreadCount={unreadCount}
-                    settingsPath="/app/settings"
-                    notificationsPath="/app/notifications"
-                    triggerClassName="sm:hidden shrink-0"
-                  />
+                  <Link
+                    to="/app/notifications"
+                    aria-label="Notificações"
+                    className="sm:hidden shrink-0 relative inline-flex"
+                  >
+                    <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="sm" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-slate-100 leading-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </Link>
                   <AvatarAccountMenu
                     name={currentUser.name}
                     photoUrl={currentUser.photoUrl}
@@ -148,7 +152,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
               <button
                 onClick={handleLogout}
                 title="Sair da Conta"
-                className="tap-target flex items-center justify-center gap-1.5 sm:min-w-0 sm:min-h-0 sm:px-3.5 sm:py-2 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
+                className="hidden sm:flex tap-target items-center justify-center gap-1.5 sm:min-w-0 sm:min-h-0 sm:px-3.5 sm:py-2 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
               >
                 <LogOut className="w-5 h-5" strokeWidth={2.5} />
                 <span className="hidden sm:inline">Sair</span>
@@ -221,7 +225,11 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             notificationsPath="/app/notifications"
             dropUp
             align="left"
-            triggerClassName={`mt-auto flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors w-full ${
+            hideNotifications
+            onLogout={handleLogout}
+            onItemSelect={() => setMobileMenuOpen(false)}
+            wrapperClassName="mt-auto"
+            triggerClassName={`flex items-center gap-3 px-3.5 py-3.5 min-h-11 rounded-lg text-sm font-medium transition-colors w-full ${
               location.pathname.startsWith('/app/settings') || location.pathname.startsWith('/app/notifications')
                 ? 'bg-cyan-500/15 text-cyan-500 border border-cyan-500/40'
                 : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -280,6 +288,8 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             notificationsPath="/app/notifications"
             dropUp
             align="left"
+            hideNotifications
+            onLogout={handleLogout}
             triggerClassName={`flex items-center gap-3 justify-center group-hover/sidebar:justify-start px-0 group-hover/sidebar:px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 w-full ${
               location.pathname.startsWith('/app/settings') || location.pathname.startsWith('/app/notifications')
                 ? 'bg-cyan-500/15 text-cyan-500 border border-cyan-500/40 font-semibold shadow-sm'

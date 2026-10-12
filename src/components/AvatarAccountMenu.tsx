@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, UserCircle } from 'lucide-react';
+import { Bell, LogOut, UserCircle } from 'lucide-react';
 import { Avatar } from './Avatar';
 
 interface AvatarAccountMenuProps {
@@ -23,6 +23,14 @@ interface AvatarAccountMenuProps {
   // ancorados no rodapé da tela (sidebar/gaveta).
   dropUp?: boolean;
   align?: 'left' | 'right';
+  // Rodapé do menu lateral: esconde o item "Notificações" (e o badge do
+  // avatar) e, com onLogout, acrescenta o item "Sair".
+  hideNotifications?: boolean;
+  onLogout?: () => void;
+  // Chamado após clicar em qualquer item do menu (ex.: recolher a gaveta).
+  onItemSelect?: () => void;
+  // className do invólucro — ex.: "mt-auto" para ancorar no rodapé.
+  wrapperClassName?: string;
 }
 
 // Avatar clicável (topbar ou rodapé do menu lateral/gaveta) que abre um
@@ -31,7 +39,8 @@ interface AvatarAccountMenuProps {
 export const AvatarAccountMenu: React.FC<AvatarAccountMenuProps> = ({
   name, photoUrl, role, avatarSize = 'sm', unreadCount,
   settingsPath, notificationsPath, triggerClassName, nameSlot,
-  dropUp = false, align = 'right'
+  dropUp = false, align = 'right', hideNotifications = false,
+  onLogout, onItemSelect, wrapperClassName = ''
 }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,14 +55,19 @@ export const AvatarAccountMenu: React.FC<AvatarAccountMenuProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const select = () => {
+    setOpen(false);
+    onItemSelect?.();
+  };
+
   const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className={`relative ${wrapperClassName}`} ref={containerRef}>
       <button type="button" onClick={() => setOpen(prev => !prev)} className={triggerClassName}>
         <span className="relative inline-flex shrink-0">
           <Avatar name={name} photoUrl={photoUrl} role={role} size={avatarSize} />
-          {unreadCount > 0 && (
+          {!hideNotifications && unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[0.95rem] h-[0.95rem] px-[3px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-slate-100 leading-none">
               {badgeLabel}
             </span>
@@ -68,9 +82,10 @@ export const AvatarAccountMenu: React.FC<AvatarAccountMenuProps> = ({
             dropUp ? 'bottom-full mb-2' : 'top-full mt-2'
           } ${align === 'right' ? 'right-0' : 'left-0'}`}
         >
+          {!hideNotifications && (
           <Link
             to={notificationsPath}
-            onClick={() => setOpen(false)}
+            onClick={select}
             className="flex items-center justify-between gap-2 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors"
           >
             <span className="flex items-center gap-2">
@@ -81,14 +96,25 @@ export const AvatarAccountMenu: React.FC<AvatarAccountMenuProps> = ({
               <span className="text-[10px] font-bold text-red-500">{badgeLabel}</span>
             )}
           </Link>
+          )}
           <Link
             to={settingsPath}
-            onClick={() => setOpen(false)}
+            onClick={select}
             className="flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors"
           >
             <UserCircle className="w-3.5 h-3.5 text-slate-400" />
             Perfil
           </Link>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={() => { select(); onLogout(); }}
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5 text-slate-400" />
+              Sair
+            </button>
+          )}
         </div>
       )}
     </div>
