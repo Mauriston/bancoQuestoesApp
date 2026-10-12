@@ -9,7 +9,7 @@ import {
   getExamById, getExamQuestions, getAttemptsForExam, isExamActive, updateExamContent
 } from '../../services/firebaseService';
 import { Question, Area, Theme, AppUser, QuestionAnswer } from '../../types';
-import { SOURCE_EXAM_GROUPS, SourceExamGroup, getSourceExamOptionsForGroup } from '../../constants';
+import { SOURCE_EXAM_GROUPS, SourceExamGroup, getSourceExamOptionsForGroup, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { Switch } from '../../components/Switch';
@@ -693,6 +693,9 @@ export const CreateExamPage: React.FC = () => {
                       />
                     )}
                     <div className="flex-1 min-w-0 space-y-1.5">
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSourceExamChipClass(q.sourceExam)}`}>
+                        {q.sourceExam}
+                      </span>
                       <p className="font-semibold text-sm leading-relaxed line-clamp-2">{q.statement}</p>
                       {answer ? (
                         <p className="text-xs text-emerald-400 flex items-center gap-1.5 min-w-0">
