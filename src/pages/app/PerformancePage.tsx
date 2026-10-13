@@ -26,6 +26,10 @@ function scoreTier(accuracy: number): Tier {
 
 const getTier = scoreTier;
 
+// Meta de aproveitamento geral do treinamento (%), usada na comparação do
+// card "Desempenho Geral".
+const GOAL_PERCENT = 50;
+
 const TIER_STYLES: Record<Tier, { text: string; ring: string; bar: string }> = {
   good: { text: 'text-[#079551]', ring: 'border-[#079551]/30', bar: 'bg-[#079551]' },
   warn: { text: 'text-cyan-500', ring: 'border-cyan-500/30', bar: 'bg-cyan-500' },
@@ -175,6 +179,7 @@ export const PerformancePage: React.FC = () => {
   const overallAcc = totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 100) : 0;
   const overallTier = scoreTier(overallAcc);
   const platformDelta = platformAverage !== null ? overallAcc - platformAverage : null;
+  const goalDelta = overallAcc - GOAL_PERCENT;
 
   const areaPerformanceList = areas.map(area => {
     const areaData = stats?.areas?.[area.id] || { solved: 0, correct: 0 };
@@ -273,15 +278,10 @@ export const PerformancePage: React.FC = () => {
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
 
-      {/* Ranking Geral — mesmo gráfico do Dashboard admin, sem drill-down aqui */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
-        <h2 className="text-sm font-bold text-slate-100">Ranking Geral</h2>
-        <p className="text-xs text-slate-400">Desempenho geral residentes.</p>
-        <RankingChart data={rankingData} />
-      </div>
-
+      {/* No mobile o card de Desempenho Geral vem antes do Ranking Geral (order); a partir de sm, a ordem original. */}
+      <div className="flex flex-col gap-6 sm:gap-8">
       {/* Overall Accuracy KPI — cartão mais proeminente da página */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+      <div className="order-1 sm:order-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           {currentUser?.name ? `${currentUser.name} - Desempenho Geral` : 'Desempenho Geral'}
         </p>
@@ -300,6 +300,25 @@ export const PerformancePage: React.FC = () => {
             <span className="text-slate-500">vs. média dos colegas ({platformAverage}%)</span>
           </div>
         )}
+
+        {/* Comparação com a meta de aproveitamento, abaixo da comparação com os colegas */}
+        <div className="flex items-center gap-1.5 mt-2 text-sm">
+          {goalDelta > 0 && <TrendingUp className="w-4 h-4 text-emerald-400" />}
+          {goalDelta < 0 && <TrendingDown className="w-4 h-4 text-red-400" />}
+          {goalDelta === 0 && <Minus className="w-4 h-4 text-slate-500" />}
+          <span className={goalDelta > 0 ? 'text-emerald-400 font-semibold' : goalDelta < 0 ? 'text-red-400 font-semibold' : 'text-slate-400'}>
+            {goalDelta > 0 ? '+' : ''}{goalDelta} pp
+          </span>
+          <span className="text-slate-500">vs. meta ({GOAL_PERCENT}%)</span>
+        </div>
+      </div>
+
+      {/* Ranking Geral — mesmo gráfico do Dashboard admin, sem drill-down aqui */}
+      <div className="order-2 sm:order-1 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
+        <h2 className="text-sm font-bold text-slate-100">Ranking Geral</h2>
+        <p className="text-xs text-slate-400">Desempenho geral residentes.</p>
+        <RankingChart data={rankingData} />
+      </div>
       </div>
 
       {/* Evolução ao longo das provas — só a partir de 2 provas concluídas */}
