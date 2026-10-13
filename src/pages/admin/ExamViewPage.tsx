@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, Camera, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus } from 'lucide-react';
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, syncExamQuestionFromBank, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { QuestionFormModal, SavedAnswerFields } from '../../components/QuestionFormModal';
+import { AddQuestionImageModal } from '../../components/AddQuestionImageModal';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
@@ -45,6 +46,8 @@ export const ExamViewPage: React.FC = () => {
   // Questão (do banco) aberta no modal de edição — vale para o banco e para
   // esta prova (ver handleQuestionEdited).
   const [editingQuestion, setEditingQuestion] = useState<{ examQuestionId: string; question: Question } | null>(null);
+  // Questão sem imagem que está recebendo uma (modal AddQuestionImageModal).
+  const [addingImageFor, setAddingImageFor] = useState<{ examQuestionId: string; question: Question } | null>(null);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   // Tabela "Respostas Enviadas" — uma linha completada por tentativa
@@ -376,6 +379,21 @@ export const ExamViewPage: React.FC = () => {
     setAllAreasList(allAreas);
     const areaIdsInExam = new Set(updatedQuestions.map(q => q.areaId));
     setExamAreas(allAreas.filter(a => areaIdsInExam.has(a.id)));
+  };
+
+  // O modal de imagem já grava a imagem no banco (addQuestionImage); aqui
+  // replica na cópia congelada desta prova e atualiza a tela.
+  const handleImageAdded = async (imageUrl: string) => {
+    if (!exam || !addingImageFor) return;
+    const updated: Question = { ...addingImageFor.question, imageUrl };
+    try {
+      await syncExamQuestionFromBank(exam.id, addingImageFor.examQuestionId, updated);
+    } catch (err: any) {
+      alert("A imagem foi salva no banco de questões, mas não foi possível aplicá-la a esta prova: " + (err?.message || "erro desconhecido."));
+      return;
+    }
+    setQuestions(prev => prev.map(q => q.id === addingImageFor.examQuestionId ? { ...q, imageUrl } : q));
+    setOriginalQuestionsById(prev => ({ ...prev, [updated.id]: updated }));
   };
 
   // Remove uma questão desta prova (não do banco global — apenas desanexa da
@@ -876,6 +894,16 @@ export const ExamViewPage: React.FC = () => {
                     </span>
                   )}
 
+                  {canEdit && originalQuestionsById[q.originalQuestionId] && !q.imageUrl && (
+                    <button
+                      onClick={() => setAddingImageFor({ examQuestionId: q.id, question: originalQuestionsById[q.originalQuestionId] })}
+                      title="Adicionar imagem (banco de questões e esta prova)"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-colors"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
                   {canEdit && originalQuestionsById[q.originalQuestionId] && (
                     <button
                       onClick={() => setEditingQuestion({ examQuestionId: q.id, question: originalQuestionsById[q.originalQuestionId] })}
@@ -963,6 +991,14 @@ export const ExamViewPage: React.FC = () => {
         })}
       </section>
       </div>
+
+      {addingImageFor && (
+        <AddQuestionImageModal
+          questionId={addingImageFor.question.id}
+          onClose={() => setAddingImageFor(null)}
+          onSaved={handleImageAdded}
+        />
+      )}
 
       {editingQuestion && (
         <QuestionFormModal
