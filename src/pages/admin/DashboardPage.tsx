@@ -222,19 +222,22 @@ export const DashboardPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Gráfico 1: Ranking geral */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-cyan-500" />
-            Ranking Geral de Desempenho
-          </h2>
+      {/* Ranking geral e desempenho por prova lado a lado no desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Gráfico 1: Ranking geral */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-cyan-500" />
+              Ranking Geral de Desempenho
+            </h2>
+          </div>
+          <RankingChart data={rankingData} />
         </div>
-        <RankingChart data={rankingData} />
-      </div>
 
-      {/* Desempenho de cada usuário em uma prova escolhida (autocomplete) */}
-      <ExamPerformanceCard exams={exams} attempts={attempts} userNameById={userNameById} />
+        {/* Desempenho de cada usuário em uma prova escolhida (autocomplete) */}
+        <ExamPerformanceCard exams={exams} attempts={attempts} userNameById={userNameById} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Gráfico 2: Evolução do desempenho médio ao longo das provas */}
