@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, Camera, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, Camera, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus, FileText, Loader2, ArrowUp } from 'lucide-react';
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, syncExamQuestionFromBank, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +11,7 @@ import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { getSourceExamChipClass, getSourceExamDisplayGroup } from '../../constants';
+import { generateExamPdfForAdmin, viewExamReportPdf } from '../../services/examReportService';
 import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
 
 interface SubmittedRow {
@@ -27,6 +28,15 @@ export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const { currentUser } = useAuth();
   const [exam, setExam] = useState<Exam | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  // Mobile: botões flutuantes de voltar/topo só aparecem depois de rolar.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 240);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [answerKeys, setAnswerKeys] = useState<Record<string, QuestionAnswer>>({});
   // `sourceExam` não faz parte da cópia congelada em exams/{id}/questions —
@@ -434,6 +444,29 @@ export const ExamViewPage: React.FC = () => {
     }
   };
 
+  // PDF da prova (versão preceptor): abre o já salvo ou gera no servidor —
+  // gerar numa prova editável a deixa travada (ver generateExamPdf).
+  const handleExamPdf = async () => {
+    if (!exam) return;
+    if (exam.pdfUrl) {
+      viewExamReportPdf(exam.pdfUrl);
+      return;
+    }
+    if (canEdit && !window.confirm(
+      'Gerar o PDF desta prova vai TRAVAR a edição dela (conteúdo congelado). Deseja continuar?'
+    )) return;
+    setPdfBusy(true);
+    try {
+      const { url, fileName } = await generateExamPdfForAdmin(exam.id);
+      setExam({ ...exam, pdfUrl: url, pdfFileName: fileName, editLocked: exam.editLocked || canEdit });
+      viewExamReportPdf(url);
+    } catch (err: any) {
+      alert(err?.message || 'Não foi possível gerar o PDF da prova.');
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -457,10 +490,50 @@ export const ExamViewPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Voltar para Lista de Provas</span>
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar para Lista de Provas</span>
+        </Link>
+        {/* Desktop: botão de PDF no topo à direita. */}
+        <button
+          type="button"
+          onClick={handleExamPdf}
+          disabled={pdfBusy}
+          title={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
+          aria-label={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
+          className={`hidden sm:inline-flex p-2 rounded-lg border disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'}`}
+        >
+          {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile: botões flutuantes (PDF fixo no canto superior direito;
+          voltar à lista e voltar ao topo aparecem ao rolar). */}
+      <button
+        type="button"
+        onClick={handleExamPdf}
+        disabled={pdfBusy}
+        aria-label={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
+        className={`sm:hidden fixed top-[4.5rem] right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border bg-slate-900 disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/40' : 'text-slate-300 border-slate-700'}`}
+      >
+        {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+      </button>
+      <Link
+        to="/admin/exams"
+        aria-label="Voltar para Lista de Provas"
+        className={`sm:hidden fixed top-[4.5rem] left-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border border-slate-700 bg-slate-900 text-slate-200 transition-opacity ${scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      >
+        <ArrowLeft className="w-5 h-5" />
       </Link>
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Voltar ao topo"
+        className={`sm:hidden fixed bottom-24 right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border border-slate-700 bg-slate-900 text-slate-200 transition-opacity ${scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      >
+        <ArrowUp className="w-5 h-5" />
+      </button>
 
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex flex-col items-center gap-1.5">
