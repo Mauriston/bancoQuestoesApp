@@ -211,11 +211,8 @@ export const HomePage: React.FC = () => {
                         <div className="mb-4 p-3 rounded-2xl bg-[#FFF8E7] border border-[#F3D9A6] text-[#8a6a1f] text-xs flex items-start gap-2.5">
                           <AlertCircle className="w-4 h-4 text-[#c99a3c] shrink-0 mt-0.5" />
                           <span>
-                            Não encontramos cadastro para o e-mail <strong>{notRegisteredEmail}</strong>.{' '}
-                            <Link to="/cadastro" state={{ email: notRegisteredEmail }} className="font-bold underline hover:text-[#5c4813]">
-                              Clique aqui para se cadastrar
-                            </Link>
-                            .
+                            Não encontramos cadastro para o e-mail <strong>{notRegisteredEmail}</strong>.
+                            Solicite seu acesso ao administrador.
                           </span>
                         </div>
                       )}

@@ -19,6 +19,9 @@ export interface AppUser {
   createdAt?: any;
   updatedAt?: any;
   authUid?: string;
+  // true enquanto o usuário ainda usa a senha inicial (INITIAL_PASSWORD em
+  // authService) — dispara o lembrete de troca de senha (InitialPasswordDialog).
+  passwordIsInitial?: boolean;
 }
 
 export interface Area {

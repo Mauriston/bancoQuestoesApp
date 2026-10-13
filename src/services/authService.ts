@@ -9,6 +9,9 @@ import { getUserById, getUsers, saveUser } from './firebaseService';
 
 const SESSION_KEY = 'teot_active_session_user_id';
 
+// Senha inicial de todo usuário novo (criado só pelo admin).
+export const INITIAL_PASSWORD = '123456';
+
 // Lançado por loginUserWithPassword quando o e-mail informado não corresponde
 // a nenhum usuário cadastrado no Firestore — a UI usa isso para oferecer o
 // link de cadastro em vez de um erro genérico de credenciais inválidas.
@@ -88,6 +91,7 @@ export async function createNewUserWithAuth(
     email: normalizedEmail,
     role,
     active,
+    passwordIsInitial: !!password && password.trim() === INITIAL_PASSWORD,
     ...(authUid ? { authUid } : {})
   };
 
@@ -138,8 +142,12 @@ export async function loginUserWithPassword(email: string, pass: string): Promis
     throw new Error("E-mail ou senha incorretos.");
   }
 
-  if (authUid && appUser.authUid !== authUid) {
-    appUser.authUid = authUid;
+  // Mantém o indicador "ainda usa a senha inicial" em sincronia com a senha
+  // realmente digitada (cobre também usuários criados antes deste recurso).
+  const usingInitialPassword = pass === INITIAL_PASSWORD;
+  if ((authUid && appUser.authUid !== authUid) || !!appUser.passwordIsInitial !== usingInitialPassword) {
+    appUser.authUid = authUid || appUser.authUid;
+    appUser.passwordIsInitial = usingInitialPassword;
     await saveUser(appUser);
   }
 
@@ -210,7 +218,11 @@ export async function updateOwnCredentials(
     throw new Error("Usuário não encontrado.");
   }
 
-  const updatedUser: AppUser = { ...currentAppUser, ...(newEmail ? { email: newEmail } : {}) };
+  const updatedUser: AppUser = {
+    ...currentAppUser,
+    ...(newEmail ? { email: newEmail } : {}),
+    ...(newPassword ? { passwordIsInitial: newPassword === INITIAL_PASSWORD } : {})
+  };
   await saveUser(updatedUser);
   return updatedUser;
 }

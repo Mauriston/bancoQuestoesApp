@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from '../pages/HomePage';
 import { AdminLoginPage } from '../pages/AdminLoginPage';
-import { RegisterPage } from '../pages/RegisterPage';
 import { UnauthorizedPage, InactivePage, NotFoundPage } from '../pages/UnauthorizedPage';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -112,7 +111,6 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Landing & Login Routes */}
       <Route path="/" element={<HomePage />} />
-      <Route path="/cadastro" element={<RegisterPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route path="/inactive" element={<InactivePage />} />
