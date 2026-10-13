@@ -6,7 +6,7 @@ import { Avatar } from './Avatar';
 interface AvatarAccountMenuProps {
   name: string;
   photoUrl?: string | null;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'reader';
   avatarSize?: 'sm' | 'md' | 'lg';
   unreadCount: number;
   settingsPath: string;

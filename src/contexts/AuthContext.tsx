@@ -8,7 +8,7 @@ import { getCurrentSessionUserId, loginUserWithPassword, loginAdminWithPassword,
 interface AuthContextType {
   currentUser: AppUser | null;
   firebaseUser: FbUser | null;
-  role: "user" | "admin" | null;
+  role: "user" | "admin" | "reader" | null;
   loading: boolean;
   userLogin: (email: string, pass: string) => Promise<AppUser>;
   adminLogin: (email: string, pass: string) => Promise<AppUser>;

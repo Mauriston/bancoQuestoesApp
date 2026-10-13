@@ -3,7 +3,7 @@ import React from 'react';
 interface AvatarProps {
   name: string;
   photoUrl?: string | null;
-  role?: 'admin' | 'user';
+  role?: 'admin' | 'user' | 'reader';
   size?: 'sm' | 'md' | 'lg' | 'fill';
 }
 

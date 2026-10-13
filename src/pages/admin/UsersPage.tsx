@@ -12,14 +12,14 @@ export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin' | 'reader'>('all');
   const [loading, setLoading] = useState(true);
 
   // Modal create user
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'user' | 'admin'>('user');
+  const [role, setRole] = useState<'user' | 'admin' | 'reader'>('user');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -59,7 +59,7 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const handleChangeRole = async (user: AppUser, newRole: 'user' | 'admin') => {
+  const handleChangeRole = async (user: AppUser, newRole: 'user' | 'admin' | 'reader') => {
     try {
       await updateUserRole(user.id, newRole);
       await fetchUsers();
@@ -144,6 +144,7 @@ export const UsersPage: React.FC = () => {
           <option value="all">Todos os Perfis</option>
           <option value="user">Usuário Comum (Residente)</option>
           <option value="admin">Administrador</option>
+          <option value="reader">Leitor (somente leitura)</option>
         </select>
       </div>
 
@@ -190,6 +191,7 @@ export const UsersPage: React.FC = () => {
                       >
                         <option value="user">Usuário Comum</option>
                         <option value="admin">Administrador</option>
+                        <option value="reader">Leitor</option>
                       </select>
                     </td>
 
@@ -286,6 +288,7 @@ export const UsersPage: React.FC = () => {
                 >
                   <option value="user">Usuário Comum (Residente / Aluno)</option>
                   <option value="admin">Administrador (Acesso ao Painel)</option>
+                  <option value="reader">Leitor (somente leitura)</option>
                 </select>
               </div>
 
@@ -295,7 +298,7 @@ export const UsersPage: React.FC = () => {
                 </label>
                 <input
                   type="password"
-                  required={role === 'user'}
+                  required={role !== 'admin'}
                   placeholder="Mínimo 6 caracteres (ex: 123456)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

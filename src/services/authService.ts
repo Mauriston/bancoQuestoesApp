@@ -33,7 +33,7 @@ export class UserInactiveError extends Error {
 export async function createNewUserWithAuth(
   name: string,
   email: string,
-  role: 'user' | 'admin',
+  role: 'user' | 'admin' | 'reader',
   password?: string,
   options?: { active?: boolean; startSession?: boolean }
 ): Promise<AppUser> {
