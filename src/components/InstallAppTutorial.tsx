@@ -15,6 +15,12 @@ function detectPlatform(): Platform | null {
   return null;
 }
 
+// No iPhone, Safari mostra o botão Compartilhar na barra inferior; Chrome,
+// Edge e Firefox o mostram ao lado do endereço, no topo.
+function iosShareOnTop(): boolean {
+  return /CriOS|EdgiOS|FxiOS|OPiOS/i.test(navigator.userAgent || '');
+}
+
 function isStandalone(): boolean {
   try {
     return window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
@@ -52,41 +58,42 @@ interface Step {
   art: React.ReactNode;
 }
 
-const IOS_STEPS: Step[] = [
-  {
-    title: 'Abra no Safari',
-    text: 'No iPhone, o ícone só pode ser criado pelo Safari. Abra este endereço no Safari (se estiver em outro navegador, copie o link e cole no Safari).',
-    art: (
-      <PhoneFrame>
-        <div className="absolute inset-x-0 top-0 h-6 bg-slate-800" />
-        <div className="absolute inset-x-3 top-9 h-4 rounded bg-teal-500/30" />
-        <div className="absolute inset-x-3 top-16 h-3 rounded bg-slate-800" />
-        <div className="absolute inset-x-3 top-22 h-3 rounded bg-slate-800" style={{ top: '5.5rem' }} />
-        <div className="absolute inset-x-0 bottom-0 h-12 bg-slate-800 flex items-center justify-center">
-          <div className="h-6 w-32 rounded-full bg-slate-700 text-[8px] text-slate-300 flex items-center justify-center">teot-hma.app</div>
-        </div>
-      </PhoneFrame>
-    ),
-  },
-  {
-    title: 'Toque em Compartilhar',
-    text: 'Toque no ícone de compartilhar (quadrado com uma seta para cima), na barra inferior do Safari.',
-    art: (
-      <PhoneFrame>
-        <div className="absolute inset-x-3 top-6 h-4 rounded bg-teal-500/30" />
-        <div className="absolute inset-x-3 top-14 h-3 rounded bg-slate-800" />
-        <div className="absolute inset-x-0 bottom-0 h-12 bg-slate-800 flex items-center justify-around px-3">
-          <ArrowLeft className="w-4 h-4 text-slate-500" />
-          <ArrowRight className="w-4 h-4 text-slate-500" />
-          <span className="relative flex items-center justify-center">
-            <Ping className="-left-1.5 -top-1.5" />
-            <Share className="w-4 h-4 text-sky-400 relative" />
-          </span>
-          <SquarePlus className="w-4 h-4 text-slate-500" />
-        </div>
-      </PhoneFrame>
-    ),
-  },
+const iosShareStep = (onTop: boolean): Step => ({
+  title: 'Toque em Compartilhar',
+  text: onTop
+    ? 'Toque no ícone de compartilhar (quadrado com uma seta para cima), ao lado do endereço, no topo do navegador.'
+    : 'Toque no ícone de compartilhar (quadrado com uma seta para cima), na barra inferior do Safari.',
+  art: onTop ? (
+    <PhoneFrame>
+      <div className="absolute inset-x-0 top-0 h-9 bg-slate-800 flex items-center px-2 gap-1">
+        <div className="h-5 flex-1 rounded-full bg-slate-700 text-[8px] text-slate-300 flex items-center px-2">teot-hma.app</div>
+        <span className="relative flex items-center justify-center">
+          <Ping className="-left-2.5 -top-2.5 scale-75" />
+          <Share className="w-4 h-4 text-sky-400 relative" />
+        </span>
+      </div>
+      <div className="absolute inset-x-3 top-14 h-4 rounded bg-teal-500/30" />
+      <div className="absolute inset-x-3 top-22 h-3 rounded bg-slate-800" style={{ top: '5.5rem' }} />
+    </PhoneFrame>
+  ) : (
+    <PhoneFrame>
+      <div className="absolute inset-x-3 top-6 h-4 rounded bg-teal-500/30" />
+      <div className="absolute inset-x-3 top-14 h-3 rounded bg-slate-800" />
+      <div className="absolute inset-x-0 bottom-0 h-12 bg-slate-800 flex items-center justify-around px-3">
+        <ArrowLeft className="w-4 h-4 text-slate-500" />
+        <ArrowRight className="w-4 h-4 text-slate-500" />
+        <span className="relative flex items-center justify-center">
+          <Ping className="-left-1.5 -top-1.5" />
+          <Share className="w-4 h-4 text-sky-400 relative" />
+        </span>
+        <SquarePlus className="w-4 h-4 text-slate-500" />
+      </div>
+    </PhoneFrame>
+  ),
+});
+
+const iosSteps = (): Step[] => [
+  iosShareStep(iosShareOnTop()),
   {
     title: 'Adicionar à Tela de Início',
     text: 'Role a lista de opções para baixo e toque em “Adicionar à Tela de Início”.',
@@ -128,8 +135,8 @@ const IOS_STEPS: Step[] = [
 
 const ANDROID_STEPS: Step[] = [
   {
-    title: 'Abra no Chrome',
-    text: 'No Android, use o Chrome para abrir este endereço (se estiver em outro navegador, copie o link e cole no Chrome).',
+    title: 'Abra no navegador',
+    text: 'Abra o app no navegador do celular (o Chrome é o mais indicado) e siga os passos abaixo.',
     art: (
       <PhoneFrame>
         <div className="absolute inset-x-0 top-0 h-9 bg-slate-800 flex items-center px-2 gap-1">
@@ -202,7 +209,7 @@ const ANDROID_STEPS: Step[] = [
 // flag em localStorage). "Mais tarde" fecha só até a próxima abertura do app.
 export const InstallAppTutorial: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const platform = detectPlatform();
-  const steps = platform === 'android' ? ANDROID_STEPS : IOS_STEPS;
+  const steps = platform === 'android' ? ANDROID_STEPS : iosSteps();
   const [index, setIndex] = useState(0);
   const step = steps[index];
   const isLast = index === steps.length - 1;
