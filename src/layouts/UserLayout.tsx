@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { Avatar } from '../components/Avatar';
 import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
-import { InitialPasswordDialog } from '../components/InitialPasswordDialog';
+import { StartupDialogs } from '../components/StartupDialogs';
 import { NotificationToastHost } from '../components/NotificationToastHost';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 import { useUnseenExtrasCount } from '../hooks/useUnseenExtrasCount';
@@ -318,7 +318,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
       />
 
       <NotificationToastHost />
-      <InitialPasswordDialog settingsPath="/app/settings" />
+      <StartupDialogs settingsPath="/app/settings" />
     </div>
   );
 };
