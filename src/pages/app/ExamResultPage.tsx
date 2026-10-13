@@ -6,6 +6,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { getAttemptById, getAttemptResultSnapshot, buildAttemptResultSnapshot, saveAttemptResultSnapshot } from '../../services/firebaseService';
 import { Attempt, ExamQuestion, AttemptAnswer, QuestionAnswer, Area, Theme, Reference, AttemptResultSnapshot } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import { getSourceExamChipClass } from '../../constants';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
@@ -15,6 +16,10 @@ import { generateAndDownloadExamReportPdf, viewExamReportPdf } from '../../servi
 export const ExamResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  // O admin abre este relatório por /admin/attempts/:id/result (dentro do
+  // AdminLayout) e volta para a tela de onde veio; o usuário volta ao Histórico.
+  const isAdmin = currentUser?.role === 'admin';
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   // Único campo de Exam usado nesta página (ver seção de revisão de
   // questões abaixo) — evita precisar do documento inteiro quando os
@@ -232,9 +237,9 @@ export const ExamResultPage: React.FC = () => {
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => navigate('/app/history')}
-          aria-label="Voltar para o Histórico"
-          title="Voltar para o Histórico"
+          onClick={() => (isAdmin ? navigate(-1) : navigate('/app/history'))}
+          aria-label={isAdmin ? 'Voltar' : 'Voltar para o Histórico'}
+          title={isAdmin ? 'Voltar' : 'Voltar para o Histórico'}
           className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 transition-colors shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
