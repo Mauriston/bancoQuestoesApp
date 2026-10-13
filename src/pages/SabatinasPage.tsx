@@ -147,7 +147,98 @@ export const SabatinasPage: React.FC = () => {
       ) : sortedSabatinas.length === 0 ? (
         <p className="text-xs text-slate-500 italic text-center py-10">Nenhuma sabatina cadastrada ainda.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <>
+        {/* Desktop (lg+): tabela — clicar na linha abre a apresentação em tela cheia */}
+        <div className="hidden lg:block bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+              <tr>
+                <th className="p-3 w-28">Data</th>
+                <th className="p-3">Sabatina</th>
+                <th className="p-3">Temas</th>
+                {isAdmin && <th className="p-3 text-center">Visualizações</th>}
+                <th className="p-3 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80">
+              {sortedSabatinas.map(item => {
+                const themeNames = item.themeIds
+                  .map(id => themes.find(t => t.id === id)?.name)
+                  .filter((n): n is string => !!n);
+                const pdfUrl = googleSlidesPdfExportUrl(item.url);
+                const isDownloading = downloadingId === item.id;
+                const viewCount = viewCountBySabatina[item.id] || 0;
+                const viewers = viewerNamesBySabatina[item.id] || [];
+                return (
+                  <tr
+                    key={item.id}
+                    onClick={() => handleOpenItem(item)}
+                    title="Clique para abrir a apresentação"
+                    className="cursor-pointer hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="p-3 whitespace-nowrap text-slate-400">{formatIsoDateBr(item.date)}</td>
+                    <td className="p-3 font-bold text-slate-100">{item.title}</td>
+                    <td className="p-3">
+                      <div className="flex flex-wrap gap-1">
+                        {themeNames.map(name => (
+                          <span key={name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-600 border border-teal-500/30">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="p-3 text-center whitespace-nowrap">
+                        <span
+                          title={viewers.length > 0 ? viewers.join(', ') : undefined}
+                          className="inline-flex items-center gap-1 text-slate-400"
+                        >
+                          <UsersIcon className="w-3 h-3" />
+                          {viewCount}
+                        </span>
+                      </td>
+                    )}
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {pdfUrl && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
+                            disabled={isDownloading}
+                            title="Baixar apresentação em PDF"
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 disabled:opacity-50"
+                          >
+                            <Download className={`w-3.5 h-3.5 ${isDownloading ? 'animate-pulse' : ''}`} />
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }}
+                              title="Editar sabatina"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                              title="Excluir sabatina"
+                              className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile/tablet (< lg): cards, como antes */}
+        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
               {sortedSabatinas.map(item => {
                 const themeNames = item.themeIds
                   .map(id => themes.find(t => t.id === id)?.name)
@@ -231,6 +322,7 @@ export const SabatinasPage: React.FC = () => {
                 );
               })}
         </div>
+        </>
       )}
 
       {modalOpen && isAdmin && (
