@@ -19,22 +19,20 @@ const attemptSeconds = (a: Attempt): number => {
 };
 
 // Card "Desempenho por Prova": barras horizontais por usuário (como o
-// ranking geral) para UMA prova escolhida num autocomplete. A lista de
-// usuários e a ordem das barras são fixas entre provas, para que a troca de
-// seleção anime o comprimento de cada barra em vez de recriar o gráfico.
+// ranking geral) para UMA prova escolhida num autocomplete, ordenados do
+// maior para o menor desempenho. A lista de usuários é a mesma entre provas,
+// então a troca de seleção anima as barras em vez de recriar o gráfico.
 export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams, attempts, userNameById }) => {
   const completed = useMemo(() => attempts.filter(a => a.status === 'completed'), [attempts]);
 
-  // Provas ordenadas da mais recentemente realizada para a mais antiga; as
-  // sem nenhuma tentativa concluída vão para o fim, em ordem alfabética.
+  // Só provas com resultados lançados (ao menos uma tentativa concluída),
+  // da mais recentemente realizada para a mais antiga.
   const sortedExams = useMemo(() => {
     const lastByExam: Record<string, number> = {};
     completed.forEach(a => { lastByExam[a.examId] = Math.max(lastByExam[a.examId] || 0, attemptSeconds(a)); });
-    return [...exams].sort((a, b) => {
-      const la = lastByExam[a.id] || 0;
-      const lb = lastByExam[b.id] || 0;
-      return lb - la || a.name.localeCompare(b.name);
-    });
+    return exams
+      .filter(e => e.id in lastByExam)
+      .sort((a, b) => lastByExam[b.id] - lastByExam[a.id] || a.name.localeCompare(b.name));
   }, [exams, completed]);
 
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -67,8 +65,8 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
     return sortedExams.filter(e => !term || e.name.toLowerCase().includes(term));
   }, [sortedExams, search]);
 
-  // Um ponto por usuário que já concluiu alguma prova (ordem alfabética,
-  // fixa). O valor é o aproveitamento na tentativa concluída mais recente da
+  // Um ponto por usuário que já concluiu alguma prova, em ordem decrescente de
+  // desempenho na prova escolhida. O valor é o aproveitamento na tentativa concluída mais recente da
   // prova escolhida; sem tentativa nela, 0 com rótulo "—".
   const chartData = useMemo(() => {
     const names: Record<string, string> = {};
@@ -85,7 +83,8 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
         const att = latestByUser[userId];
         return { userId, name, score: att ? (att.scorePercentage || 0) : 0, done: !!att };
       })
-      .sort((a, b) => a.name.localeCompare(b.name));
+      // Maior desempenho primeiro; quem não fez a prova vai para o fim.
+      .sort((a, b) => Number(b.done) - Number(a.done) || b.score - a.score || a.name.localeCompare(b.name));
   }, [completed, userNameById, selectedExamId]);
 
   const hasAnyScore = chartData.some(d => d.done);
@@ -111,7 +110,9 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
         {open && (
           <div className="absolute z-20 mt-1.5 w-full max-h-56 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-2xl p-1">
             {matches.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-slate-500">Nenhuma prova encontrada.</p>
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {sortedExams.length === 0 ? 'Nenhuma prova com resultados lançados.' : 'Nenhuma prova encontrada.'}
+              </p>
             ) : matches.map(e => (
               <button
                 key={e.id}
