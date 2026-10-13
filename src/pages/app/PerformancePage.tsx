@@ -420,6 +420,8 @@ export const PerformancePage: React.FC = () => {
         </div>
       )}
 
+      {/* Desempenho por Área e por Grupo (TEOT) lado a lado no desktop (lg+) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
       {/* Desempenho por Área — donut da área selecionada no filtro. Área
           continua servindo também de filtro de questões no banco/provas;
           aqui é só a visão de estatística. */}
@@ -620,6 +622,7 @@ export const PerformancePage: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* Desempenho por Tema, dentro da mesma área filtrada acima */}
       {selectedArea && (
