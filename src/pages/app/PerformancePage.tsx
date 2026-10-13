@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserStats, getAllUserStats, getAreas, getGroups, getThemes, getUserAttempts, getUsers } from '../../services/firebaseService';
 import { UserStats, Area as ExamArea, Group, Theme, Attempt } from '../../types';
 import { scoreColorHex } from '../../utils/helpers';
+import { Avatar } from '../../components/Avatar';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
 
 type Tier = 'good' | 'warn' | 'bad';
@@ -285,9 +286,17 @@ export const PerformancePage: React.FC = () => {
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           {currentUser?.name ? `${currentUser.name} - Desempenho Geral` : 'Desempenho Geral'}
         </p>
-        <p className={`text-5xl sm:text-6xl font-black leading-none mt-2 ${TIER_STYLES[overallTier].text}`}>
-          {overallAcc}%
-        </p>
+        {/* Avatar com a altura da fonte do valor (1em), à esquerda do número */}
+        <div className="flex items-center gap-3 sm:gap-4 mt-2 text-5xl sm:text-6xl leading-none">
+          {currentUser && (
+            <div className="w-[1em] h-[1em] shrink-0">
+              <Avatar name={currentUser.name} photoUrl={currentUser.photoUrl} role={currentUser.role} size="fill" />
+            </div>
+          )}
+          <p className={`font-black leading-none ${TIER_STYLES[overallTier].text}`}>
+            {overallAcc}%
+          </p>
+        </div>
 
         {platformDelta !== null && (
           <div className="flex items-center gap-1.5 mt-3 text-sm">

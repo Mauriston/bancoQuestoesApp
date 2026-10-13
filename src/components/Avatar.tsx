@@ -4,13 +4,16 @@ interface AvatarProps {
   name: string;
   photoUrl?: string | null;
   role?: 'admin' | 'user';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'fill';
 }
 
 const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
   sm: 'w-7 h-7 text-xs',
   md: 'w-10 h-10 text-sm',
   lg: 'w-12 h-12 text-lg',
+  // Preenche o contêiner (que define o tamanho, ex.: w-[1em] h-[1em] para
+  // acompanhar uma fonte); a inicial usa 45% do tamanho do contêiner.
+  fill: 'w-full h-full text-[0.45em]',
 };
 
 // Avatar único usado em toda a aplicação: mostra a foto do usuário quando
