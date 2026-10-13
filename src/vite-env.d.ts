@@ -12,3 +12,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Injetado em build pelo vite.config.ts (também publicado em /version.json).
+declare const __BUILD_ID__: string;
