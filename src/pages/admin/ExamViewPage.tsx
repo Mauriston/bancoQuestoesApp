@@ -729,69 +729,6 @@ export const ExamViewPage: React.FC = () => {
               )}
             </section>
 
-            {/* Temas da Prova — filtrado pela área selecionada, se houver. 2/7 da largura no desktop. */}
-            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-cyan-400" />
-                Temas da Prova
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
-                    <tr>
-                      <th className="p-3">Tema</th>
-                      <th className="p-3">Questões</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {paginatedThemes.map((t) => {
-                      const idx = themeDistribution.indexOf(t);
-                      const isSelected = selectedThemeId === t.themeId;
-                      return (
-                        <tr
-                          key={t.themeId}
-                          onClick={() => handleThemeClick(t.themeId)}
-                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
-                        >
-                          <td className="p-3 font-semibold text-slate-100 flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                            <span className="truncate">{t.name}</span>
-                          </td>
-                          <td className="p-3 font-bold text-slate-300">{t.count}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {themeTableTotalPages > 1 && (
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setThemeTablePage(p => Math.max(1, p - 1))}
-                    disabled={themeTablePage === 1}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    Anterior
-                  </button>
-                  <span className="text-[11px] text-slate-400">
-                    Página <strong className="text-slate-200">{themeTablePage}</strong> de {themeTableTotalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setThemeTablePage(p => Math.min(themeTableTotalPages, p + 1))}
-                    disabled={themeTablePage === themeTableTotalPages}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Próxima
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </section>
-
             {/* Distribuição por fonte — filtrada por área/tema selecionados; clicar numa linha filtra as questões. 3/7 da largura no desktop. */}
             <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
@@ -846,6 +783,69 @@ export const ExamViewPage: React.FC = () => {
                     type="button"
                     onClick={() => setSourceTablePage(p => Math.min(sourceTableTotalPages, p + 1))}
                     disabled={sourceTablePage === sourceTableTotalPages}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Próxima
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Temas da Prova — filtrado pela área selecionada, se houver. 2/7 da largura no desktop. */}
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-cyan-400" />
+                Temas da Prova
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="p-3">Tema</th>
+                      <th className="p-3">Questões</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {paginatedThemes.map((t) => {
+                      const idx = themeDistribution.indexOf(t);
+                      const isSelected = selectedThemeId === t.themeId;
+                      return (
+                        <tr
+                          key={t.themeId}
+                          onClick={() => handleThemeClick(t.themeId)}
+                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
+                        >
+                          <td className="p-3 font-semibold text-slate-100 flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                            <span className="truncate">{t.name}</span>
+                          </td>
+                          <td className="p-3 font-bold text-slate-300">{t.count}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {themeTableTotalPages > 1 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setThemeTablePage(p => Math.max(1, p - 1))}
+                    disabled={themeTablePage === 1}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    Anterior
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Página <strong className="text-slate-200">{themeTablePage}</strong> de {themeTableTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setThemeTablePage(p => Math.min(themeTableTotalPages, p + 1))}
+                    disabled={themeTablePage === themeTableTotalPages}
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     Próxima
