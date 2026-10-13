@@ -179,7 +179,10 @@ export const ExamsListPage: React.FC = () => {
                     : 'Ninguém respondeu ainda';
                   return (
                     <tr key={ex.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3.5 font-semibold text-slate-100 max-w-[280px]">
+                      <td
+                        className="p-3.5 font-semibold text-slate-100 max-w-[280px] cursor-pointer"
+                        onClick={() => navigate(`/admin/exams/${ex.id}`)}
+                      >
                         <span className="line-clamp-2">{ex.name}</span>
                       </td>
                       <td className="p-3.5 text-slate-400">{ex.questionCount}</td>
