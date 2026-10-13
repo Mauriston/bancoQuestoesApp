@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, Camera, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus, FileText, Loader2, ArrowUp } from 'lucide-react';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, Camera, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus, FileText, Download, Loader2, ArrowUp } from 'lucide-react';
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, syncExamQuestionFromBank, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -507,7 +507,7 @@ export const ExamViewPage: React.FC = () => {
           aria-label={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
           className={`${isReader && !exam.pdfUrl ? 'hidden' : 'hidden sm:inline-flex'} p-2 rounded-lg border disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'}`}
         >
-          {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+          {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : exam.pdfUrl ? <Download className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
         </button>
       </div>
 
@@ -520,7 +520,7 @@ export const ExamViewPage: React.FC = () => {
         aria-label={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
         className={`${isReader && !exam.pdfUrl ? 'hidden' : 'sm:hidden'} fixed top-[4.5rem] right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border bg-slate-900 disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/40' : 'text-slate-300 border-slate-700'}`}
       >
-        {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+        {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : exam.pdfUrl ? <Download className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
       </button>
       <Link
         to={basePath + '/exams'}
@@ -541,6 +541,7 @@ export const ExamViewPage: React.FC = () => {
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex flex-col items-center gap-1.5">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">{exam.name}</h1>
+          {!isReader && (
           <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
             isExamActive(exam)
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -548,6 +549,7 @@ export const ExamViewPage: React.FC = () => {
           }`}>
             {isExamActive(exam) ? 'Ativa' : 'Inativa'}
           </span>
+          )}
         </div>
 
         {!isReader && (

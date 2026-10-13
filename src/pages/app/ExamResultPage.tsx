@@ -260,7 +260,7 @@ export const ExamResultPage: React.FC = () => {
             </>
           ) : attempt.reportPdfUrl ? (
             <>
-              <FileText className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Ver PDF</span>
             </>
           ) : (

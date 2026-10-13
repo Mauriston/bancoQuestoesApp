@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Pencil, Users, Eye, Send, FileText, Loader2
+  FileCheck, Plus, Trash2, Pencil, Users, Eye, Send, FileText, Download, Loader2
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts, getAllExamAssignments } from '../../services/firebaseService';
 import { Exam } from '../../types';
@@ -187,7 +187,7 @@ export const ExamsListPage: React.FC = () => {
                               aria-label="Ver PDF da prova"
                               className="p-2 rounded-lg text-emerald-400 hover:bg-emerald-500/10"
                             >
-                              <FileText className="w-4 h-4" />
+                              <Download className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -307,7 +307,7 @@ export const ExamsListPage: React.FC = () => {
                             aria-label={ex.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
                             className={`p-2 rounded-lg disabled:opacity-60 ${ex.pdfUrl ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
                           >
-                            {pdfBusyId === ex.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                            {pdfBusyId === ex.id ? <Loader2 className="w-4 h-4 animate-spin" /> : ex.pdfUrl ? <Download className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                           </button>
                           {isEditable(ex) && (
                             <Link
