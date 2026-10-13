@@ -11,6 +11,7 @@ import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { getSourceExamChipClass, getSourceExamDisplayGroup } from '../../constants';
+import { useAccess } from '../../hooks/useAccess';
 import { generateExamPdfForAdmin, viewExamReportPdf } from '../../services/examReportService';
 import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
 
@@ -27,6 +28,7 @@ const ROWS_PER_PAGE = 5;
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const { currentUser } = useAuth();
+  const { isReader, basePath } = useAccess();
   const [exam, setExam] = useState<Exam | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   // Mobile: botões flutuantes de voltar/topo só aparecem depois de rolar.
@@ -93,7 +95,7 @@ export const ExamViewPage: React.FC = () => {
   // (handleToggleActive) — antes disso, o botão de excluir podia continuar
   // visível mesmo depois de a prova ser ativada, causando o erro "Só é
   // possível editar provas inativas." ao clicar.
-  const canEdit = !!exam && !isExamActive(exam) && !exam.editLocked && !hasAttempts;
+  const canEdit = !isReader && !!exam && !isExamActive(exam) && !exam.editLocked && !hasAttempts;
 
   // Usuários ativos que ainda não têm assignment nesta prova — opções do
   // seletor de "Adicionar Candidatos".
@@ -227,16 +229,17 @@ export const ExamViewPage: React.FC = () => {
       if (!examId) return;
       try {
         setLoading(true);
+        // Leitor não vê candidatos/convites/respostas — não carrega esses dados.
         const [examData, examQs, questionStats, attempts, allAreas, allThemes, refList, assignmentList, activeUserList] = await Promise.all([
           getExamById(examId),
           getExamQuestions(examId),
           getExamQuestionStats(examId),
-          getAttemptsForExam(examId),
+          isReader ? Promise.resolve([] as Attempt[]) : getAttemptsForExam(examId),
           getAreas(),
           getThemes(),
           getReferences(),
-          getExamAssignmentsWithUsers(examId),
-          getActiveUsers()
+          isReader ? Promise.resolve([] as (ExamAssignment & { userName: string; userPhone?: string })[]) : getExamAssignmentsWithUsers(examId),
+          isReader ? Promise.resolve([] as AppUser[]) : getActiveUsers()
         ]);
         setExam(examData);
         setQuestions(examQs);
@@ -245,7 +248,7 @@ export const ExamViewPage: React.FC = () => {
         setReferences(refList);
         setAssignments(assignmentList);
         // O admin não realiza provas — nunca deve aparecer como candidato.
-        setActiveUsers(activeUserList.filter(u => u.role !== 'admin'));
+        setActiveUsers(activeUserList.filter(u => u.role === 'user'));
 
         // Áreas presentes nesta prova (colunas da tabela de respostas
         // enviadas), na mesma ordem de getAreas() (alfabética).
@@ -285,7 +288,7 @@ export const ExamViewPage: React.FC = () => {
   // Tabela "Respostas Enviadas" ao vivo — uma nova tentativa concluída
   // aparece nela sozinha, sem precisar recarregar a página.
   useEffect(() => {
-    if (!examId || questions.length === 0) return;
+    if (!examId || questions.length === 0 || isReader) return;
     const areaIdsInExam = new Set(questions.map(q => q.areaId));
 
     const unsubscribe = subscribeAttemptsForExam(examId, async (attempts) => {
@@ -479,7 +482,7 @@ export const ExamViewPage: React.FC = () => {
   if (!exam) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100">
+        <Link to={basePath + '/exams'} className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Lista de Provas</span>
         </Link>
@@ -491,7 +494,7 @@ export const ExamViewPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/admin/exams" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 transition-colors">
+        <Link to={basePath + '/exams'} className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Lista de Provas</span>
         </Link>
@@ -502,7 +505,7 @@ export const ExamViewPage: React.FC = () => {
           disabled={pdfBusy}
           title={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
           aria-label={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
-          className={`hidden sm:inline-flex p-2 rounded-lg border disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'}`}
+          className={`${isReader && !exam.pdfUrl ? 'hidden' : 'hidden sm:inline-flex'} p-2 rounded-lg border disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'}`}
         >
           {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
         </button>
@@ -515,12 +518,12 @@ export const ExamViewPage: React.FC = () => {
         onClick={handleExamPdf}
         disabled={pdfBusy}
         aria-label={exam.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
-        className={`sm:hidden fixed top-[4.5rem] right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border bg-slate-900 disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/40' : 'text-slate-300 border-slate-700'}`}
+        className={`${isReader && !exam.pdfUrl ? 'hidden' : 'sm:hidden'} fixed top-[4.5rem] right-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border bg-slate-900 disabled:opacity-60 ${exam.pdfUrl ? 'text-emerald-400 border-emerald-500/40' : 'text-slate-300 border-slate-700'}`}
       >
         {pdfBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
       </button>
       <Link
-        to="/admin/exams"
+        to={basePath + '/exams'}
         aria-label="Voltar para Lista de Provas"
         className={`sm:hidden fixed top-[4.5rem] left-4 z-30 w-11 h-11 rounded-full flex items-center justify-center shadow-lg border border-slate-700 bg-slate-900 text-slate-200 transition-opacity ${scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
@@ -547,6 +550,7 @@ export const ExamViewPage: React.FC = () => {
           </span>
         </div>
 
+        {!isReader && (
         <button
           onClick={handleToggleActive}
           disabled={toggling}
@@ -559,8 +563,10 @@ export const ExamViewPage: React.FC = () => {
           {isExamActive(exam) ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
           <span>{isExamActive(exam) ? 'Desativar Prova' : 'Ativar Prova'}</span>
         </button>
+        )}
       </div>
 
+      {!isReader && (
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
         <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
           <UserPlus className="w-4 h-4 text-cyan-400" />
@@ -590,8 +596,9 @@ export const ExamViewPage: React.FC = () => {
           </button>
         </div>
       </section>
+      )}
 
-      {isExamActive(exam) && assignments.length > 0 && (
+      {!isReader && isExamActive(exam) && assignments.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <Send className="w-4 h-4 text-cyan-400" />
@@ -664,7 +671,7 @@ export const ExamViewPage: React.FC = () => {
         </section>
       )}
 
-      {submittedRows.length > 0 && (
+      {!isReader && submittedRows.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <ClipboardList className="w-4 h-4 text-cyan-400" />

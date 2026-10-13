@@ -17,6 +17,9 @@ function formatIsoDateBr(isoDate: string): string {
 export const SabatinasPage: React.FC = () => {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
+  // Leitor: tabela simples (Data, Sabatina, Ações) em qualquer tamanho de tela,
+  // sem registrar visualizações.
+  const isReader = currentUser?.role === 'reader';
 
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -99,7 +102,7 @@ export const SabatinasPage: React.FC = () => {
     // allViewLogs é uma assinatura ao vivo (só para o admin) — o novo
     // registro reflete sozinho assim que o Firestore confirma a escrita,
     // sem precisar atualizar o estado local otimisticamente aqui.
-    if (currentUser) {
+    if (currentUser && !isReader) {
       logSabatinaView(item.id, currentUser.id, currentUser.name).catch(err => console.error('Erro ao registrar visualização da sabatina:', err));
     }
   };
@@ -149,13 +152,13 @@ export const SabatinasPage: React.FC = () => {
       ) : (
         <>
         {/* Desktop (lg+): tabela — clicar na linha abre a apresentação em tela cheia */}
-        <div className="hidden lg:block bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-x-auto">
+        <div className={`${isReader ? 'block' : 'hidden lg:block'} bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-x-auto`}>
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="p-3 w-28">Data</th>
                 <th className="p-3">Sabatina</th>
-                <th className="p-3">Temas</th>
+                {!isReader && <th className="p-3">Temas</th>}
                 {isAdmin && <th className="p-3 text-center">Visualizações</th>}
                 <th className="p-3 text-center">Ações</th>
               </tr>
@@ -178,6 +181,7 @@ export const SabatinasPage: React.FC = () => {
                   >
                     <td className="p-3 whitespace-nowrap text-slate-400">{formatIsoDateBr(item.date)}</td>
                     <td className="p-3 font-bold text-slate-100">{item.title}</td>
+                    {!isReader && (
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1">
                         {themeNames.map(name => (
@@ -187,6 +191,7 @@ export const SabatinasPage: React.FC = () => {
                         ))}
                       </div>
                     </td>
+                    )}
                     {isAdmin && (
                       <td className="p-3 text-center whitespace-nowrap">
                         <span
@@ -238,7 +243,7 @@ export const SabatinasPage: React.FC = () => {
         </div>
 
         {/* Mobile/tablet (< lg): cards, como antes */}
-        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={`${isReader ? 'hidden' : 'lg:hidden'} grid grid-cols-1 sm:grid-cols-2 gap-4`}>
               {sortedSabatinas.map(item => {
                 const themeNames = item.themeIds
                   .map(id => themes.find(t => t.id === id)?.name)

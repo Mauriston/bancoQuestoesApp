@@ -5,11 +5,13 @@ import {
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts, getAllExamAssignments } from '../../services/firebaseService';
 import { Exam } from '../../types';
+import { useAccess } from '../../hooks/useAccess';
 import { generateExamPdfForAdmin, viewExamReportPdf } from '../../services/examReportService';
 import { scoreColorClass } from '../../utils/helpers';
 
 export const ExamsListPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isReader, basePath } = useAccess();
   const [exams, setExams] = useState<Exam[]>([]);
   // Nº de tentativas por prova — usado só para decidir se a prova pode ser
   // editada (inativa + zero tentativas registradas). Ver isEditable().
@@ -29,6 +31,12 @@ export const ExamsListPage: React.FC = () => {
   const fetchExamsList = async () => {
     setLoading(true);
     try {
+      if (isReader) {
+        // Leitor só vê nome/nº de questões/PDF — não carrega tentativas
+        // nem convites.
+        setExams(await getExams());
+        return;
+      }
       const [list, attempts, assignments] = await Promise.all([getExams(), getAllAttempts(), getAllExamAssignments()]);
       setExams(list);
       const counts: Record<string, number> = {};
@@ -127,6 +135,73 @@ export const ExamsListPage: React.FC = () => {
       setTogglingId(null);
     }
   };
+
+  // Perfil Leitor: tabela somente leitura (Prova, Questões, Ações com olho e
+  // PDF quando houver); clicar na linha abre a prova.
+  if (isReader) {
+    return (
+      <div className="space-y-6 pb-12">
+        <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+          <FileCheck className="w-5 h-5 text-cyan-400" />
+          Provas & Simulados
+        </h1>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-slate-500">Carregando lista de provas...</div>
+          ) : exams.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500">Nenhuma prova cadastrada ainda.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3.5">Prova</th>
+                    <th className="p-3.5">Questões</th>
+                    <th className="p-3.5 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  {exams.map(ex => (
+                    <tr
+                      key={ex.id}
+                      onClick={() => navigate(`${basePath}/exams/${ex.id}`)}
+                      className="hover:bg-slate-800/40 transition-colors cursor-pointer"
+                    >
+                      <td className="p-3.5 font-semibold text-slate-100 max-w-[280px]">
+                        <span className="line-clamp-2">{ex.name}</span>
+                      </td>
+                      <td className="p-3.5 text-slate-400">{ex.questionCount}</td>
+                      <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => navigate(`${basePath}/exams/${ex.id}`)}
+                            title="Ver prova"
+                            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {ex.pdfUrl && (
+                            <button
+                              onClick={() => viewExamReportPdf(ex.pdfUrl!)}
+                              title="Ver PDF da prova"
+                              aria-label="Ver PDF da prova"
+                              className="p-2 rounded-lg text-emerald-400 hover:bg-emerald-500/10"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">

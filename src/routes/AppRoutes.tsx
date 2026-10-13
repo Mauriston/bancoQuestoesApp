@@ -22,6 +22,8 @@ import { HomePage as AppHomePage } from '../pages/app/HomePage';
 import { HomePage as AdminHomePage } from '../pages/admin/HomePage';
 
 import { AdminLayout } from '../layouts/AdminLayout';
+import { ReaderHomePage } from '../pages/ReaderHomePage';
+import { ReaderLayout } from '../layouts/ReaderLayout';
 import { DashboardPage } from '../pages/admin/DashboardPage';
 import { UsersPage } from '../pages/admin/UsersPage';
 import { UserDetailPage } from '../pages/admin/UserDetailPage';
@@ -52,7 +54,30 @@ const UserProtectedRoute: React.FC = () => {
     return <Navigate to="/inactive" replace />;
   }
 
+  // Leitor (somente leitura) tem área própria.
+  if (currentUser.role === 'reader') {
+    return <Navigate to="/leitor/home" replace />;
+  }
   return <UserLayout />;
+};
+
+const ReaderProtectedRoute: React.FC = () => {
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400">
+        <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs">Verificando sessão...</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) return <Navigate to="/" replace />;
+  if (!currentUser.active) return <Navigate to="/inactive" replace />;
+  if (currentUser.role !== 'reader') return <Navigate to="/unauthorized" replace />;
+
+  return <ReaderLayout />;
 };
 
 const AdminProtectedRoute: React.FC = () => {
@@ -130,6 +155,17 @@ export const AppRoutes: React.FC = () => {
         <Route path="extras" element={<ExtrasPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+      </Route>
+
+      {/* Leitor (somente leitura): reaproveita as páginas do admin em modo leitura */}
+      <Route path="/leitor" element={<ReaderProtectedRoute />}>
+        <Route index element={<Navigate to="/leitor/home" replace />} />
+        <Route path="home" element={<ReaderHomePage />} />
+        <Route path="questions" element={<QuestionsPage />} />
+        <Route path="exams" element={<ExamsListPage />} />
+        <Route path="exams/:examId" element={<ExamViewPage />} />
+        <Route path="sabatinas" element={<SabatinasPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Fallback 404 */}

@@ -1,4 +1,6 @@
-export type UserRole = 'user' | 'admin';
+// 'reader' (Leitor): perfil somente leitura — só consulta Banco de Questões,
+// Provas e Sabatinas (ver ReaderLayout / rotas /leitor).
+export type UserRole = 'user' | 'admin' | 'reader';
 
 export interface AppUser {
   id: string;

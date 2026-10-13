@@ -9,13 +9,15 @@ import { getExamsContainingQuestion, getQuestionAnswer, getReferences } from '..
 interface QuestionPreviewModalProps {
   question: Question | ExamQuestion;
   onClose: () => void;
+  // Perfil Leitor: não mostra o ID da questão nem as provas em que ela é usada.
+  readOnly?: boolean;
 }
 
 // Pré-visualização administrativa de uma questão — ao contrário da mesma
 // tela no fluxo do candidato, aqui o gabarito é exibido de propósito
 // (alternativa correta destacada + comentário), já que só o admin acessa
 // esta modal. Usada em QuestionsPage e CreateExamPage.
-export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ question, onClose }) => {
+export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ question, onClose, readOnly = false }) => {
   // `ExamQuestion` (cópia congelada dentro de exams/{id}/questions) guarda o
   // id da questão original em `originalQuestionId`; `Question` (banco de
   // questões) já É a questão original, então seu próprio `id` serve de busca.
@@ -68,7 +70,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
           </button>
         </div>
 
-        {examsUsedIn.length > 0 && (
+        {!readOnly && examsUsedIn.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 px-6 pt-3">
             <span className="text-[10px] uppercase font-bold text-slate-500 mr-1">Já utilizada em:</span>
             {examsUsedIn.map(e => (
@@ -83,6 +85,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
           </div>
         )}
 
+        {!readOnly && (
         <div className="flex items-center gap-1.5 px-6 pt-3 text-[10px] text-slate-500">
           <span className="font-mono truncate">ID: {originalQuestionId}</span>
           <button
@@ -94,6 +97,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({ ques
             {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
           </button>
         </div>
+        )}
 
         <div className="p-6">
           <p className="text-sm sm:text-base lg:text-lg font-medium text-slate-100 leading-relaxed whitespace-pre-line mb-6">

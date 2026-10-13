@@ -39,7 +39,10 @@ export const HomePage: React.FC = () => {
   // pula direto para a home certa, em vez de sempre reexibir o login.
   useEffect(() => {
     if (!loading && currentUser) {
-      navigate(currentUser.role === 'admin' ? '/admin/home' : '/app/home', { replace: true });
+      navigate(
+        currentUser.role === 'admin' ? '/admin/home' : currentUser.role === 'reader' ? '/leitor/home' : '/app/home',
+        { replace: true }
+      );
     }
   }, [loading, currentUser, navigate]);
 
@@ -64,8 +67,8 @@ export const HomePage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      await userLogin(email, password);
-      navigate('/app/home');
+      const loggedUser = await userLogin(email, password);
+      navigate(loggedUser.role === 'reader' ? '/leitor/home' : '/app/home');
     } catch (err: any) {
       if (err instanceof UserNotRegisteredError) {
         setNotRegisteredEmail(err.email);

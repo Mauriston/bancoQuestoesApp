@@ -11,8 +11,10 @@ import { QuestionFormModal } from '../../components/QuestionFormModal';
 import { AddQuestionToExamModal } from '../../components/AddQuestionToExamModal';
 import { AddQuestionImageModal } from '../../components/AddQuestionImageModal';
 import { useHideOnScroll } from '../../hooks/useHideOnScroll';
+import { useAccess } from '../../hooks/useAccess';
 
 export const QuestionsPage: React.FC = () => {
+  const { isReader } = useAccess();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -156,6 +158,7 @@ export const QuestionsPage: React.FC = () => {
           </h1>
         </div>
 
+        {!isReader && (
         <button
           onClick={handleOpenCreateModal}
           className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all self-start sm:self-auto"
@@ -163,6 +166,7 @@ export const QuestionsPage: React.FC = () => {
           <Plus className="w-4 h-4" />
           <span>Cadastrar Nova Questão</span>
         </button>
+        )}
       </div>
 
       {/* Filter Bar + Questions List — no desktop (lg+) a barra de filtros
@@ -338,6 +342,7 @@ export const QuestionsPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {!isReader && (
                   <div className="flex flex-col items-end gap-2 shrink-0 self-end sm:self-auto">
                     <div className="flex items-center gap-2">
                       <button
@@ -374,6 +379,7 @@ export const QuestionsPage: React.FC = () => {
                     )}
                     </div>
                   </div>
+                  )}
                 </div>
                 );
               })}
@@ -398,7 +404,7 @@ export const QuestionsPage: React.FC = () => {
       )}
 
       {viewingQuestion && (
-        <QuestionPreviewModal question={viewingQuestion} onClose={() => setViewingQuestion(null)} />
+        <QuestionPreviewModal question={viewingQuestion} onClose={() => setViewingQuestion(null)} readOnly={isReader} />
       )}
 
       {addingToExamQuestion && (

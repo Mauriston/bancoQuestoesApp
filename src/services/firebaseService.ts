@@ -98,7 +98,7 @@ export async function updateUserActiveStatus(userId: string, active: boolean): P
   await updateDoc(userRef, { active, updatedAt: serverTimestamp() });
 }
 
-export async function updateUserRole(userId: string, role: "user" | "admin"): Promise<void> {
+export async function updateUserRole(userId: string, role: "user" | "admin" | "reader"): Promise<void> {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { role, updatedAt: serverTimestamp() });
 }
@@ -582,7 +582,7 @@ export async function createAndPublishExam(params: {
     const activeUsers = await getActiveUsers();
     // O admin não realiza provas — mesmo que "all" seja escolhido, ele nunca
     // deve virar candidato de uma prova.
-    targetUserIds = activeUsers.filter(u => u.role !== 'admin').map(u => u.id);
+    targetUserIds = activeUsers.filter(u => u.role === 'user').map(u => u.id);
   } else {
     targetUserIds = params.assignedUserIds;
   }

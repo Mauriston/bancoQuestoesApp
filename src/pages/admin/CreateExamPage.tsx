@@ -78,7 +78,7 @@ export const CreateExamPage: React.FC = () => {
         setAreas(arList);
         setThemes(thList);
         // O admin não realiza provas, então não pode ser destinatário.
-        setActiveUsers(uList.filter(u => u.role !== 'admin'));
+        setActiveUsers(uList.filter(u => u.role === 'user'));
         getQuestionAnswersByIds(qList.map(q => q.id))
           .then(setAnswersById)
           .catch(err => console.error("Erro ao carregar gabaritos:", err));
