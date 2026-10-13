@@ -222,6 +222,59 @@ export const DashboardPage: React.FC = () => {
         </button>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-cyan-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/15 text-cyan-500 border border-cyan-500/30 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Usuários Ativos</p>
+              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">{activeUsers.length}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-teal-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-teal-500/15 text-teal-500 border border-teal-500/30 flex items-center justify-center shrink-0">
+              <FileCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Provas Publicadas</p>
+              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">
+                {exams.filter(e => e.status === 'published').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-emerald-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <Award className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Média Geral de Acerto</p>
+              <p className="text-2xl font-black text-cyan-600 mt-0.5 leading-none">{overallAvgScore}%</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-purple-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-500 border border-purple-500/30 flex items-center justify-center shrink-0">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Tentativas Concluídas</p>
+              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">{completedAttempts.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Ranking geral e desempenho por prova lado a lado no desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Gráfico 1: Ranking geral */}
@@ -232,7 +285,12 @@ export const DashboardPage: React.FC = () => {
               Ranking Geral de Desempenho
             </h2>
           </div>
-          <RankingChart data={rankingData} />
+          {/* No desktop, desce o gráfico na altura do campo de pesquisa do card ao
+              lado (34px de campo + 12px de espaçamento; a margem de 58px já absorve os 12px
+              do espaçamento do título, pois as margens se sobrepõem) para alinhar as barras. */}
+          <div className="lg:mt-[58px]">
+            <RankingChart data={rankingData} />
+          </div>
         </div>
 
         {/* Desempenho de cada usuário em uma prova escolhida (autocomplete) */}
@@ -326,59 +384,6 @@ export const DashboardPage: React.FC = () => {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-cyan-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-cyan-500/15 text-cyan-500 border border-cyan-500/30 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Usuários Ativos</p>
-              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">{activeUsers.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-teal-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-teal-500/15 text-teal-500 border border-teal-500/30 flex items-center justify-center shrink-0">
-              <FileCheck className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Provas Publicadas</p>
-              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">
-                {exams.filter(e => e.status === 'published').length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-emerald-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <Award className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Média Geral de Acerto</p>
-              <p className="text-2xl font-black text-cyan-600 mt-0.5 leading-none">{overallAvgScore}%</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-purple-500 rounded-2xl p-5 hover:border-slate-700 transition-colors">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-500 border border-purple-500/30 flex items-center justify-center shrink-0">
-              <ClipboardCheck className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Tentativas Concluídas</p>
-              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">{completedAttempts.length}</p>
-            </div>
-          </div>
-        </div>
       </div>
 
     </div>

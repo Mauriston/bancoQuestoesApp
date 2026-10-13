@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FileCheck, Search } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LabelList } from 'recharts';
 import { Attempt, Exam } from '../types';
 import { scoreColorHex } from '../utils/helpers';
 
@@ -9,6 +8,15 @@ interface ExamPerformanceCardProps {
   attempts: Attempt[];
   userNameById: Record<string, string>;
 }
+
+// Geometria do gráfico, espelhando a do RankingChart (recharts) para que as
+// barras dos dois cards fiquem alinhadas: altura mínima 160 / 52px por usuário,
+// margens 4px, eixo X de 30px, coluna de nomes de 140px e 44px à direita.
+const MARGIN = 4;
+const AXIS_H = 30;
+const NAME_W = 140;
+const RIGHT_M = 44;
+const TICKS = [0, 25, 50, 75, 100];
 
 const attemptSeconds = (a: Attempt): number => {
   const t: any = a.completedAt || a.startedAt;
@@ -89,6 +97,18 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
 
   const hasAnyScore = chartData.some(d => d.done);
   const chartHeight = Math.max(160, chartData.length * 52);
+  const plotH = chartHeight - MARGIN * 2 - AXIS_H;
+  const band = plotH / Math.max(1, chartData.length);
+  const barH = band * 0.44; // barCategoryGap 28% de cada lado, como no recharts
+
+  // Linhas renderizadas numa ordem estável (por userId) e posicionadas por
+  // `translateY` conforme o ranking: ao trocar a prova, o nome e a barra de
+  // cada usuário deslizam para a nova posição enquanto a barra muda de largura.
+  const rankByUser = useMemo(
+    () => Object.fromEntries(chartData.map((d, i) => [d.userId, i])) as Record<string, number>,
+    [chartData]
+  );
+  const stableRows = useMemo(() => [...chartData].sort((a, b) => a.userId.localeCompare(b.userId)), [chartData]);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
@@ -136,37 +156,58 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
           {!hasAnyScore && (
             <p className="text-[11px] text-slate-500 italic">Nenhum usuário concluiu esta prova ainda.</p>
           )}
-          <ResponsiveContainer width="100%" height={chartHeight}>
-            <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 4 }} barCategoryGap="28%">
-              <XAxis type="number" domain={[0, 100]} tick={{ fill: '#6B7680', fontSize: 11 }} unit="%" />
-              <YAxis type="category" dataKey="name" width={140} tick={{ fill: '#2C3A47', fontSize: 14, fontWeight: 700 }} interval={0} />
-              <Tooltip
-                formatter={(value: any, _n: any, item: any) => [item?.payload?.done ? `${value}%` : 'Sem tentativa', 'Desempenho']}
-                contentStyle={{ background: '#23303B', border: '1px solid #2C3A47', borderRadius: 12, fontSize: 12 }}
-                labelStyle={{ color: '#D8DBDD' }}
-              />
-              <Bar dataKey="score" radius={[0, 6, 6, 0]} isAnimationActive animationDuration={700} animationEasing="ease-out">
-                {chartData.map(entry => (
-                  <Cell key={entry.userId} fill={entry.done ? scoreColorHex(entry.score) : '#D8DBDD'} />
-                ))}
-                <LabelList
-                  dataKey="score"
-                  position="right"
-                  formatter={(value: any, ..._rest: any[]) => `${value}%`}
-                  content={(props: any) => {
-                    const { x, y, width, height, index } = props;
-                    const entry = chartData[index];
-                    if (!entry) return null;
-                    return (
-                      <text x={x + width + 8} y={y + height / 2} dominantBaseline="central" fill="#2C3A47" fontSize={13} fontWeight={700}>
-                        {entry.done ? `${entry.score}%` : '—'}
-                      </text>
-                    );
-                  }}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="relative w-full" style={{ height: chartHeight }}>
+            {/* Linhas: nome + barra, animadas por transform/width */}
+            <div className="absolute" style={{ left: MARGIN, right: RIGHT_M, top: MARGIN, height: plotH }}>
+              {stableRows.map(entry => (
+                <div
+                  key={entry.userId}
+                  title={entry.done ? `${entry.name}: ${entry.score}%` : `${entry.name}: sem tentativa`}
+                  className="absolute left-0 right-0 flex items-center transition-transform duration-700 ease-out"
+                  style={{ top: 0, height: band, transform: `translateY(${(rankByUser[entry.userId] || 0) * band}px)` }}
+                >
+                  <span
+                    className="shrink-0 pr-2 text-right text-sm font-bold text-slate-100 truncate"
+                    style={{ width: NAME_W }}
+                  >
+                    {entry.name}
+                  </span>
+                  <div className="relative flex-1 h-full">
+                    <div
+                      className="absolute left-0 rounded-r-md transition-[width,background-color] duration-700 ease-out"
+                      style={{
+                        top: (band - barH) / 2,
+                        height: barH,
+                        width: `${entry.done ? entry.score : 0}%`,
+                        backgroundColor: entry.done ? scoreColorHex(entry.score) : '#D8DBDD'
+                      }}
+                    />
+                    <span
+                      className="absolute top-1/2 -translate-y-1/2 text-[13px] font-bold text-slate-100 whitespace-nowrap transition-[left] duration-700 ease-out"
+                      style={{ left: `calc(${entry.done ? entry.score : 0}% + 8px)` }}
+                    >
+                      {entry.done ? `${entry.score}%` : '—'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Eixos: linha vertical, linha horizontal e marcas de 0 a 100% */}
+            <div className="absolute w-px bg-slate-400" style={{ left: MARGIN + NAME_W, top: MARGIN, height: plotH }} />
+            <div className="absolute" style={{ left: MARGIN + NAME_W, right: RIGHT_M, top: MARGIN + plotH }}>
+              <div className="h-px bg-slate-400" />
+              {TICKS.map(t => (
+                <span
+                  key={t}
+                  className="absolute text-[11px] text-slate-400 -translate-x-1/2"
+                  style={{ left: `${t}%`, top: 6 }}
+                >
+                  {t}%
+                </span>
+              ))}
+            </div>
+          </div>
         </>
       )}
     </div>
