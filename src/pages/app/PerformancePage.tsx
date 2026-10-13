@@ -282,8 +282,8 @@ export const PerformancePage: React.FC = () => {
       {/* Desempenho Geral antes do Ranking Geral; lado a lado no desktop (lg+). */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
       {/* Overall Accuracy KPI — cartão mais proeminente da página */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl lg:flex lg:flex-col lg:justify-between">
+        <p className="text-xs lg:text-sm font-semibold text-slate-400 uppercase tracking-wide">
           {currentUser?.name ? `${currentUser.name} - Desempenho Geral` : 'Desempenho Geral'}
         </p>
         {/* Avatar com a altura da fonte do valor (1em), à esquerda do número */}
@@ -298,8 +298,12 @@ export const PerformancePage: React.FC = () => {
           </p>
         </div>
 
+        {/* Comparações (colegas e meta): no desktop, o card estica à altura do
+            Ranking ao lado, então título/valor/comparações se distribuem
+            verticalmente (justify-between). */}
+        <div className="mt-3 lg:mt-0">
         {platformDelta !== null && (
-          <div className="flex items-center gap-1.5 mt-3 text-sm">
+          <div className="flex items-center gap-1.5 text-sm">
             {platformDelta > 0 && <TrendingUp className="w-4 h-4 text-emerald-400" />}
             {platformDelta < 0 && <TrendingDown className="w-4 h-4 text-red-400" />}
             {platformDelta === 0 && <Minus className="w-4 h-4 text-slate-500" />}
@@ -319,6 +323,7 @@ export const PerformancePage: React.FC = () => {
             {goalDelta > 0 ? '+' : ''}{goalDelta} pp
           </span>
           <span className="text-slate-500">vs. meta ({GOAL_PERCENT}%)</span>
+        </div>
         </div>
       </div>
 
@@ -415,6 +420,8 @@ export const PerformancePage: React.FC = () => {
         </div>
       )}
 
+      {/* Desempenho por Área e por Grupo (TEOT) lado a lado no desktop (lg+) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
       {/* Desempenho por Área — donut da área selecionada no filtro. Área
           continua servindo também de filtro de questões no banco/provas;
           aqui é só a visão de estatística. */}
@@ -615,6 +622,7 @@ export const PerformancePage: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* Desempenho por Tema, dentro da mesma área filtrada acima */}
       {selectedArea && (
