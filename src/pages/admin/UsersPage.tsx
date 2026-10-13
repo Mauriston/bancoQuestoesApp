@@ -7,6 +7,7 @@ import { getUsers, saveUser, updateUserActiveStatus, updateUserRole, deleteUserA
 import { createNewUserWithAuth, INITIAL_PASSWORD } from '../../services/authService';
 import { AppUser } from '../../types';
 import { Avatar } from '../../components/Avatar';
+import { maskPhoneInput } from '../../utils/helpers';
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export const UsersPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'user' | 'admin' | 'reader'>('user');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -80,11 +82,12 @@ export const UsersPage: React.FC = () => {
         throw new Error("Por favor, informe um endereço de e-mail válido.");
       }
 
-      await createNewUserWithAuth(name, email, role, INITIAL_PASSWORD);
+      await createNewUserWithAuth(name, email, role, INITIAL_PASSWORD, { phone });
 
       setModalOpen(false);
       setName('');
       setEmail('');
+      setPhone('');
       setRole('user');
       await fetchUsers();
     } catch (err: any) {
@@ -273,6 +276,18 @@ export const UsersPage: React.FC = () => {
                   placeholder="roberto@ortopedia.br"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Telefone / WhatsApp (opcional)</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={(e) => setPhone(maskPhoneInput(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
                 />
               </div>

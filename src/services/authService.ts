@@ -38,7 +38,7 @@ export async function createNewUserWithAuth(
   email: string,
   role: 'user' | 'admin' | 'reader',
   password?: string,
-  options?: { active?: boolean; startSession?: boolean }
+  options?: { active?: boolean; startSession?: boolean; phone?: string }
 ): Promise<AppUser> {
   const active = options?.active ?? true;
   const startSession = options?.startSession ?? true;
@@ -91,6 +91,7 @@ export async function createNewUserWithAuth(
     email: normalizedEmail,
     role,
     active,
+    ...(options?.phone?.trim() ? { phone: options.phone.trim() } : {}),
     passwordIsInitial: !!password && password.trim() === INITIAL_PASSWORD,
     ...(authUid ? { authUid } : {})
   };
