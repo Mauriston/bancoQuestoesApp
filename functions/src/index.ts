@@ -625,18 +625,39 @@ async function downloadSlidesPdf(url: string): Promise<Buffer> {
   return buffer;
 }
 
-// force=false: não refaz se o PDF já foi gerado a partir da mesma `url`.
+function sabatinaPdfFileName(item: Sabatina): string {
+  return `${sanitizeForFileName(item.title || 'Sabatina')}.pdf`;
+}
+
+function sabatinaPdfPath(item: Sabatina): string {
+  return `sabatina-pdfs/${item.id}/${sabatinaPdfFileName(item)}`;
+}
+
+// O PDF arquivado está em dia: mesma apresentação, mesmo título e o objeto
+// no Storage já tem o nome do título (PDFs antigos usavam "apresentacao.pdf").
+function isSabatinaPdfCurrent(item: Sabatina): boolean {
+  return !!item.pdfUrl
+    && item.pdfSourceUrl === item.url
+    && item.pdfFileName === sabatinaPdfFileName(item)
+    && item.pdfUrl.includes(encodeURIComponent(sabatinaPdfPath(item)));
+}
+
+// force=false: não refaz se o PDF já foi gerado a partir da mesma `url` e
+// com o nome atual do título.
 async function archiveSabatinaPdf(sabatinaId: string, force: boolean): Promise<'generated' | 'skipped'> {
   const ref = db.collection('sabatinas').doc(sabatinaId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error('Sabatina não encontrada.');
   const item = { id: snap.id, ...snap.data() } as Sabatina;
 
-  if (!force && item.pdfUrl && item.pdfSourceUrl === item.url) return 'skipped';
+  const fileName = sabatinaPdfFileName(item);
+  if (!force && isSabatinaPdfCurrent(item)) return 'skipped';
 
   const pdf = await downloadSlidesPdf(item.url);
-  const fileName = `${sanitizeForFileName(item.title)}.pdf`;
-  const filePath = `sabatina-pdfs/${sabatinaId}/apresentacao.pdf`;
+  // O nome do objeto no Storage é o título da sabatina: é o último segmento
+  // do caminho que iOS/Android usam como nome do arquivo ao compartilhar ou
+  // salvar o PDF (o Content-Disposition é ignorado por vários visualizadores).
+  const filePath = sabatinaPdfPath(item);
   const downloadToken = randomUUID();
   await bucket.file(filePath).save(pdf, {
     contentType: 'application/pdf',
@@ -655,6 +676,9 @@ async function archiveSabatinaPdf(sabatinaId: string, force: boolean): Promise<'
   const pdfUrl =
     `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}` +
     `/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
+  // Remove versões anteriores (ex.: com outro nome, após renomear a sabatina).
+  const [previous] = await bucket.getFiles({ prefix: `sabatina-pdfs/${sabatinaId}/` });
+  await Promise.all(previous.filter(f => f.name !== filePath).map(f => f.delete().catch(() => undefined)));
   await ref.set(
     {
       pdfUrl,
@@ -727,7 +751,7 @@ export const onSabatinaWritten = onDocumentWritten(
     }
     // Já arquivado a partir desta mesma URL (inclui a escrita que o próprio
     // arquivamento faz em pdfUrl) → nada a fazer, evita laço.
-    if (after.pdfUrl && after.pdfSourceUrl === after.url) return;
+    if (isSabatinaPdfCurrent({ ...after, id: sabatinaId })) return;
     if (!extractSlidesId(after.url)) return;
 
     try {
