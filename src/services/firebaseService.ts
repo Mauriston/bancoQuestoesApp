@@ -695,6 +695,47 @@ export async function updateExamContent(params: {
   }
 }
 
+// Provas com edição habilitada: mesmo gate de updateExamContent() — inativas e
+// sem nenhuma tentativa registrada.
+export async function getEditableExams(): Promise<Exam[]> {
+  const inactive = (await getExams()).filter(e => !isExamActive(e));
+  const attemptsPerExam = await Promise.all(inactive.map(e => getAttemptsForExam(e.id)));
+  return inactive.filter((_, i) => attemptsPerExam[i].length === 0);
+}
+
+// Acrescenta UMA questão ao final de uma prova editável (inativa e sem
+// tentativas), congelando a cópia como no assistente de criação.
+export async function addQuestionToExam(examId: string, q: Question): Promise<void> {
+  const [exam, attempts, existing] = await Promise.all([
+    getExamById(examId),
+    getAttemptsForExam(examId),
+    getExamQuestions(examId)
+  ]);
+
+  if (!exam) throw new Error("Prova não encontrada.");
+  if (isExamActive(exam)) throw new Error("Só é possível editar provas inativas.");
+  if (attempts.length > 0) throw new Error("Esta prova já tem tentativas registradas e não pode mais ser editada.");
+  if (existing.some(eq => eq.originalQuestionId === q.id)) throw new Error("Esta questão já faz parte da prova.");
+
+  const nextIndex = existing.reduce((max, eq) => Math.max(max, eq.orderIndex || eq.order || 0), 0) + 1;
+  const eqId = `eq_${nextIndex}`;
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'exams', examId, 'questions', eqId), removeUndefined({
+    id: eqId,
+    examId,
+    originalQuestionId: q.id,
+    orderIndex: nextIndex,
+    order: nextIndex,
+    areaId: q.areaId,
+    themeId: q.themeId,
+    statement: q.statement,
+    alternatives: q.alternatives,
+    imageUrl: q.imageUrl || undefined
+  }));
+  batch.set(doc(db, 'exams', examId), { questionCount: existing.length + 1, updatedAt: serverTimestamp() }, { merge: true });
+  await batch.commit();
+}
+
 // Reverte o efeito de uma tentativa corrigida sobre o agregado userStats do
 // residente (contraparte do somatório feito em finishAndGradeAttempt, em
 // gradingService.ts). Usado tanto para excluir uma tentativa avulsa quanto

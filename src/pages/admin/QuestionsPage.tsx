@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  BookOpen, Plus, Search, Filter, Image as ImageIcon, Camera, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown
+  BookOpen, Plus, Search, Filter, Image as ImageIcon, Camera, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown, FilePlus
 } from 'lucide-react';
 import { getQuestions, getAreas, getThemes, getGroups, createTheme, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
 import { Question, Area, Theme, Group, QuestionAnswer, Reference } from '../../types';
@@ -8,6 +8,7 @@ import { SOURCE_EXAM_GROUPS, SourceExamGroup, getSourceExamOptionsForGroup, getS
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { QuestionImage } from '../../components/QuestionImage';
+import { AddQuestionToExamModal } from '../../components/AddQuestionToExamModal';
 import { AddQuestionImageModal } from '../../components/AddQuestionImageModal';
 import { useHideOnScroll } from '../../hooks/useHideOnScroll';
 
@@ -16,6 +17,7 @@ export const QuestionsPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addingToExamQuestion, setAddingToExamQuestion] = useState<Question | null>(null);
   // Gabarito de cada questão listada, buscado em lote (ver getQuestionAnswersByIds)
   // para mostrar a alternativa correta abaixo do enunciado sem 1 leitura por linha.
   const [answersById, setAnswersById] = useState<Record<string, QuestionAnswer>>({});
@@ -522,6 +524,14 @@ export const QuestionsPage: React.FC = () => {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setAddingToExamQuestion(q); }}
+                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 transition-colors"
+                      title="Inserir em uma Prova"
+                    >
+                      <FilePlus className="w-4 h-4" />
+                    </button>
                     {!q.imageUrl && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setAddingImageQuestion(q); }}
@@ -531,6 +541,7 @@ export const QuestionsPage: React.FC = () => {
                         <Camera className="w-4 h-4" />
                       </button>
                     )}
+                    </div>
                   </div>
                 </div>
                 );
@@ -781,6 +792,13 @@ export const QuestionsPage: React.FC = () => {
 
       {viewingQuestion && (
         <QuestionPreviewModal question={viewingQuestion} onClose={() => setViewingQuestion(null)} />
+      )}
+
+      {addingToExamQuestion && (
+        <AddQuestionToExamModal
+          question={addingToExamQuestion}
+          onClose={() => setAddingToExamQuestion(null)}
+        />
       )}
 
       {addingImageQuestion && (
