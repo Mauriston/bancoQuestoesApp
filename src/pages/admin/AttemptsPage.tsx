@@ -129,7 +129,7 @@ export const AttemptsPage: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       {att.status === 'completed' && (
                         <Link
-                          to={`/app/attempts/${att.id}/result`}
+                          to={`/admin/attempts/${att.id}/result`}
                           className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl shrink-0"
                         >
                           <span>Ver Relatório</span>
