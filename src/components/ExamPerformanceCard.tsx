@@ -25,16 +25,14 @@ const attemptSeconds = (a: Attempt): number => {
 export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams, attempts, userNameById }) => {
   const completed = useMemo(() => attempts.filter(a => a.status === 'completed'), [attempts]);
 
-  // Provas ordenadas da mais recentemente realizada para a mais antiga; as
-  // sem nenhuma tentativa concluída vão para o fim, em ordem alfabética.
+  // Só provas com resultados lançados (ao menos uma tentativa concluída),
+  // da mais recentemente realizada para a mais antiga.
   const sortedExams = useMemo(() => {
     const lastByExam: Record<string, number> = {};
     completed.forEach(a => { lastByExam[a.examId] = Math.max(lastByExam[a.examId] || 0, attemptSeconds(a)); });
-    return [...exams].sort((a, b) => {
-      const la = lastByExam[a.id] || 0;
-      const lb = lastByExam[b.id] || 0;
-      return lb - la || a.name.localeCompare(b.name);
-    });
+    return exams
+      .filter(e => e.id in lastByExam)
+      .sort((a, b) => lastByExam[b.id] - lastByExam[a.id] || a.name.localeCompare(b.name));
   }, [exams, completed]);
 
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -112,7 +110,9 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
         {open && (
           <div className="absolute z-20 mt-1.5 w-full max-h-56 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-2xl p-1">
             {matches.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-slate-500">Nenhuma prova encontrada.</p>
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {sortedExams.length === 0 ? 'Nenhuma prova com resultados lançados.' : 'Nenhuma prova encontrada.'}
+              </p>
             ) : matches.map(e => (
               <button
                 key={e.id}
