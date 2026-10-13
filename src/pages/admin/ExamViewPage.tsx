@@ -9,7 +9,7 @@ import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
-import { getSourceExamChipClass } from '../../constants';
+import { getSourceExamChipClass, getSourceExamDisplayGroup } from '../../constants';
 import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
 
 interface SubmittedRow {
@@ -119,15 +119,17 @@ export const ExamViewPage: React.FC = () => {
     selectedAreaId ? themeDistributionAll.filter(t => t.areaId === selectedAreaId) : themeDistributionAll
   ), [themeDistributionAll, selectedAreaId]);
 
-  // 3ª tabela "Distribuição por fonte": fontes das questões restritas pelos
-  // filtros de área e tema (se houver). `sourceExam` vem do banco
+  // 3ª tabela "Distribuição por fonte": BANCO PRÓPRIO, TEOT e TARO (os dois
+  // últimos agrupam todos os anos), só com os grupos que têm questões, restrita
+  // aos filtros de área e tema (se houver). `sourceExam` vem do banco
   // (sourceExamById), não da cópia congelada da prova.
   const sourceDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     questions.forEach(q => {
       if (selectedAreaId && q.areaId !== selectedAreaId) return;
       if (selectedThemeId && q.themeId !== selectedThemeId) return;
-      const source = sourceExamById[q.originalQuestionId] || 'Sem fonte';
+      const source = getSourceExamDisplayGroup(sourceExamById[q.originalQuestionId]);
+      if (!source) return;
       counts[source] = (counts[source] || 0) + 1;
     });
     return Object.entries(counts)
@@ -139,7 +141,7 @@ export const ExamViewPage: React.FC = () => {
   const filteredQuestions = useMemo(() => questions.filter(q => (
     (!selectedAreaId || q.areaId === selectedAreaId) &&
     (!selectedThemeId || q.themeId === selectedThemeId) &&
-    (!selectedSource || (sourceExamById[q.originalQuestionId] || 'Sem fonte') === selectedSource)
+    (!selectedSource || getSourceExamDisplayGroup(sourceExamById[q.originalQuestionId]) === selectedSource)
   )), [questions, selectedAreaId, selectedThemeId, selectedSource, sourceExamById]);
 
   const handleAreaClick = (areaId: string) => {
