@@ -5,6 +5,16 @@ import { getAllAttempts, getUsers, deleteAttempt } from '../../services/firebase
 import { Attempt } from '../../types';
 import { formatDate, scoreColorClass } from '../../utils/helpers';
 
+// Data-hora de realização em segundos: conclusão, ou início se a tentativa
+// ainda está em andamento (mesma data exibida na tabela).
+const attemptTime = (a: Attempt): number => {
+  const t: any = a.completedAt || a.startedAt;
+  if (!t) return 0;
+  if (typeof t === 'object' && 'seconds' in t) return t.seconds;
+  const ms = new Date(t).getTime();
+  return Number.isNaN(ms) ? 0 : ms / 1000;
+};
+
 export const AttemptsPage: React.FC = () => {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
@@ -16,11 +26,7 @@ export const AttemptsPage: React.FC = () => {
     setLoading(true);
     return Promise.all([getAllAttempts(), getUsers()])
       .then(([res, users]) => {
-        setAttempts(res.sort((a, b) => {
-          const aT = a.startedAt ? (typeof a.startedAt === 'object' && 'seconds' in a.startedAt ? a.startedAt.seconds : 0) : 0;
-          const bT = b.startedAt ? (typeof b.startedAt === 'object' && 'seconds' in b.startedAt ? b.startedAt.seconds : 0) : 0;
-          return bT - aT;
-        }));
+        setAttempts(res.sort((a, b) => attemptTime(b) - attemptTime(a)));
         // Tentativas antigas podem ter sido gravadas antes do userName ser
         // desnormalizado no documento — esse mapa cobre esses registros.
         setUserNameById(Object.fromEntries(users.map(u => [u.id, u.name])));
@@ -75,72 +81,75 @@ export const AttemptsPage: React.FC = () => {
         />
       </div>
 
-      {/* List — grid de cards para não desperdiçar a largura da tela em telas
-          largas (cada tentativa fica compacta em vez de ocupar 1 linha inteira) */}
+      {/* Tabela única, da mais recente para a mais antiga pela data-hora de
+          realização (conclusão; para tentativas em andamento, o início). */}
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">Carregando registro de tentativas...</div>
       ) : filtered.length === 0 ? (
         <div className="p-8 text-center text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">Nenhuma tentativa encontrada.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((att) => {
-            return (
-              <div key={att.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl hover:border-slate-700 transition-all flex flex-col justify-between">
-
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-xs font-bold text-cyan-400 flex items-center gap-1 min-w-0">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+              <tr>
+                <th className="p-3">Data / Hora</th>
+                <th className="p-3">Residente</th>
+                <th className="p-3">Prova</th>
+                <th className="p-3 text-center">Acertos</th>
+                <th className="p-3 text-center">Aproveitamento</th>
+                <th className="p-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80">
+              {filtered.map((att) => (
+                <tr key={att.id} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="p-3 whitespace-nowrap text-slate-400">{formatDate(att.completedAt || att.startedAt)}</td>
+                  <td className="p-3 font-bold text-cyan-400">
+                    <span className="flex items-center gap-1.5 min-w-0">
                       <User className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{nameOf(att)}</span>
                     </span>
-                    <button
-                      onClick={() => handleDelete(att.id)}
-                      disabled={deletingId === att.id}
-                      title="Excluir esta tentativa do histórico"
-                      className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors disabled:opacity-40 shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-slate-100 line-clamp-2">
-                    {att.examName || 'Simulado Ortopedia'}
-                  </h3>
-
-                  <p className="text-[11px] text-slate-500 mt-1">{formatDate(att.completedAt || att.startedAt)}</p>
-
-                  <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
-                    <span>Acertos: <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}</span>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-3">
-                  {att.status === 'completed' ? (
-                    <>
-                      <div>
-                        <span className={`text-lg font-black ${scoreColorClass(att.scorePercentage || 0)}`}>
-                          {att.scorePercentage}%
-                        </span>
-                        <p className="text-[10px] text-slate-500">Aproveitamento</p>
-                      </div>
-                      <Link
-                        to={`/app/attempts/${att.id}/result`}
-                        className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl shrink-0"
+                  </td>
+                  <td className="p-3 font-semibold text-slate-100">{att.examName || 'Simulado Ortopedia'}</td>
+                  <td className="p-3 text-center whitespace-nowrap">
+                    <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}
+                  </td>
+                  <td className="p-3 text-center">
+                    {att.status === 'completed' ? (
+                      <span className={`text-sm font-black ${scoreColorClass(att.scorePercentage || 0)}`}>
+                        {att.scorePercentage}%
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 whitespace-nowrap">
+                        Em Andamento
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center justify-end gap-2">
+                      {att.status === 'completed' && (
+                        <Link
+                          to={`/app/attempts/${att.id}/result`}
+                          className="flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl shrink-0"
+                        >
+                          <span>Ver Relatório</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => handleDelete(att.id)}
+                        disabled={deletingId === att.id}
+                        title="Excluir esta tentativa do histórico"
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors disabled:opacity-40 shrink-0"
                       >
-                        <span>Ver Relatório</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </>
-                  ) : (
-                    <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                      Em Andamento
-                    </span>
-                  )}
-                </div>
-
-              </div>
-            );
-          })}
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
