@@ -279,10 +279,10 @@ export const PerformancePage: React.FC = () => {
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
 
-      {/* No mobile o card de Desempenho Geral vem antes do Ranking Geral (order); a partir de sm, a ordem original. */}
-      <div className="flex flex-col gap-6 sm:gap-8">
+      {/* Desempenho Geral antes do Ranking Geral; lado a lado no desktop (lg+). */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
       {/* Overall Accuracy KPI — cartão mais proeminente da página */}
-      <div className="order-1 sm:order-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           {currentUser?.name ? `${currentUser.name} - Desempenho Geral` : 'Desempenho Geral'}
         </p>
@@ -323,7 +323,7 @@ export const PerformancePage: React.FC = () => {
       </div>
 
       {/* Ranking Geral — mesmo gráfico do Dashboard admin, sem drill-down aqui */}
-      <div className="order-2 sm:order-1 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-2">
         <h2 className="text-sm font-bold text-slate-100">Ranking Geral</h2>
         <p className="text-xs text-slate-400">Desempenho geral residentes.</p>
         <RankingChart data={rankingData} />

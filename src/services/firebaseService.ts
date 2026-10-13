@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
+import { resizeImageToSquare } from '../utils/imageResize';
 import {
    AppUser, Area, Group, Theme, Question, QuestionAnswer, Reference, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, AttemptResultSnapshot, UserStats, AdminLog, ImportLog,
@@ -119,7 +120,10 @@ export async function deleteUserAccount(userId: string): Promise<void> {
   await deleteDoc(doc(db, 'users', userId));
 }
 
-export async function uploadUserAvatar(userId: string, file: File): Promise<string> {
+export async function uploadUserAvatar(userId: string, originalFile: File): Promise<string> {
+  // Avatar quadrado de até 512px, reduzido com boa qualidade (foto original
+  // gigante exibida em 60px fica serrilhada) — ver resizeImageToSquare.
+  const file = await resizeImageToSquare(originalFile, 512);
   const fileExt = file.name.split('.').pop() || 'jpg';
   const fileName = `${Date.now()}.${fileExt}`;
   const storageRef = ref(storage, `user-avatars/${userId}/${fileName}`);
