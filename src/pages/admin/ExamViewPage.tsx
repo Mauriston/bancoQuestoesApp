@@ -9,7 +9,7 @@ import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
-import { getSourceExamChipClass } from '../../constants';
+import { getSourceExamChipClass, getSourceExamDisplayGroup } from '../../constants';
 import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
 
 interface SubmittedRow {
@@ -119,15 +119,17 @@ export const ExamViewPage: React.FC = () => {
     selectedAreaId ? themeDistributionAll.filter(t => t.areaId === selectedAreaId) : themeDistributionAll
   ), [themeDistributionAll, selectedAreaId]);
 
-  // 3ª tabela "Distribuição por fonte": fontes das questões restritas pelos
-  // filtros de área e tema (se houver). `sourceExam` vem do banco
+  // 3ª tabela "Distribuição por fonte": BANCO PRÓPRIO, TEOT e TARO (os dois
+  // últimos agrupam todos os anos), só com os grupos que têm questões, restrita
+  // aos filtros de área e tema (se houver). `sourceExam` vem do banco
   // (sourceExamById), não da cópia congelada da prova.
   const sourceDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     questions.forEach(q => {
       if (selectedAreaId && q.areaId !== selectedAreaId) return;
       if (selectedThemeId && q.themeId !== selectedThemeId) return;
-      const source = sourceExamById[q.originalQuestionId] || 'Sem fonte';
+      const source = getSourceExamDisplayGroup(sourceExamById[q.originalQuestionId]);
+      if (!source) return;
       counts[source] = (counts[source] || 0) + 1;
     });
     return Object.entries(counts)
@@ -139,7 +141,7 @@ export const ExamViewPage: React.FC = () => {
   const filteredQuestions = useMemo(() => questions.filter(q => (
     (!selectedAreaId || q.areaId === selectedAreaId) &&
     (!selectedThemeId || q.themeId === selectedThemeId) &&
-    (!selectedSource || (sourceExamById[q.originalQuestionId] || 'Sem fonte') === selectedSource)
+    (!selectedSource || getSourceExamDisplayGroup(sourceExamById[q.originalQuestionId]) === selectedSource)
   )), [questions, selectedAreaId, selectedThemeId, selectedSource, sourceExamById]);
 
   const handleAreaClick = (areaId: string) => {
@@ -571,8 +573,50 @@ export const ExamViewPage: React.FC = () => {
         </section>
       )}
 
-      {areaDistribution.length > 0 && (
-        <div className="space-y-3">
+      {submittedRows.length > 0 && (
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-cyan-400" />
+            Respostas Enviadas ({submittedRows.length})
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Usuário</th>
+                  <th className="p-3">Desempenho na Prova</th>
+                  {examAreas.map(area => (
+                    <th key={area.id} className="p-3">{area.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {submittedRows.map(({ attempt, areaScores }) => (
+                  <tr key={attempt.id}>
+                    <td className="p-3 font-semibold text-slate-100">{attempt.userName || '—'}</td>
+                    <td className={`p-3 font-black ${scoreColorClass(attempt.scorePercentage || 0)}`}>
+                      {attempt.scorePercentage ?? 0}%
+                    </td>
+                    {examAreas.map(area => {
+                      const score = areaScores[area.id];
+                      return (
+                        <td key={area.id} className={score === null ? 'p-3 text-slate-600' : `p-3 font-bold ${scoreColorClass(score)}`}>
+                          {score === null ? '—' : `${score}%`}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Cards de distribuição fixos à esquerda; as questões rolam à direita. */}
+      <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+        {areaDistribution.length > 0 && (
+        <aside className="lg:w-80 xl:w-96 shrink-0 space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
           {(selectedAreaId || selectedThemeId || selectedSource) && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span>Filtrando por:</span>
@@ -602,11 +646,10 @@ export const ExamViewPage: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-            {/* Áreas da Prova — raiz do filtro cruzado. 2/7 da largura no
-                desktop (mesmo tanto que a tabela de Temas; o gráfico fica
-                com 3/7). */}
-            <section className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="space-y-4">
+            {/* Áreas da Prova — raiz do filtro cruzado. Os 3 cards ficam empilhados
+                numa coluna fixa (sticky) ao lado da lista de questões. */}
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-cyan-400" />
                 Áreas da Prova
@@ -669,7 +712,7 @@ export const ExamViewPage: React.FC = () => {
             </section>
 
             {/* Temas da Prova — filtrado pela área selecionada, se houver. 2/7 da largura no desktop. */}
-            <section className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-cyan-400" />
                 Temas da Prova
@@ -732,7 +775,7 @@ export const ExamViewPage: React.FC = () => {
             </section>
 
             {/* Distribuição por fonte — filtrada por área/tema selecionados; clicar numa linha filtra as questões. 3/7 da largura no desktop. */}
-            <section className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
                 Distribuição por fonte
@@ -794,50 +837,9 @@ export const ExamViewPage: React.FC = () => {
               )}
             </section>
           </div>
-        </div>
+        </aside>
       )}
-
-      {submittedRows.length > 0 && (
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-cyan-400" />
-            Respostas Enviadas ({submittedRows.length})
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="p-3">Usuário</th>
-                  <th className="p-3">Desempenho na Prova</th>
-                  {examAreas.map(area => (
-                    <th key={area.id} className="p-3">{area.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {submittedRows.map(({ attempt, areaScores }) => (
-                  <tr key={attempt.id}>
-                    <td className="p-3 font-semibold text-slate-100">{attempt.userName || '—'}</td>
-                    <td className={`p-3 font-black ${scoreColorClass(attempt.scorePercentage || 0)}`}>
-                      {attempt.scorePercentage ?? 0}%
-                    </td>
-                    {examAreas.map(area => {
-                      const score = areaScores[area.id];
-                      return (
-                        <td key={area.id} className={score === null ? 'p-3 text-slate-600' : `p-3 font-bold ${scoreColorClass(score)}`}>
-                          {score === null ? '—' : `${score}%`}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      <section className="space-y-6">
+      <section className="flex-1 min-w-0 space-y-6">
         {(selectedAreaId || selectedThemeId || selectedSource) && filteredQuestions.length === 0 && (
           <p className="text-center text-xs text-slate-500 italic py-4">Nenhuma questão para este filtro.</p>
         )}
@@ -960,6 +962,7 @@ export const ExamViewPage: React.FC = () => {
           );
         })}
       </section>
+      </div>
 
       {editingQuestion && (
         <QuestionFormModal

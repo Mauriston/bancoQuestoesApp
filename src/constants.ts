@@ -103,3 +103,15 @@ export function getSourceExamChipClass(sourceExam: string): string {
   }
   return 'bg-slate-800 text-slate-300 border-slate-700';
 }
+
+// Agrupa a fonte de uma questão (ex.: "TEOT 2025", "TARO 2021") em um dos três
+// grupos de exibição — TEOT/TARO de todos os anos ficam juntos. Qualquer outro
+// valor não pertence a nenhum grupo (null).
+export type SourceExamDisplayGroup = 'BANCO PRÓPRIO' | 'TEOT' | 'TARO';
+export function getSourceExamDisplayGroup(sourceExam: string): SourceExamDisplayGroup | null {
+  const normalized = (sourceExam || '').trim().toUpperCase();
+  if (normalized.startsWith('TEOT')) return 'TEOT';
+  if (normalized.startsWith('TARO')) return 'TARO';
+  if (normalized.startsWith('BANCO PRÓPRIO') || normalized.startsWith('BANCO PROPRIO')) return 'BANCO PRÓPRIO';
+  return null;
+}
