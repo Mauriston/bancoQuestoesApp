@@ -1,5 +1,5 @@
 import {
-   collection, collectionGroup, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
+   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
    query, where, orderBy, limit, serverTimestamp, writeBatch, runTransaction, Timestamp, addDoc,
    documentId, Query, DocumentData, onSnapshot
 } from 'firebase/firestore';
@@ -315,24 +315,23 @@ export async function getQuestionsByIds(questionIds: string[]): Promise<Record<s
 // `exams/{examId}/questions`, filtrando por `originalQuestionId`. Usado pelo
 // QuestionPreviewModal para mostrar os chips "já usada em" no admin.
 //
-// ATENÇÃO: consultas collection group com `where` normalmente exigem um
-// índice composto dedicado (escopo "collection group"), que o Firestore não
-// cria automaticamente como faz com índices de coleção única. Se esta
-// consulta falhar em produção com um erro do tipo "The query requires an
-// index", o próprio erro traz um link para criar o índice necessário no
-// console do Firebase — não é possível criar esse índice a partir deste
-// ambiente (sem credenciais do projeto).
+// Provas que contêm a questão (cópia congelada em exams/{id}/questions com
+// originalQuestionId == id). Em vez de uma consulta collection group — que
+// exige regra `/{path=**}/questions/{id}` e índice de escopo "collection
+// group", ausentes no projeto, e por isso falhava sempre sem avisar na tela —
+// consulta a subcoleção de cada prova, coberta pelas regras e pelos índices
+// automáticos atuais (1 leitura por prova, no máximo 1 documento cada).
 export async function getExamsContainingQuestion(originalQuestionId: string): Promise<{ examId: string; examName: string }[]> {
-  const q = query(collectionGroup(db, 'questions'), where('originalQuestionId', '==', originalQuestionId));
-  const snapshot = await getDocs(q);
-
-  const examIds = Array.from(new Set(snapshot.docs.map(d => (d.data() as ExamQuestion).examId).filter(Boolean)));
-  if (examIds.length === 0) return [];
-
-  const exams = await Promise.all(examIds.map(examId => getExamById(examId)));
-  return exams
-    .filter((e): e is Exam => !!e)
-    .map(e => ({ examId: e.id, examName: e.name }));
+  const exams = await getExams();
+  const hits = await Promise.all(exams.map(async (exam) => {
+    const snap = await getDocs(query(
+      collection(db, 'exams', exam.id, 'questions'),
+      where('originalQuestionId', '==', originalQuestionId),
+      limit(1)
+    ));
+    return snap.empty ? null : { examId: exam.id, examName: exam.name };
+  }));
+  return hits.filter((h): h is { examId: string; examName: string } => !!h);
 }
 
 export async function saveQuestion(
