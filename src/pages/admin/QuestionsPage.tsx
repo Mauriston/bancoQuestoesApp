@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen, Plus, Search, Filter, Image as ImageIcon, Camera, Trash2, Edit, AlertCircle, X, Check, Upload, CheckCircle2, ChevronDown, FilePlus
 } from 'lucide-react';
-import { getQuestions, getAreas, getThemes, getGroups, createTheme, getReferences, saveQuestion, deleteQuestion, uploadQuestionImage, deleteQuestionImage, getQuestionAnswer, getQuestionAnswersByIds } from '../../services/firebaseService';
-import { Question, Area, Theme, Group, QuestionAnswer, Reference } from '../../types';
+import { getQuestions, getAreas, getThemes, deleteQuestion, getQuestionAnswersByIds } from '../../services/firebaseService';
+import { Question, Area, Theme, QuestionAnswer } from '../../types';
 import { SOURCE_EXAM_GROUPS, SourceExamGroup, getSourceExamOptionsForGroup, getSourceExamChipClass } from '../../constants';
 import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
-import { QuestionImage } from '../../components/QuestionImage';
+import { QuestionFormModal } from '../../components/QuestionFormModal';
 import { AddQuestionToExamModal } from '../../components/AddQuestionToExamModal';
 import { AddQuestionImageModal } from '../../components/AddQuestionImageModal';
 import { useHideOnScroll } from '../../hooks/useHideOnScroll';
@@ -66,44 +66,9 @@ export const QuestionsPage: React.FC = () => {
   // o modal completo de edição (ver AddQuestionImageModal).
   const [addingImageQuestion, setAddingImageQuestion] = useState<Question | null>(null);
 
-  // Edit/Create Modal state
+  // Modal de criar/editar questão (ver QuestionFormModal).
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingQId, setEditingQId] = useState<string | null>(null);
-
-  const [areaId, setAreaId] = useState('');
-  const [themeId, setThemeId] = useState('');
-  // Cadastro rápido de tema dentro do modal ("+ Adicionar tema").
-  const [addingTheme, setAddingTheme] = useState(false);
-  const [newThemeName, setNewThemeName] = useState('');
-  const [newThemeGroupId, setNewThemeGroupId] = useState('');
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [savingTheme, setSavingTheme] = useState(false);
-  const [themeError, setThemeError] = useState('');
-  // Temas do formulário do modal, dependentes da área escolhida ali dentro —
-  // mantidos separados de `themes` (que alimenta o filtro da listagem) para
-  // que escolher uma área no modal não altere o filtro da tela por trás dele.
-  const [modalThemes, setModalThemes] = useState<Theme[]>([]);
-  const [sourceExam, setSourceExam] = useState('SBOT');
-  const [statement, setStatement] = useState('');
-  const [altA, setAltA] = useState('');
-  const [altB, setAltB] = useState('');
-  const [altC, setAltC] = useState('');
-  const [altD, setAltD] = useState('');
-  const [correctAlt, setCorrectAlt] = useState<"A"|"B"|"C"|"D">('A');
-  const [comments, setComments] = useState('');
-  const [commentMediaUrl, setCommentMediaUrl] = useState('');
-  // Referência bibliográfica do gabarito (ver Reference/coleção `reference`)
-  // — '' = nenhuma. Lista carregada uma vez (coleção pequena, muda raro).
-  const [referenceId, setReferenceId] = useState('');
-  const [references, setReferences] = useState<Reference[]>([]);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  // Imagem que a questão tinha ao abrir o modal de edição — usado para saber
-  // se o admin removeu uma imagem existente (ver handleRemoveImage) e, nesse
-  // caso, apagar de fato o objeto no Storage ao salvar.
-  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
-  const [removingImage, setRemovingImage] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   const fetchQuestionsList = async () => {
     setLoading(true);
@@ -139,10 +104,6 @@ export const QuestionsPage: React.FC = () => {
   }, [selectedAreaId, selectedThemeIds, selectedSourceExams, searchQuery]);
 
   useEffect(() => {
-    getReferences().then(setReferences).catch(err => console.error("Erro ao carregar referências:", err));
-  }, []);
-
-  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(e.target as Node)) {
         setSourceDropdownOpen(false);
@@ -163,91 +124,13 @@ export const QuestionsPage: React.FC = () => {
     );
   };
 
-  const handleOpenCreateModal = async () => {
-    closeAddTheme();
-    const defaultAreaId = areas[0]?.id || '';
-    setEditingQId(null);
-    setAreaId(defaultAreaId);
-    setThemeId('');
-    setSourceExam('SBOT');
-    setStatement('');
-    setAltA('');
-    setAltB('');
-    setAltC('');
-    setAltD('');
-    setCorrectAlt('A');
-    setComments('');
-    setCommentMediaUrl('');
-    setReferenceId('');
-    setImageUrl(null);
-    setImageFile(null);
-    setOriginalImageUrl(null);
-    setModalThemes(defaultAreaId ? await getThemes(defaultAreaId) : []);
+  const handleOpenCreateModal = () => {
+    setEditingQuestion(null);
     setModalOpen(true);
   };
 
-  const closeAddTheme = () => {
-    setAddingTheme(false);
-    setNewThemeName('');
-    setNewThemeGroupId('');
-    setThemeError('');
-  };
-
-  const handleOpenAddTheme = () => {
-    setAddingTheme(true);
-    if (groups.length === 0) getGroups().then(setGroups).catch(err => console.error('Erro ao carregar grupos:', err));
-  };
-
-  const handleSaveNewTheme = async () => {
-    const name = newThemeName.trim();
-    if (!areaId || !name) return;
-    if (modalThemes.some(t => t.name.trim().toLowerCase() === name.toLowerCase())) {
-      setThemeError('Já existe um tema com esse nome nesta área.');
-      return;
-    }
-    setSavingTheme(true);
-    setThemeError('');
-    try {
-      const group = groups.find(g => g.id === newThemeGroupId);
-      const created = await createTheme({ areaId, name, groupId: group?.id, groupName: group?.name });
-      setModalThemes(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setThemes(prev => prev.some(t => t.id === created.id) || (selectedAreaId && selectedAreaId !== areaId) ? prev : [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setThemeId(created.id);
-      closeAddTheme();
-    } catch (err: any) {
-      setThemeError('Erro ao criar tema: ' + err.message);
-    } finally {
-      setSavingTheme(false);
-    }
-  };
-
-  const handleOpenEditModal = async (q: Question) => {
-    closeAddTheme();
-    setEditingQId(q.id);
-    setAreaId(q.areaId);
-    setThemeId(q.themeId);
-    setSourceExam(q.sourceExam);
-    setStatement(q.statement);
-    setAltA(q.alternatives.A);
-    setAltB(q.alternatives.B);
-    setAltC(q.alternatives.C);
-    setAltD(q.alternatives.D);
-    setImageUrl(q.imageUrl || null);
-    setImageFile(null);
-    setOriginalImageUrl(q.imageUrl || null);
-    setModalThemes(await getThemes(q.areaId));
-
-    // Fetch answer key
-    const ansKey = await getQuestionAnswer(q.id);
-    if (ansKey) {
-      setCorrectAlt(ansKey.correctAlternative);
-      setComments(ansKey.comments || '');
-      setCommentMediaUrl(ansKey.commentMediaUrl || '');
-      setReferenceId(ansKey.referenceId || '');
-    } else {
-      setReferenceId('');
-    }
-
+  const handleOpenEditModal = (q: Question) => {
+    setEditingQuestion(q);
     setModalOpen(true);
   };
 
@@ -258,58 +141,6 @@ export const QuestionsPage: React.FC = () => {
       await fetchQuestionsList();
     } catch (err) {
       alert("Erro ao excluir questão.");
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!areaId || !themeId || !statement) {
-      alert("Preencha todos os campos obrigatórios.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      let finalImageUrl = imageUrl;
-
-      // If a new image was picked, upload to Firebase Storage
-      if (imageFile) {
-        const qIdToUse = editingQId || 'q_' + Date.now();
-        finalImageUrl = await uploadQuestionImage(qIdToUse, imageFile);
-      } else if (editingQId && originalImageUrl && !imageUrl) {
-        // Imagem existente foi removida (botão "Remover imagem") e nenhuma
-        // nova foi escolhida — apaga de fato o objeto no Storage e limpa o
-        // campo, já que saveQuestion() com merge:true não removeria um
-        // campo simplesmente por vir undefined.
-        await deleteQuestionImage(editingQId, originalImageUrl);
-        finalImageUrl = null;
-      }
-
-      await saveQuestion(
-        {
-          id: editingQId || undefined,
-          areaId,
-          themeId,
-          sourceExam,
-          statement,
-          alternatives: { A: altA, B: altB, C: altC, D: altD },
-          imageUrl: finalImageUrl || undefined,
-          active: true
-        },
-        {
-          correctAlternative: correctAlt,
-          comments,
-          commentMediaUrl: commentMediaUrl || undefined,
-          referenceId: referenceId || undefined
-        }
-      );
-
-      setModalOpen(false);
-      await fetchQuestionsList();
-    } catch (err: any) {
-      alert("Erro ao salvar questão: " + err.message);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -551,243 +382,19 @@ export const QuestionsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Create/Edit */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-100/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative space-y-4">
-            
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 sticky top-0 bg-slate-900 z-10">
-              <h3 className="text-sm font-bold text-slate-100">
-                {editingQId ? 'Editar Questão' : 'Cadastrar Nova Questão'}
-              </h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-100">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4 text-xs">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-300 font-medium mb-1">Área *</label>
-                  <select
-                    value={areaId}
-                    onChange={(e) => {
-                      const newAreaId = e.target.value;
-                      setAreaId(newAreaId);
-                      setThemeId('');
-                      closeAddTheme();
-                      getThemes(newAreaId || undefined).then(res => setModalThemes(res));
-                    }}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
-                  >
-                    <option value="">Selecione a Área</option>
-                    {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-medium mb-1">Tema *</label>
-                  <select
-                    value={themeId}
-                    onChange={(e) => setThemeId(e.target.value)}
-                    required
-                    disabled={!areaId}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 disabled:opacity-50"
-                  >
-                    <option value="">{areaId ? 'Selecione o Tema' : 'Selecione a área primeiro'}</option>
-                    {modalThemes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                  {!addingTheme ? (
-                    <button
-                      type="button"
-                      disabled={!areaId}
-                      onClick={handleOpenAddTheme}
-                      className="mt-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      + Adicionar tema
-                    </button>
-                  ) : (
-                    <div className="mt-2 p-3 rounded-xl border border-slate-800 bg-slate-950 space-y-2">
-                      <input
-                        type="text"
-                        autoFocus
-                        placeholder="Nome do novo tema"
-                        value={newThemeName}
-                        onChange={(e) => setNewThemeName(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                      />
-                      <select
-                        value={newThemeGroupId}
-                        onChange={(e) => setNewThemeGroupId(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300"
-                      >
-                        <option value="">Grupo TEOT (opcional)</option>
-                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                      </select>
-                      {themeError && <p className="text-[11px] text-red-400">{themeError}</p>}
-                      <div className="flex items-center justify-end gap-3">
-                        <button type="button" onClick={closeAddTheme} className="text-[11px] font-semibold text-slate-400 hover:text-slate-200">
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={savingTheme || !newThemeName.trim()}
-                          onClick={handleSaveNewTheme}
-                          className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 disabled:opacity-40"
-                        >
-                          {savingTheme ? 'Salvando...' : 'Salvar tema'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Enunciado *</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Informe o enunciado completo da questão..."
-                  value={statement}
-                  onChange={(e) => setStatement(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                />
-              </div>
-
-              {/* Alternatives */}
-              <div className="space-y-2">
-                <label className="block text-slate-300 font-medium">Alternativas A, B, C e D *</label>
-                {(['A', 'B', 'C', 'D'] as const).map((altKey) => {
-                  const val = altKey === 'A' ? altA : altKey === 'B' ? altB : altKey === 'C' ? altC : altD;
-                  const setVal = altKey === 'A' ? setAltA : altKey === 'B' ? setAltB : altKey === 'C' ? setAltC : setAltD;
-
-                  return (
-                    <div key={altKey} className="flex items-center gap-2">
-                      <span className="w-6 font-bold text-teal-400">{altKey})</span>
-                      <input
-                        type="text"
-                        required
-                        value={val}
-                        onChange={(e) => setVal(e.target.value)}
-                        placeholder={`Texto da alternativa ${altKey}`}
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div>
-                  <label className="block text-slate-300 font-medium mb-1">Gabarito Correto *</label>
-                  <select
-                    value={correctAlt}
-                    onChange={(e) => setCorrectAlt(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-teal-400 font-bold"
-                  >
-                    <option value="A">Alternativa A</option>
-                    <option value="B">Alternativa B</option>
-                    <option value="C">Alternativa C</option>
-                    <option value="D">Alternativa D</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-medium mb-1">Prova de Origem</label>
-                  <input
-                    type="text"
-                    value={sourceExam}
-                    onChange={(e) => setSourceExam(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Imagem da Questão (Upload Firebase Storage)</label>
-                <div className="flex items-start gap-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-400"
-                  />
-                  {imageUrl && !imageFile && (
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl(null)}
-                      disabled={removingImage}
-                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 font-semibold disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Remover imagem
-                    </button>
-                  )}
-                </div>
-                {imageUrl && !imageFile && (
-                  <div className="mt-2">
-                    <QuestionImage src={imageUrl} alt="Imagem atual da questão" className="max-h-40 rounded-xl border border-slate-800" />
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Comentários do Gabarito</label>
-                <textarea
-                  rows={2}
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Referência Bibliográfica</label>
-                <select
-                  value={referenceId}
-                  onChange={(e) => setReferenceId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200"
-                >
-                  <option value="">Nenhuma</option>
-                  {references.map(r => <option key={r.id} value={r.id}>{r.referenceId}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Mídia do Comentário (URL de imagem ou vídeo do YouTube)</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={commentMediaUrl}
-                  onChange={(e) => setCommentMediaUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-md shadow-cyan-600/20"
-                >
-                  {submitting ? 'Salvando...' : 'Salvar Questão'}
-                </button>
-              </div>
-
-            </form>
-
-          </div>
-        </div>
+        <QuestionFormModal
+          key={editingQuestion?.id || 'new'}
+          question={editingQuestion}
+          areas={areas}
+          onClose={() => setModalOpen(false)}
+          onSaved={() => fetchQuestionsList()}
+          onThemeCreated={(created) => setThemes(prev =>
+            prev.some(t => t.id === created.id) || (selectedAreaId && selectedAreaId !== created.areaId)
+              ? prev
+              : [...prev, created].sort((x, y) => x.name.localeCompare(y.name))
+          )}
+        />
       )}
 
       {viewingQuestion && (

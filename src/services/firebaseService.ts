@@ -695,6 +695,25 @@ export async function updateExamContent(params: {
   }
 }
 
+// Atualiza a cópia congelada de uma questão dentro de UMA prova editável
+// (inativa e sem tentativas) com o conteúdo atual do banco — usado quando o
+// admin edita a questão pela visualização da prova, para que a edição valha
+// tanto no banco quanto nesta prova.
+export async function syncExamQuestionFromBank(examId: string, examQuestionId: string, q: Question): Promise<void> {
+  const [exam, attempts] = await Promise.all([getExamById(examId), getAttemptsForExam(examId)]);
+  if (!exam) throw new Error("Prova não encontrada.");
+  if (isExamActive(exam)) throw new Error("Só é possível editar provas inativas.");
+  if (attempts.length > 0) throw new Error("Esta prova já tem tentativas registradas e não pode mais ser editada.");
+
+  await updateDoc(doc(db, 'exams', examId, 'questions', examQuestionId), {
+    areaId: q.areaId,
+    themeId: q.themeId,
+    statement: q.statement,
+    alternatives: q.alternatives,
+    imageUrl: q.imageUrl || deleteField()
+  });
+}
+
 // Provas com edição habilitada: mesmo gate de updateExamContent() — inativas e
 // sem nenhuma tentativa registrada.
 export async function getEditableExams(): Promise<Exam[]> {
