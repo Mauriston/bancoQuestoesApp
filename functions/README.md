@@ -76,3 +76,10 @@ npm run build      # roda copy-shared.mjs (copia reportTemplate.ts/types.ts
 Nunca edite `functions/src/_shared/*` diretamente — é sobrescrito a cada
 build. Edite `../src/reportTemplate.ts` (fonte compartilhada com o
 frontend) ou `src/index.ts` (lógica específica da função).
+
+## PDF da prova (versão preceptor)
+
+- `generateExamPdf` (callable, só admin): gera `exam-pdfs/{examId}/prova.pdf` (capa verde "PRECEPTOR", distribuição por grupo/fonte/temas e questões com gabaritos e comentários, sem respostas de usuários), grava `pdfUrl/pdfFileName/pdfGeneratedAt` em `exams/{id}` e marca `editLocked: true` (a prova deixa de ser editável).
+- `onExamActivated`: ao ativar a prova (`active` false → true) gera o mesmo PDF automaticamente (sem travar a edição).
+- `onExamDeleted`: remove o PDF do Storage.
+- Qualquer edição de conteúdo (feita com a prova inativa) apaga `pdfUrl` etc.; um novo PDF é gerado na próxima ativação ou clique no botão.

@@ -472,6 +472,15 @@ export function isExamActive(exam: Exam | null | undefined): boolean {
   return !exam || exam.active !== false;
 }
 
+// Qualquer mudança de conteúdo invalida o PDF da prova salvo no Storage
+// (gerado por functions/ — generateExamPdf / onExamActivated); o arquivo
+// antigo é sobrescrito na próxima geração.
+const PDF_INVALIDATION = {
+  pdfUrl: deleteField(),
+  pdfFileName: deleteField(),
+  pdfGeneratedAt: deleteField()
+};
+
 export async function updateExamActiveStatus(examId: string, active: boolean): Promise<void> {
   await updateDoc(doc(db, 'exams', examId), { active, updatedAt: serverTimestamp() });
 }
@@ -631,6 +640,7 @@ export async function updateExamContent(params: {
   if (isExamActive(exam)) {
     throw new Error("Só é possível editar provas inativas.");
   }
+  if (exam.editLocked) throw new Error("O PDF desta prova já foi gerado e ela não pode mais ser editada.");
   if (existingAttempts.length > 0) {
     throw new Error("Esta prova já tem tentativas registradas e não pode mais ser editada.");
   }
@@ -690,7 +700,8 @@ export async function updateExamContent(params: {
   await queueSet(doc(db, 'exams', examId), removeUndefined({
     ...examData,
     questionCount: questions.length,
-    updatedAt: serverTimestamp()
+    updatedAt: serverTimestamp(),
+    ...PDF_INVALIDATION
   }), true);
 
   if (opCount > 0) {
@@ -706,8 +717,10 @@ export async function syncExamQuestionFromBank(examId: string, examQuestionId: s
   const [exam, attempts] = await Promise.all([getExamById(examId), getAttemptsForExam(examId)]);
   if (!exam) throw new Error("Prova não encontrada.");
   if (isExamActive(exam)) throw new Error("Só é possível editar provas inativas.");
+  if (exam.editLocked) throw new Error("O PDF desta prova já foi gerado e ela não pode mais ser editada.");
   if (attempts.length > 0) throw new Error("Esta prova já tem tentativas registradas e não pode mais ser editada.");
 
+  await updateDoc(doc(db, 'exams', examId), PDF_INVALIDATION);
   await updateDoc(doc(db, 'exams', examId, 'questions', examQuestionId), {
     areaId: q.areaId,
     themeId: q.themeId,
@@ -720,7 +733,7 @@ export async function syncExamQuestionFromBank(examId: string, examQuestionId: s
 // Provas com edição habilitada: mesmo gate de updateExamContent() — inativas e
 // sem nenhuma tentativa registrada.
 export async function getEditableExams(): Promise<Exam[]> {
-  const inactive = (await getExams()).filter(e => !isExamActive(e));
+  const inactive = (await getExams()).filter(e => !isExamActive(e) && !e.editLocked);
   const attemptsPerExam = await Promise.all(inactive.map(e => getAttemptsForExam(e.id)));
   return inactive.filter((_, i) => attemptsPerExam[i].length === 0);
 }
@@ -736,6 +749,7 @@ export async function addQuestionToExam(examId: string, q: Question): Promise<vo
 
   if (!exam) throw new Error("Prova não encontrada.");
   if (isExamActive(exam)) throw new Error("Só é possível editar provas inativas.");
+  if (exam.editLocked) throw new Error("O PDF desta prova já foi gerado e ela não pode mais ser editada.");
   if (attempts.length > 0) throw new Error("Esta prova já tem tentativas registradas e não pode mais ser editada.");
   if (existing.some(eq => eq.originalQuestionId === q.id)) throw new Error("Esta questão já faz parte da prova.");
 
@@ -754,7 +768,7 @@ export async function addQuestionToExam(examId: string, q: Question): Promise<vo
     alternatives: q.alternatives,
     imageUrl: q.imageUrl || undefined
   }));
-  batch.set(doc(db, 'exams', examId), { questionCount: existing.length + 1, updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(doc(db, 'exams', examId), { questionCount: existing.length + 1, updatedAt: serverTimestamp(), ...PDF_INVALIDATION }, { merge: true });
   await batch.commit();
 }
 

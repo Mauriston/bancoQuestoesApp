@@ -148,6 +148,14 @@ export interface Exam {
   // Libera a revisão questão a questão no relatório pós-prova. A nota e as
   // análises de desempenho são sempre exibidas, independentemente disto.
   allowReviewAfterFinish?: boolean;
+  // Travada para edição depois que o admin gerou o PDF da prova (versão
+  // preceptor) — o PDF congela o conteúdo. Ver generateExamPdf em functions/.
+  editLocked?: boolean;
+  // PDF da prova (versão admin) salvo no Storage. Apagado automaticamente
+  // quando o conteúdo da prova muda (ver firebaseService).
+  pdfUrl?: string;
+  pdfFileName?: string;
+  pdfGeneratedAt?: any;
   createdBy: string;
   createdAt?: any;
   updatedAt?: any;
