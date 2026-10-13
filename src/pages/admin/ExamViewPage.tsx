@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
+import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus } from 'lucide-react';
+import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, syncExamQuestionFromBank, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
 import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { QuestionFormModal, SavedAnswerFields } from '../../components/QuestionFormModal';
 import { QuestionImage } from '../../components/QuestionImage';
 import { CommentMedia } from '../../components/CommentMedia';
 import { ReferenceSource } from '../../components/ReferenceSource';
@@ -19,26 +19,8 @@ interface SubmittedRow {
 
 const PIE_COLORS = ['#2C3A47', '#2F9C8C', '#2F9C8C', '#079551', '#a855f7', '#f472b6', '#f97316', '#10b981', '#6366f1', '#C7362F'];
 
-// Tabelas "Áreas da Prova" e "Temas da Prova" paginadas, 5 linhas por página.
+// Tabelas "Áreas da Prova", "Temas da Prova" e "Distribuição por fonte" paginadas, 5 linhas por página.
 const ROWS_PER_PAGE = 5;
-
-// Marcador (nome + quantidade + %) fora de cada fatia do gráfico de
-// distribuição, ligado por uma linha — mesmo estilo dos rótulos usados em
-// gráficos de pizza de referência do produto.
-const RADIAN = Math.PI / 180;
-const renderPieSliceLabel = (props: any) => {
-  const { cx, cy, midAngle, outerRadius, percent, name, value } = props;
-  const radius = outerRadius + 22;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const anchor = x > cx ? 'start' : 'end';
-  return (
-    <text x={x} y={y} textAnchor={anchor} dominantBaseline="central" fill="#2C3A47" fontSize={11}>
-      <tspan x={x} dy="-0.35em" fontWeight={700}>{name}: {value}</tspan>
-      <tspan x={x} dy="1.3em" fontWeight={600} fillOpacity={0.75}>{(percent * 100).toFixed(1)}%</tspan>
-    </text>
-  );
-};
 
 export const ExamViewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -60,6 +42,9 @@ export const ExamViewPage: React.FC = () => {
   // Se a prova tem alguma tentativa registrada — não muda depois do
   // carregamento inicial (uma vez que existe uma tentativa, ela nunca some).
   const [hasAttempts, setHasAttempts] = useState(false);
+  // Questão (do banco) aberta no modal de edição — vale para o banco e para
+  // esta prova (ver handleQuestionEdited).
+  const [editingQuestion, setEditingQuestion] = useState<{ examQuestionId: string; question: Question } | null>(null);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   // Tabela "Respostas Enviadas" — uma linha completada por tentativa
@@ -74,6 +59,7 @@ export const ExamViewPage: React.FC = () => {
   const [selectedNewUserIds, setSelectedNewUserIds] = useState<string[]>([]);
   const [addingCandidates, setAddingCandidates] = useState(false);
   const [examAreas, setExamAreas] = useState<Area[]>([]);
+  const [allAreasList, setAllAreasList] = useState<Area[]>([]);
   // Nome de cada tema/área, usado só para rotular as tabelas e o gráfico de
   // distribuição da prova (ver areaDistribution/themeDistribution abaixo).
   const [themeNameById, setThemeNameById] = useState<Record<string, string>>({});
@@ -84,6 +70,9 @@ export const ExamViewPage: React.FC = () => {
   // topo da hierarquia Área → Tema).
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
+  // Filtro por fonte (tabela "Distribuição por fonte") — restringe só a lista
+  // de questões; área e tema continuam restringindo a própria tabela de fontes.
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   // Mesmo gate usado em CreateExamPage/updateExamContent: só é possível
   // mexer nas questões de uma prova inativa e sem tentativas registradas.
   // Derivado a cada render (em vez de um estado próprio) para não ficar
@@ -130,42 +119,48 @@ export const ExamViewPage: React.FC = () => {
     selectedAreaId ? themeDistributionAll.filter(t => t.areaId === selectedAreaId) : themeDistributionAll
   ), [themeDistributionAll, selectedAreaId]);
 
-  // Gráfico: além do filtro de área acima, restrito ao tema selecionado (se
-  // houver) — clicar num tema na 2ª tabela "zooma" o gráfico nele.
-  const pieData = useMemo(() => (
-    selectedThemeId ? themeDistribution.filter(t => t.themeId === selectedThemeId) : themeDistribution
-  ), [themeDistribution, selectedThemeId]);
-
-  // Gráfico: só os 5 maiores temas viram fatia própria — o resto é somado
-  // numa fatia "Outros" para o gráfico não ficar poluído com muitas fatias
-  // finas (pieData já vem ordenado do maior para o menor).
-  const chartData = useMemo(() => {
-    const top = pieData.slice(0, 5);
-    const rest = pieData.slice(5);
-    if (rest.length === 0) return top;
-    const othersCount = rest.reduce((sum, t) => sum + t.count, 0);
-    return [...top, { themeId: '__others__', areaId: '', name: 'Outros', count: othersCount }];
-  }, [pieData]);
-  const chartTotal = useMemo(() => chartData.reduce((sum, t) => sum + t.count, 0), [chartData]);
+  // 3ª tabela "Distribuição por fonte": fontes das questões restritas pelos
+  // filtros de área e tema (se houver). `sourceExam` vem do banco
+  // (sourceExamById), não da cópia congelada da prova.
+  const sourceDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    questions.forEach(q => {
+      if (selectedAreaId && q.areaId !== selectedAreaId) return;
+      if (selectedThemeId && q.themeId !== selectedThemeId) return;
+      const source = sourceExamById[q.originalQuestionId] || 'Sem fonte';
+      counts[source] = (counts[source] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
+  }, [questions, sourceExamById, selectedAreaId, selectedThemeId]);
 
   // Questões exibidas abaixo, restritas pelos mesmos filtros cruzados.
   const filteredQuestions = useMemo(() => questions.filter(q => (
     (!selectedAreaId || q.areaId === selectedAreaId) &&
-    (!selectedThemeId || q.themeId === selectedThemeId)
-  )), [questions, selectedAreaId, selectedThemeId]);
+    (!selectedThemeId || q.themeId === selectedThemeId) &&
+    (!selectedSource || (sourceExamById[q.originalQuestionId] || 'Sem fonte') === selectedSource)
+  )), [questions, selectedAreaId, selectedThemeId, selectedSource, sourceExamById]);
 
   const handleAreaClick = (areaId: string) => {
     setSelectedAreaId(prev => (prev === areaId ? null : areaId));
     setSelectedThemeId(null);
+    setSelectedSource(null);
   };
 
   const handleThemeClick = (themeId: string) => {
     setSelectedThemeId(prev => (prev === themeId ? null : themeId));
+    setSelectedSource(null);
+  };
+
+  const handleSourceClick = (source: string) => {
+    setSelectedSource(prev => (prev === source ? null : source));
   };
 
   const clearFilters = () => {
     setSelectedAreaId(null);
     setSelectedThemeId(null);
+    setSelectedSource(null);
   };
 
   const [areaTablePage, setAreaTablePage] = useState(1);
@@ -182,6 +177,13 @@ export const ExamViewPage: React.FC = () => {
     return themeDistribution.slice(start, start + ROWS_PER_PAGE);
   }, [themeDistribution, themeTablePage]);
 
+  const [sourceTablePage, setSourceTablePage] = useState(1);
+  const sourceTableTotalPages = Math.max(1, Math.ceil(sourceDistribution.length / ROWS_PER_PAGE));
+  const paginatedSources = useMemo(() => {
+    const start = (sourceTablePage - 1) * ROWS_PER_PAGE;
+    return sourceDistribution.slice(start, start + ROWS_PER_PAGE);
+  }, [sourceDistribution, sourceTablePage]);
+
   // Volta para a primeira página sempre que a prova carregada mudar (troca
   // de examId) ou a distribuição encolher a ponto da página atual não
   // existir mais; a tabela de temas também volta ao trocar o filtro de área.
@@ -192,6 +194,12 @@ export const ExamViewPage: React.FC = () => {
   useEffect(() => {
     setThemeTablePage(1);
   }, [selectedAreaId]);
+  useEffect(() => {
+    setSourceTablePage(1);
+  }, [selectedAreaId, selectedThemeId, examId]);
+  useEffect(() => {
+    if (sourceTablePage > sourceTableTotalPages) setSourceTablePage(sourceTableTotalPages);
+  }, [sourceTablePage, sourceTableTotalPages]);
   useEffect(() => {
     if (areaTablePage > areaTableTotalPages) setAreaTablePage(areaTableTotalPages);
   }, [areaTablePage, areaTableTotalPages]);
@@ -228,6 +236,7 @@ export const ExamViewPage: React.FC = () => {
         // enviadas), na mesma ordem de getAreas() (alfabética).
         const areaIdsInExam = new Set(examQs.map(q => q.areaId));
         setExamAreas(allAreas.filter(a => areaIdsInExam.has(a.id)));
+        setAllAreasList(allAreas);
 
         const themeNames: Record<string, string> = {};
         allThemes.forEach(t => { themeNames[t.id] = t.name; });
@@ -343,6 +352,28 @@ export const ExamViewPage: React.FC = () => {
     } finally {
       setToggling(false);
     }
+  };
+
+  // Depois que o modal grava a questão no banco, replica a edição na cópia
+  // congelada desta prova e atualiza o que a tela mostra.
+  const handleQuestionEdited = async (saved: Question, answer: SavedAnswerFields) => {
+    if (!exam || !editingQuestion) return;
+    await syncExamQuestionFromBank(exam.id, editingQuestion.examQuestionId, saved);
+
+    const updatedQuestions = questions.map(q => q.id === editingQuestion.examQuestionId
+      ? { ...q, areaId: saved.areaId, themeId: saved.themeId, statement: saved.statement, alternatives: saved.alternatives, imageUrl: saved.imageUrl }
+      : q);
+    setQuestions(updatedQuestions);
+    setOriginalQuestionsById(prev => ({ ...prev, [saved.id]: saved }));
+    setSourceExamById(prev => ({ ...prev, [saved.id]: saved.sourceExam }));
+    setAnswerKeys(prev => ({ ...prev, [saved.id]: { ...(prev[saved.id] || { questionId: saved.id }), ...answer } as QuestionAnswer }));
+    // Área/tema podem ter mudado: mantém os rótulos e colunas coerentes.
+    const [allAreas, allThemes] = await Promise.all([getAreas(), getThemes()]);
+    setAreaNameById(Object.fromEntries(allAreas.map(a => [a.id, a.name])));
+    setThemeNameById(Object.fromEntries(allThemes.map(t => [t.id, t.name])));
+    setAllAreasList(allAreas);
+    const areaIdsInExam = new Set(updatedQuestions.map(q => q.areaId));
+    setExamAreas(allAreas.filter(a => areaIdsInExam.has(a.id)));
   };
 
   // Remove uma questão desta prova (não do banco global — apenas desanexa da
@@ -542,7 +573,7 @@ export const ExamViewPage: React.FC = () => {
 
       {areaDistribution.length > 0 && (
         <div className="space-y-3">
-          {(selectedAreaId || selectedThemeId) && (
+          {(selectedAreaId || selectedThemeId || selectedSource) && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span>Filtrando por:</span>
               {selectedAreaId && (
@@ -553,6 +584,11 @@ export const ExamViewPage: React.FC = () => {
               {selectedThemeId && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 font-semibold">
                   {themeNameById[selectedThemeId] || 'Tema'}
+                </span>
+              )}
+              {selectedSource && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 font-semibold">
+                  {selectedSource}
                 </span>
               )}
               <button
@@ -695,40 +731,67 @@ export const ExamViewPage: React.FC = () => {
               )}
             </section>
 
-            {/* Gráfico — reflete os filtros de área e tema selecionados. 3/7 da largura no desktop. */}
+            {/* Distribuição por fonte — filtrada por área/tema selecionados; clicar numa linha filtra as questões. 3/7 da largura no desktop. */}
             <section className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
-                Distribuição por Tema
+                Distribuição por fonte
               </h2>
-              <div className="relative h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 24, right: 64, bottom: 24, left: 64 }}>
-                    <Pie
-                      data={chartData}
-                      dataKey="count"
-                      nameKey="name"
-                      innerRadius="45%"
-                      outerRadius="72%"
-                      paddingAngle={2}
-                      label={renderPieSliceLabel}
-                      labelLine={{ stroke: '#6B7680', strokeWidth: 1 }}
-                      isAnimationActive
-                    >
-                      {chartData.map((t, i) => (
-                        <Cell key={t.themeId} fill={t.themeId === '__others__' ? '#6B7680' : PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#ffffff', borderColor: '#F2F2F5', borderRadius: '12px', fontSize: '12px' }}
-                      formatter={(value: number, name: string) => [`${value} questões`, name]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-100">{chartTotal}</span>
-                </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="p-3">Fonte</th>
+                      <th className="p-3">Questões</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {paginatedSources.map((s) => {
+                      const idx = sourceDistribution.indexOf(s);
+                      const isSelected = selectedSource === s.source;
+                      return (
+                        <tr
+                          key={s.source}
+                          onClick={() => handleSourceClick(s.source)}
+                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-800/50'}`}
+                        >
+                          <td className="p-3 font-semibold text-slate-100 flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                            <span className="truncate">{s.source}</span>
+                          </td>
+                          <td className="p-3 font-bold text-slate-300">{s.count}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
+
+              {sourceTableTotalPages > 1 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSourceTablePage(p => Math.max(1, p - 1))}
+                    disabled={sourceTablePage === 1}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    Anterior
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Página <strong className="text-slate-200">{sourceTablePage}</strong> de {sourceTableTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSourceTablePage(p => Math.min(sourceTableTotalPages, p + 1))}
+                    disabled={sourceTablePage === sourceTableTotalPages}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Próxima
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </section>
           </div>
         </div>
@@ -775,7 +838,7 @@ export const ExamViewPage: React.FC = () => {
       )}
 
       <section className="space-y-6">
-        {(selectedAreaId || selectedThemeId) && filteredQuestions.length === 0 && (
+        {(selectedAreaId || selectedThemeId || selectedSource) && filteredQuestions.length === 0 && (
           <p className="text-center text-xs text-slate-500 italic py-4">Nenhuma questão para este filtro.</p>
         )}
         {filteredQuestions.map((q, idx) => {
@@ -809,6 +872,16 @@ export const ExamViewPage: React.FC = () => {
                         <Users className="w-3 h-3" />({qStats!.totalAnswered})
                       </span>
                     </span>
+                  )}
+
+                  {canEdit && originalQuestionsById[q.originalQuestionId] && (
+                    <button
+                      onClick={() => setEditingQuestion({ examQuestionId: q.id, question: originalQuestionsById[q.originalQuestionId] })}
+                      title="Editar questão (banco de questões e esta prova)"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                   )}
 
                   {canEdit && (
@@ -887,6 +960,16 @@ export const ExamViewPage: React.FC = () => {
           );
         })}
       </section>
+
+      {editingQuestion && (
+        <QuestionFormModal
+          key={editingQuestion.question.id}
+          question={editingQuestion.question}
+          areas={allAreasList}
+          onClose={() => setEditingQuestion(null)}
+          onSaved={handleQuestionEdited}
+        />
+      )}
     </div>
   );
 };
