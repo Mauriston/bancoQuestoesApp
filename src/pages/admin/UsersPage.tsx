@@ -4,7 +4,7 @@ import {
   Users, UserPlus, Search, UserCheck, UserX, AlertCircle, X, Trash2
 } from 'lucide-react';
 import { getUsers, saveUser, updateUserActiveStatus, updateUserRole, deleteUserAccount } from '../../services/firebaseService';
-import { createNewUserWithAuth } from '../../services/authService';
+import { createNewUserWithAuth, INITIAL_PASSWORD } from '../../services/authService';
 import { AppUser } from '../../types';
 import { Avatar } from '../../components/Avatar';
 
@@ -20,7 +20,6 @@ export const UsersPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'user' | 'admin' | 'reader'>('user');
-  const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -81,12 +80,11 @@ export const UsersPage: React.FC = () => {
         throw new Error("Por favor, informe um endereço de e-mail válido.");
       }
 
-      await createNewUserWithAuth(name, email, role, password);
+      await createNewUserWithAuth(name, email, role, INITIAL_PASSWORD);
 
       setModalOpen(false);
       setName('');
       setEmail('');
-      setPassword('');
       setRole('user');
       await fetchUsers();
     } catch (err: any) {
@@ -292,22 +290,12 @@ export const UsersPage: React.FC = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  {role === 'admin' ? 'Senha do Administrador (opcional)' : 'Senha de Acesso'}
-                </label>
-                <input
-                  type="password"
-                  required={role !== 'admin'}
-                  placeholder="Mínimo 6 caracteres (ex: 123456)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
-                />
+              <div className="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2.5">
+                <p className="text-[11px] text-slate-300">
+                  Senha inicial: <strong className="font-mono text-slate-100">{INITIAL_PASSWORD}</strong>
+                </p>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  {role === 'admin'
-                    ? 'Se informada, cria conta segura no Firebase Auth para login com senha.'
-                    : 'O usuário fará login na página inicial com este e-mail e esta senha.'}
+                  O usuário faz login na página inicial com este e-mail e esta senha e será lembrado de trocá-la.
                 </p>
               </div>
 
