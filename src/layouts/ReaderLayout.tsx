@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { BookOpen, FileCheck, MessageSquare, Menu, X, Home } from 'lucide-react';
-import { InitialPasswordDialog } from '../components/InitialPasswordDialog';
+import { StartupDialogs } from '../components/StartupDialogs';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { AvatarAccountMenu } from '../components/AvatarAccountMenu';
@@ -155,7 +155,7 @@ export const ReaderLayout: React.FC = () => {
         left={{ path: '/leitor/questions', icon: BookOpen, label: 'Questões' }}
         right={{ path: '/leitor/exams', icon: FileCheck, label: 'Provas' }}
       />
-      <InitialPasswordDialog settingsPath="/leitor/settings" />
+      <StartupDialogs settingsPath="/leitor/settings" />
     </div>
   );
 };

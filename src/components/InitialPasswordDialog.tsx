@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 // Lembrete exibido ao abrir o app enquanto o usuário (comum ou leitor) ainda
 // usa a senha inicial. "Sim" leva ao Perfil para trocar a senha; "Mais tarde"
 // só fecha (volta a aparecer na próxima abertura do app).
-export const InitialPasswordDialog: React.FC<{ settingsPath: string }> = ({ settingsPath }) => {
+export const InitialPasswordDialog: React.FC<{ settingsPath: string; onClose?: () => void }> = ({ settingsPath, onClose }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
@@ -28,14 +28,14 @@ export const InitialPasswordDialog: React.FC<{ settingsPath: string }> = ({ sett
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setDismissed(true)}
+            onClick={() => { setDismissed(true); onClose?.(); }}
             className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
           >
             Mais tarde
           </button>
           <button
             type="button"
-            onClick={() => { setDismissed(true); navigate(settingsPath); }}
+            onClick={() => { setDismissed(true); onClose?.(); navigate(settingsPath); }}
             className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 transition-colors"
           >
             Sim
