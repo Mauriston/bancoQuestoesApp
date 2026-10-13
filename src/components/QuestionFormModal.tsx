@@ -366,7 +366,7 @@ export const QuestionFormModal: React.FC<QuestionFormModalProps> = ({ question, 
               </div>
               {imageUrl && !imageFile && (
                 <div className="mt-2">
-                  <QuestionImage src={imageUrl} alt="Imagem atual da questão" className="max-h-40 rounded-xl border border-slate-800" />
+                  <QuestionImage src={imageUrl} alt="Imagem atual da questão" className="!my-0" imageClassName="max-h-40" />
                 </div>
               )}
             </div>

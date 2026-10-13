@@ -9,13 +9,17 @@ interface QuestionImageProps {
   alt?: string;
   allowZoom?: boolean;
   className?: string;
+  // Classes de altura máxima da <img> (className vai para o invólucro, que não
+  // limita a altura da imagem). Padrão: tamanho usado nas telas de prova.
+  imageClassName?: string;
 }
 
 export const QuestionImage: React.FC<QuestionImageProps> = ({
   src,
   alt = 'Imagem da questão',
   allowZoom = true,
-  className = ''
+  className = '',
+  imageClassName = 'max-h-80 lg:max-h-[28rem]'
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -72,7 +76,7 @@ export const QuestionImage: React.FC<QuestionImageProps> = ({
             src={formattedSrc}
             alt={alt}
             onError={() => setHasError(true)}
-            className="max-h-80 lg:max-h-[28rem] w-auto object-contain rounded-xl mx-auto"
+            className={`${imageClassName} w-auto object-contain rounded-xl mx-auto`}
           />
           {allowZoom && (
             <div className="absolute inset-0 bg-slate-100/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-white text-xs gap-1.5 font-semibold">
