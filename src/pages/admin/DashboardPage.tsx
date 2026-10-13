@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Users, FileCheck, Award, ClipboardCheck, Download, TrendingUp, Trophy, X
+  Users, FileCheck, Award, ClipboardCheck, Download, TrendingUp, Trophy
 } from 'lucide-react';
 import {
   AreaChart, Area as RechartsArea, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
@@ -8,8 +8,9 @@ import {
 } from 'recharts';
 import { getActiveUsers, getUsers, getExams, getAreas, getGroups, getThemes, subscribeAllAttempts, subscribeAllUserStats } from '../../services/firebaseService';
 import { AppUser, Exam, Attempt, Area, Group, UserStats, Theme } from '../../types';
-import { exportToCSV, scoreColorClass, scoreColorHex } from '../../utils/helpers';
+import { exportToCSV, scoreColorHex } from '../../utils/helpers';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
+import { ExamPerformanceCard } from '../../components/ExamPerformanceCard';
 
 export const DashboardPage: React.FC = () => {
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
@@ -21,8 +22,6 @@ export const DashboardPage: React.FC = () => {
   const [userStatsList, setUserStatsList] = useState<UserStats[]>([]);
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  // Usuário selecionado no ranking (Gráfico 1) — filtra os 2 gráficos abaixo.
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Dados de referência (usuários, provas, áreas/temas) mudam raramente
   // enquanto o Dashboard está aberto — busca única. Tentativas e estatísticas
@@ -55,9 +54,9 @@ export const DashboardPage: React.FC = () => {
     loadReferenceData();
   }, []);
 
-  // Tentativas e estatísticas de desempenho ao vivo — os dois gráficos e a
-  // tabela de últimas tentativas atualizam sozinhos, sem precisar recarregar
-  // a página, assim que um residente termina uma prova.
+  // Tentativas e estatísticas de desempenho ao vivo — os gráficos e cards de
+  // desempenho atualizam sozinhos, sem precisar recarregar a página, assim
+  // que um residente termina uma prova.
   useEffect(() => {
     setLoading(true);
     let attemptsLoaded = false;
@@ -95,13 +94,11 @@ export const DashboardPage: React.FC = () => {
       }));
   }, [userStatsList, userNameById]);
 
-  const selectedUserName = selectedUserId ? (userNameById[selectedUserId] || 'Usuário') : null;
-
   // Evolução (Gráfico 2): desempenho médio por prova, em ordem cronológica,
   // recalculado a partir das tentativas concluídas (de todos os usuários, ou
   // só do usuário selecionado no ranking).
   const evolutionData = useMemo(() => {
-    const completed = attempts.filter(a => a.status === 'completed' && (!selectedUserId || a.userId === selectedUserId));
+    const completed = attempts.filter(a => a.status === 'completed');
     const byExam: Record<string, { name: string; sum: number; count: number; earliest: number }> = {};
     completed.forEach(a => {
       const ts = a.completedAt && typeof a.completedAt === 'object' && 'seconds' in a.completedAt ? a.completedAt.seconds : 0;
@@ -115,15 +112,13 @@ export const DashboardPage: React.FC = () => {
     return Object.values(byExam)
       .sort((a, b) => a.earliest - b.earliest)
       .map(e => ({ name: e.name, score: Math.round(e.sum / e.count) }));
-  }, [attempts, selectedUserId]);
+  }, [attempts]);
 
   // Agregado de solved/correct por tema (todos os usuários, ou só o
   // selecionado no ranking) — insumo comum dos dois gráficos por área e por
   // grupo abaixo.
   const themeAgg = useMemo(() => {
-    const sourceStats = selectedUserId
-      ? userStatsList.filter(s => s.userId === selectedUserId)
-      : userStatsList;
+    const sourceStats = userStatsList;
 
     const agg: Record<string, { solved: number; correct: number }> = {};
     sourceStats.forEach(s => {
@@ -134,7 +129,7 @@ export const DashboardPage: React.FC = () => {
       });
     });
     return agg;
-  }, [userStatsList, selectedUserId]);
+  }, [userStatsList]);
 
   // Desempenho médio por Área (Gráfico 3) — 1 barra por área, sem
   // subdivisão (a Área é hoje uma unidade "achatada": os temas de uma mesma
@@ -227,32 +222,25 @@ export const DashboardPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Gráfico 1: Ranking geral — clicar numa barra filtra os 2 gráficos abaixo */}
+      {/* Gráfico 1: Ranking geral */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <Trophy className="w-4 h-4 text-cyan-500" />
             Ranking Geral de Desempenho
           </h2>
-          {selectedUserId && (
-            <button
-              onClick={() => setSelectedUserId(null)}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 rounded-lg"
-            >
-              <X className="w-3 h-3" />
-              Filtrando por: {selectedUserName} — limpar
-            </button>
-          )}
         </div>
-        <p className="text-[11px] text-slate-400">Clique em um usuário para filtrar os gráficos de evolução e desempenho por área abaixo.</p>
-        <RankingChart data={rankingData} selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} />
+        <RankingChart data={rankingData} />
       </div>
+
+      {/* Desempenho de cada usuário em uma prova escolhida (autocomplete) */}
+      <ExamPerformanceCard exams={exams} attempts={attempts} userNameById={userNameById} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Gráfico 2: Evolução do desempenho médio ao longo das provas */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
           <h2 className="text-sm font-bold text-slate-100">
-            Evolução do Desempenho {selectedUserName ? `— ${selectedUserName}` : '(Média Geral)'}
+            Evolução do Desempenho (Média Geral)
           </h2>
           {evolutionData.length === 0 ? (
             <p className="text-xs text-slate-500 italic py-6 text-center">Sem provas concluídas suficientes ainda.</p>
@@ -283,7 +271,7 @@ export const DashboardPage: React.FC = () => {
             de filtro de questões no banco/provas; aqui é só a estatística. */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
           <h2 className="text-sm font-bold text-slate-100">
-            Desempenho por Área {selectedUserName ? `— ${selectedUserName}` : '(Média Geral)'}
+            Desempenho por Área (Média Geral)
           </h2>
           {areaChartData.length === 0 ? (
             <p className="text-xs text-slate-500 italic py-6 text-center">Sem questões respondidas suficientes ainda.</p>
@@ -314,7 +302,7 @@ export const DashboardPage: React.FC = () => {
           estatística de desempenho, nunca como filtro de questões. */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3">
         <h2 className="text-sm font-bold text-slate-100">
-          Desempenho por Grupo (TEOT) {selectedUserName ? `— ${selectedUserName}` : '(Média Geral)'}
+          Desempenho por Grupo (TEOT) (Média Geral)
         </h2>
         {groupChartData.length === 0 ? (
           <p className="text-xs text-slate-500 italic py-6 text-center">Sem questões respondidas suficientes ainda.</p>
@@ -388,44 +376,6 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Recent Attempts Log Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <h2 className="text-sm font-bold text-slate-100 flex items-center justify-between">
-          <span>Últimas Tentativas Concluídas ({completedAttempts.length})</span>
-        </h2>
-
-        {completedAttempts.length === 0 ? (
-          <p className="text-xs text-slate-500 italic py-4">Nenhuma tentativa concluída até o momento.</p>
-        ) : (
-          <div className="overflow-x-auto -mx-6 px-6">
-            <table className="w-full text-left text-xs text-slate-600 border-separate border-spacing-0">
-              <thead className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">
-                <tr>
-                  <th className="p-3 border-b-2 border-slate-800">Prova</th>
-                  <th className="p-3 border-b-2 border-slate-800">Usuário</th>
-                  <th className="p-3 border-b-2 border-slate-800">Acertos</th>
-                  <th className="p-3 border-b-2 border-slate-800">Aproveitamento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completedAttempts.slice(0, 10).map((att, i) => (
-                  <tr key={att.id} className={`hover:bg-cyan-500/5 transition-colors ${i % 2 === 1 ? 'bg-slate-950/60' : ''}`}>
-                    <td className="p-3 font-semibold text-slate-100 border-b border-slate-800/70">{att.examName || 'Simulado'}</td>
-                    <td className="p-3 text-slate-500 border-b border-slate-800/70">{att.userName || userNameById[att.userId] || 'Usuário removido'}</td>
-                    <td className="p-3 font-bold text-teal-500 border-b border-slate-800/70">{att.correctAnswers} / {att.totalQuestions}</td>
-                    <td className="p-3 border-b border-slate-800/70">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[11px] bg-current/10 ${scoreColorClass(att.scorePercentage || 0)}`}>
-                        {att.scorePercentage}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
     </div>

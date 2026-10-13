@@ -10,15 +10,13 @@ export interface RankingEntry {
 
 interface RankingChartProps {
   data: RankingEntry[];
-  selectedUserId?: string | null;
-  onSelectUser?: (userId: string | null) => void;
   height?: number;
 }
 
 // Ranking geral (barras horizontais, ordem decrescente de desempenho) —
-// reutilizado no Dashboard admin (com drill-down via onSelectUser) e na
-// página de Desempenho do usuário (somente leitura, sem onSelectUser).
-export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId, onSelectUser, height }) => {
+// reutilizado no Dashboard admin e na página de Desempenho do usuário
+// (ambos somente leitura).
+export const RankingChart: React.FC<RankingChartProps> = ({ data, height }) => {
   const sorted = [...data].sort((a, b) => b.score - a.score);
   // Linha mais alta por usuário (antes 32px) para acomodar barras mais
   // grossas e o rótulo de nome maior, tanto no mobile quanto no desktop.
@@ -44,18 +42,9 @@ export const RankingChart: React.FC<RankingChartProps> = ({ data, selectedUserId
           contentStyle={{ background: '#23303B', border: '1px solid #2C3A47', borderRadius: 12, fontSize: 12 }}
           labelStyle={{ color: '#D8DBDD' }}
         />
-        <Bar
-          dataKey="score"
-          radius={[0, 6, 6, 0]}
-          cursor={onSelectUser ? 'pointer' : 'default'}
-          onClick={onSelectUser ? (entry: any) => onSelectUser(selectedUserId === entry.userId ? null : entry.userId) : undefined}
-        >
+        <Bar dataKey="score" radius={[0, 6, 6, 0]}>
           {sorted.map(entry => (
-            <Cell
-              key={entry.userId}
-              fill={scoreColorHex(entry.score)}
-              opacity={!selectedUserId || selectedUserId === entry.userId ? 1 : 0.35}
-            />
+            <Cell key={entry.userId} fill={scoreColorHex(entry.score)} />
           ))}
           <LabelList
             dataKey="score"
