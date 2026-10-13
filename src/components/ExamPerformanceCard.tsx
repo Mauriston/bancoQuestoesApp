@@ -19,9 +19,9 @@ const attemptSeconds = (a: Attempt): number => {
 };
 
 // Card "Desempenho por Prova": barras horizontais por usuário (como o
-// ranking geral) para UMA prova escolhida num autocomplete. A lista de
-// usuários e a ordem das barras são fixas entre provas, para que a troca de
-// seleção anime o comprimento de cada barra em vez de recriar o gráfico.
+// ranking geral) para UMA prova escolhida num autocomplete, ordenados do
+// maior para o menor desempenho. A lista de usuários é a mesma entre provas,
+// então a troca de seleção anima as barras em vez de recriar o gráfico.
 export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams, attempts, userNameById }) => {
   const completed = useMemo(() => attempts.filter(a => a.status === 'completed'), [attempts]);
 
@@ -67,8 +67,8 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
     return sortedExams.filter(e => !term || e.name.toLowerCase().includes(term));
   }, [sortedExams, search]);
 
-  // Um ponto por usuário que já concluiu alguma prova (ordem alfabética,
-  // fixa). O valor é o aproveitamento na tentativa concluída mais recente da
+  // Um ponto por usuário que já concluiu alguma prova, em ordem decrescente de
+  // desempenho na prova escolhida. O valor é o aproveitamento na tentativa concluída mais recente da
   // prova escolhida; sem tentativa nela, 0 com rótulo "—".
   const chartData = useMemo(() => {
     const names: Record<string, string> = {};
@@ -85,7 +85,8 @@ export const ExamPerformanceCard: React.FC<ExamPerformanceCardProps> = ({ exams,
         const att = latestByUser[userId];
         return { userId, name, score: att ? (att.scorePercentage || 0) : 0, done: !!att };
       })
-      .sort((a, b) => a.name.localeCompare(b.name));
+      // Maior desempenho primeiro; quem não fez a prova vai para o fim.
+      .sort((a, b) => Number(b.done) - Number(a.done) || b.score - a.score || a.name.localeCompare(b.name));
   }, [completed, userNameById, selectedExamId]);
 
   const hasAnyScore = chartData.some(d => d.done);
