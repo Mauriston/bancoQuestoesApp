@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { History, Search, ChevronRight, User, Trash2 } from 'lucide-react';
 import { getAllAttempts, getUsers, deleteAttempt } from '../../services/firebaseService';
 import { Attempt } from '../../types';
-import { formatDate, scoreColorClass } from '../../utils/helpers';
+import { formatDateOnly, scoreColorClass } from '../../utils/helpers';
 
 // Data-hora de realização em segundos: conclusão, ou início se a tentativa
 // ainda está em andamento (mesma data exibida na tabela).
@@ -92,27 +92,24 @@ export const AttemptsPage: React.FC = () => {
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
-                <th className="p-3">Data / Hora</th>
-                <th className="p-3">Residente</th>
                 <th className="p-3">Prova</th>
-                <th className="p-3 text-center">Acertos</th>
-                <th className="p-3 text-center">Aproveitamento</th>
-                <th className="p-3 text-right">Ações</th>
+                <th className="p-3">Residente</th>
+                <th className="p-3 text-center">Desempenho</th>
+                <th className="p-3 text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
               {filtered.map((att) => (
                 <tr key={att.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-3 whitespace-nowrap text-slate-400">{formatDate(att.completedAt || att.startedAt)}</td>
-                  <td className="p-3 font-bold text-cyan-400">
-                    <span className="flex items-center gap-1.5 min-w-0">
+                  <td className="p-3 font-semibold text-slate-100">{att.examName || 'Simulado Ortopedia'}</td>
+                  <td className="p-3">
+                    <span className="flex items-center gap-1.5 min-w-0 font-bold text-cyan-400">
                       <User className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{nameOf(att)}</span>
                     </span>
-                  </td>
-                  <td className="p-3 font-semibold text-slate-100">{att.examName || 'Simulado Ortopedia'}</td>
-                  <td className="p-3 text-center whitespace-nowrap">
-                    <strong className="text-teal-400">{att.correctAnswers || 0}</strong> / {att.totalQuestions}
+                    <span className="block text-[11px] text-slate-500 mt-0.5 whitespace-nowrap">
+                      {formatDateOnly(att.completedAt || att.startedAt)}
+                    </span>
                   </td>
                   <td className="p-3 text-center">
                     {att.status === 'completed' ? (
@@ -126,7 +123,7 @@ export const AttemptsPage: React.FC = () => {
                     )}
                   </td>
                   <td className="p-3">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-center gap-2">
                       {att.status === 'completed' && (
                         <Link
                           to={`/admin/attempts/${att.id}/result`}
