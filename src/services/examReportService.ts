@@ -43,3 +43,24 @@ export async function generateExamPdfForAdmin(examId: string): Promise<ExamRepor
   const result = await generate({ examId });
   return result.data;
 }
+
+export interface ArchiveSabatinaPdfsResult {
+  total: number;
+  generated: number;
+  skipped: number;
+  failed: { id: string; title: string; error: string }[];
+}
+
+// Admin: baixa as apresentações do Google Slides no servidor e arquiva o PDF
+// de cada sabatina no Storage (ver archiveSabatinaPdfs em functions/). Sem
+// sabatinaId processa todas; force=true refaz as já arquivadas. Pode levar
+// vários minutos com muitas sabatinas.
+export async function archiveSabatinaPdfs(options?: { sabatinaId?: string; force?: boolean }): Promise<ArchiveSabatinaPdfsResult> {
+  const call = httpsCallable<{ sabatinaId?: string; force?: boolean }, ArchiveSabatinaPdfsResult>(
+    functions,
+    'archiveSabatinaPdfs',
+    { timeout: 540_000 }
+  );
+  const result = await call(options || {});
+  return result.data;
+}

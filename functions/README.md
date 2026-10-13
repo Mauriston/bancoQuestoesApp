@@ -83,3 +83,9 @@ frontend) ou `src/index.ts` (lógica específica da função).
 - `onExamActivated`: ao ativar a prova (`active` false → true) gera o mesmo PDF automaticamente (sem travar a edição).
 - `onExamDeleted`: remove o PDF do Storage.
 - Qualquer edição de conteúdo (feita com a prova inativa) apaga `pdfUrl` etc.; um novo PDF é gerado na próxima ativação ou clique no botão.
+
+## PDF das sabatinas
+
+- `archiveSabatinaPdfs` (callable, só admin): baixa `docs.google.com/presentation/d/{id}/export/pdf` de cada sabatina (ou de uma, com `sabatinaId`; `force` refaz), salva em `sabatina-pdfs/{id}/apresentacao.pdf` e grava `pdfUrl/pdfFileName/pdfSourceUrl` em `sabatinas/{id}`. Botão "Arquivar PDFs" na página Sabatinas (admin). Requer apresentações compartilhadas como "qualquer pessoa com o link".
+- `onSabatinaWritten`: arquiva automaticamente ao criar a sabatina ou trocar a apresentação; limpa o arquivo ao excluir.
+- No app, o botão de download abre o PDF arquivado; sem PDF arquivado, mantém o download direto do Drive.
