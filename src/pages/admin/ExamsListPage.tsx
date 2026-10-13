@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FileCheck, Plus, Trash2, Pencil, Users, Eye, Send
+  FileCheck, Plus, Trash2, Pencil, Users, Eye, Send, FileText, Loader2
 } from 'lucide-react';
 import { getExams, deleteExam, updateExamActiveStatus, isExamActive, getAllAttempts, getAllExamAssignments } from '../../services/firebaseService';
 import { Exam } from '../../types';
+import { generateExamPdfForAdmin, viewExamReportPdf } from '../../services/examReportService';
 import { scoreColorClass } from '../../utils/helpers';
 
 export const ExamsListPage: React.FC = () => {
@@ -23,6 +24,7 @@ export const ExamsListPage: React.FC = () => {
   const [inviteCountByExamId, setInviteCountByExamId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const fetchExamsList = async () => {
     setLoading(true);
@@ -76,7 +78,29 @@ export const ExamsListPage: React.FC = () => {
   // uma prova que ainda ninguém começou a responder — e ela precisa estar
   // inativa, ou um candidato poderia estar com ela em andamento neste exato
   // momento. updateExamContent() no firebaseService repete essa checagem.
-  const isEditable = (exam: Exam) => !isExamActive(exam) && !attemptCountByExamId[exam.id];
+  const isEditable = (exam: Exam) => !isExamActive(exam) && !exam.editLocked && !attemptCountByExamId[exam.id];
+
+  // PDF da prova (versão preceptor). Se já existe, só abre. Se não, gera no
+  // servidor — e, se a prova ainda era editável, ela deixa de ser (travada).
+  const handleExamPdf = async (exam: Exam) => {
+    if (exam.pdfUrl) {
+      viewExamReportPdf(exam.pdfUrl);
+      return;
+    }
+    if (isEditable(exam) && !window.confirm(
+      'Gerar o PDF desta prova vai TRAVAR a edição dela (conteúdo congelado). Deseja continuar?'
+    )) return;
+    setPdfBusyId(exam.id);
+    try {
+      const { url } = await generateExamPdfForAdmin(exam.id);
+      await fetchExamsList();
+      viewExamReportPdf(url);
+    } catch (err: any) {
+      alert(err?.message || 'Não foi possível gerar o PDF da prova.');
+    } finally {
+      setPdfBusyId(null);
+    }
+  };
 
   useEffect(() => {
     fetchExamsList();
@@ -197,6 +221,15 @@ export const ExamsListPage: React.FC = () => {
                             className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleExamPdf(ex)}
+                            disabled={pdfBusyId === ex.id}
+                            title={ex.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
+                            aria-label={ex.pdfUrl ? 'Ver PDF da prova' : 'Gerar PDF da prova'}
+                            className={`p-2 rounded-lg disabled:opacity-60 ${ex.pdfUrl ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+                          >
+                            {pdfBusyId === ex.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                           </button>
                           {isEditable(ex) && (
                             <Link

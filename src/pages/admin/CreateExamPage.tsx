@@ -99,6 +99,8 @@ export const CreateExamPage: React.FC = () => {
             setGateError("Prova não encontrada.");
           } else if (isExamActive(exam)) {
             setGateError('Esta prova está ativa e não pode ser editada. Desative-a primeiro em "Provas e Simulados".');
+          } else if (exam.editLocked) {
+            setGateError("O PDF desta prova já foi gerado e ela não pode mais ser editada.");
           } else if (attempts.length > 0) {
             setGateError("Esta prova já tem tentativas registradas e não pode mais ser editada.");
           } else {

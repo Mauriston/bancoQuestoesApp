@@ -34,3 +34,12 @@ export async function generateAndDownloadExamReportPdf(attemptId: string): Promi
 export function viewExamReportPdf(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
+
+// Gera (ou devolve, se já existir) o PDF da prova na versão do admin/preceptor
+// — só questões, gabaritos e comentários. Gerar trava a edição da prova
+// (exam.editLocked) — ver generateExamPdf em functions/src/index.ts.
+export async function generateExamPdfForAdmin(examId: string): Promise<ExamReportPdfResult> {
+  const generate = httpsCallable<{ examId: string }, ExamReportPdfResult>(functions, 'generateExamPdf');
+  const result = await generate({ examId });
+  return result.data;
+}

@@ -83,7 +83,7 @@ export const ExamViewPage: React.FC = () => {
   // (handleToggleActive) — antes disso, o botão de excluir podia continuar
   // visível mesmo depois de a prova ser ativada, causando o erro "Só é
   // possível editar provas inativas." ao clicar.
-  const canEdit = !!exam && !isExamActive(exam) && !hasAttempts;
+  const canEdit = !!exam && !isExamActive(exam) && !exam.editLocked && !hasAttempts;
 
   // Usuários ativos que ainda não têm assignment nesta prova — opções do
   // seletor de "Adicionar Candidatos".

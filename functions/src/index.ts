@@ -26,7 +26,12 @@ import { randomUUID } from 'node:crypto';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
-import { buildExamReportData, buildReportDocument, type ExamReportData } from './_shared/reportTemplate';
+import {
+  buildExamReportData,
+  buildExamAdminReportData,
+  buildReportDocument,
+  type ExamReportData,
+} from './_shared/reportTemplate';
 import type {
   Attempt,
   Exam,
@@ -403,6 +408,192 @@ export const onAttemptDeleted = onDocumentDeleted(
       await bucket.deleteFiles({ prefix: `exam-reports/${attemptId}/`, force: true });
     } catch (err) {
       console.error(`Erro ao limpar o PDF salvo da tentativa ${attemptId}:`, err);
+    }
+  }
+);
+
+
+// ---------------------------------------------------------------------------
+// PDF da prova (versão preceptor/admin): só questões, gabaritos e comentários,
+// sem respostas de nenhum usuário. Mesmo template do relatório do candidato,
+// em modo 'preceptor' (ver buildExamAdminReportData em reportTemplate.ts).
+// ---------------------------------------------------------------------------
+
+async function assertAdmin(auth: { uid: string; token: { email?: string } } | undefined): Promise<void> {
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'É necessário estar autenticado.');
+  }
+  const byUid = await db.collection('users').where('authUid', '==', auth.uid).limit(5).get();
+  let isAdmin = byUid.docs.some(d => d.data().role === 'admin' && d.data().active !== false);
+  if (!isAdmin && auth.token.email) {
+    const byEmail = await db
+      .collection('users')
+      .where('email', '==', auth.token.email.trim().toLowerCase())
+      .limit(5)
+      .get();
+    isAdmin = byEmail.docs.some(d => d.data().role === 'admin' && d.data().active !== false);
+  }
+  if (!isAdmin) {
+    throw new HttpsError('permission-denied', 'Apenas administradores podem gerar o PDF da prova.');
+  }
+}
+
+async function fetchExamAdminReportData(examId: string): Promise<ExamReportData> {
+  const examSnap = await db.collection('exams').doc(examId).get();
+  if (!examSnap.exists) {
+    throw new HttpsError('not-found', 'Prova não encontrada.');
+  }
+  const exam = { id: examSnap.id, ...examSnap.data() } as Exam;
+
+  const [examQuestionsSnap, themesSnap, referencesSnap] = await Promise.all([
+    db.collection('exams').doc(examId).collection('questions').get(),
+    db.collection('themes').get(),
+    db.collection('reference').get(),
+  ]);
+
+  const questions = examQuestionsSnap.docs
+    .map(d => ({ id: d.id, ...d.data() } as ExamQuestion))
+    .sort((a, b) => (a.orderIndex || a.order || 0) - (b.orderIndex || b.order || 0));
+  if (questions.length === 0) {
+    throw new HttpsError('failed-precondition', 'A prova não possui questões.');
+  }
+
+  const themes = themesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Theme));
+  const references = referencesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Reference));
+
+  const originalIds = questions.map(q => q.originalQuestionId);
+  const originalQuestions = await getByIdsChunked<Question>('questions', originalIds);
+  const sourceExamById: Record<string, string> = {};
+  Object.values(originalQuestions).forEach(oq => {
+    sourceExamById[oq.id] = oq.sourceExam;
+  });
+  const answerKeys = await getByIdsChunked<QuestionAnswer>('questionAnswers', originalIds);
+
+  return buildExamAdminReportData({
+    exam,
+    questions,
+    sourceExamById,
+    answerKeys,
+    references,
+    themes: themes.map(t => ({ id: t.id, name: t.name, groupName: t.groupName })),
+  });
+}
+
+interface GeneratedExamPdf {
+  url: string;
+  fileName: string;
+}
+
+// force=true regenera mesmo que já exista pdfUrl. Sem force é idempotente.
+async function generateAndPersistExamPdf(
+  examId: string,
+  options: { lock: boolean; force?: boolean }
+): Promise<GeneratedExamPdf> {
+  const examRef = db.collection('exams').doc(examId);
+  const examSnap = await examRef.get();
+  if (!examSnap.exists) {
+    throw new HttpsError('not-found', 'Prova não encontrada.');
+  }
+  const existing = examSnap.data() as Exam;
+
+  if (!options.force && existing.pdfUrl && existing.pdfFileName) {
+    if (options.lock && !existing.editLocked) {
+      await examRef.set({ editLocked: true }, { merge: true });
+    }
+    return { url: existing.pdfUrl, fileName: existing.pdfFileName };
+  }
+
+  const reportData = await fetchExamAdminReportData(examId);
+  const html = buildReportDocument(reportData, REPORT_ICON_URL);
+  const pdfBuffer = await renderPdf(html);
+
+  const fileName = `${sanitizeForFileName(reportData.examName)} - Preceptor.pdf`;
+  const filePath = `exam-pdfs/${examId}/prova.pdf`;
+  const downloadToken = randomUUID();
+  await bucket.file(filePath).save(pdfBuffer, {
+    contentType: 'application/pdf',
+    metadata: {
+      // Sem cache longo: o arquivo pode ser regenerado no mesmo caminho.
+      cacheControl: 'private, max-age=0, no-cache',
+      contentDisposition: buildContentDisposition(fileName),
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+        examId,
+        examName: reportData.examName,
+        generatedAt: new Date().toISOString(),
+      },
+    },
+  });
+
+  const url =
+    `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}` +
+    `/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
+
+  const update: Record<string, unknown> = {
+    pdfUrl: url,
+    pdfFileName: fileName,
+    pdfGeneratedAt: FieldValue.serverTimestamp(),
+  };
+  if (options.lock) update.editLocked = true;
+  await examRef.set(update, { merge: true });
+
+  return { url, fileName };
+}
+
+// Chamada pelo botão de PDF da tabela de provas (admin). Gerar o PDF
+// "congela" a prova: editLocked impede novas edições de conteúdo.
+export const generateExamPdf = onCall(
+  { region: 'us-central1', memory: '1GiB', timeoutSeconds: 300, cpu: 1 },
+  async request => {
+    await assertAdmin(request.auth as any);
+
+    const examId = typeof request.data?.examId === 'string' ? request.data.examId.trim() : '';
+    if (!examId) {
+      throw new HttpsError('invalid-argument', 'examId é obrigatório.');
+    }
+    return generateAndPersistExamPdf(examId, { lock: true });
+  }
+);
+
+// Ao ativar uma prova (active: false -> true), gera automaticamente o PDF
+// da versão do admin e salva no Storage. Não trava a edição (a regra de
+// edição continua sendo "inativa e sem tentativas").
+export const onExamActivated = onDocumentUpdated(
+  {
+    document: 'exams/{examId}',
+    database: FIRESTORE_DATABASE_ID,
+    region: 'us-central1',
+    memory: '1GiB',
+    timeoutSeconds: 300,
+  },
+  async event => {
+    const before = event.data?.before.data() as Exam | undefined;
+    const after = event.data?.after.data() as Exam | undefined;
+    if (!after || after.active !== true || before?.active === true) return;
+    if (after.pdfUrl) return;
+
+    const examId = event.params.examId;
+    try {
+      await generateAndPersistExamPdf(examId, { lock: false });
+    } catch (err) {
+      console.error(`Erro ao gerar o PDF da prova ${examId}:`, err);
+    }
+  }
+);
+
+// Limpa o PDF da prova do Storage quando a prova é excluída.
+export const onExamDeleted = onDocumentDeleted(
+  {
+    document: 'exams/{examId}',
+    database: FIRESTORE_DATABASE_ID,
+    region: 'us-central1',
+  },
+  async event => {
+    const examId = event.params.examId;
+    try {
+      await bucket.deleteFiles({ prefix: `exam-pdfs/${examId}/`, force: true });
+    } catch (err) {
+      console.error(`Erro ao limpar o PDF da prova ${examId}:`, err);
     }
   }
 );

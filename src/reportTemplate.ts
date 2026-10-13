@@ -46,7 +46,32 @@ export interface ReportQuestion {
   referenceUrl?: string;
 }
 
+// Item das distribuições da prova do preceptor (gráficos donut e tabela de
+// temas da versão sem respostas de usuário).
+export interface ReportDistributionItem {
+  name: string;
+  count: number;
+}
+
+export interface ReportDistribution {
+  total: number;
+  groups: ReportDistributionItem[];
+  sources: ReportDistributionItem[];
+  themes: ReportDistributionItem[];
+}
+
 export interface ExamReportData {
+  // 'attempt' (padrão): relatório de uma tentativa de usuário. 'preceptor':
+  // prova em PDF gerada pelo admin — só questões, gabaritos e comentários,
+  // sem nenhuma resposta de usuário (ver buildExamAdminReportData).
+  mode?: 'attempt' | 'preceptor';
+  // Texto no lugar do nome do usuário na capa e à direita do cabeçalho das
+  // páginas (versão do preceptor).
+  coverLabel?: string;
+  coverFooter?: string;
+  headerRight?: string;
+  // Página 2 da versão do preceptor: distribuição por grupo/fonte/temas.
+  distribution?: ReportDistribution;
   appName: string;
   appTagline: string;
   examName: string;
@@ -153,7 +178,16 @@ body{
 .cover__id{width:100%;max-width:340px;display:flex;flex-direction:column;gap:20px}
 .cover__exam{font:var(--weight-bold) var(--size-h3)/var(--leading-tight) var(--font-display);color:var(--white);margin:0;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.15);text-wrap:balance}
 .cover__user{font:var(--weight-semibold) var(--size-h4)/var(--leading-tight) var(--font-body);color:var(--white);margin:0}
+.cover__footer{position:absolute;left:0;right:0;bottom:12mm;margin:0;padding:0 20mm;z-index:1;text-align:center;font:var(--weight-regular) var(--size-meta)/1.5 var(--font-body);color:rgba(255,255,255,.5);letter-spacing:.2px}
 .perf{padding:18px var(--sheet-pad) 0}
+.donut{display:flex;flex-direction:column;align-items:center;gap:14px}
+.donut svg{width:150px;height:150px;flex-shrink:0}
+.legend{width:100%;display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.legend__item{display:grid;grid-template-columns:12px 1fr auto;align-items:center;gap:8px;font:var(--weight-regular) var(--size-caption)/var(--leading-snug) var(--font-body);color:var(--navy-900)}
+.legend__dot{width:12px;height:12px;border-radius:4px}
+.legend__count{font:var(--weight-bold) var(--size-caption)/1 var(--font-display);font-variant-numeric:tabular-nums;color:var(--navy-900)}
+.legend__pct{font:var(--weight-regular) var(--size-meta)/1 var(--font-body);color:var(--grey-500);margin-left:6px}
+.donut-empty{font:var(--weight-regular) var(--size-caption)/1.4 var(--font-body);color:var(--grey-500);margin:0}
 .scorecard{
   background:var(--surface-muted);border-radius:var(--radius-lg);
   padding:28px 32px;margin-bottom:28px;
@@ -309,9 +343,10 @@ const REPORT_SCRIPT = `
             '<p class="cover__tagline">' + esc(d.appTagline) + '</p>' +
             '<div class="cover__id">' +
               '<p class="cover__exam">' + esc(d.examName) + '</p>' +
-              '<p class="cover__user">' + esc(d.userName) + '</p>' +
+              '<p class="cover__user">' + esc(d.coverLabel || d.userName) + '</p>' +
             '</div>' +
           '</div>' +
+          (d.coverFooter ? '<p class="cover__footer">' + esc(d.coverFooter) + '</p>' : '') +
         '</div>' +
       '</section>';
   }
@@ -320,7 +355,7 @@ const REPORT_SCRIPT = `
     return '' +
       '<header class="runhead">' +
         '<p class="runhead__exam">' + esc(d.examName) + '</p>' +
-        '<p class="runhead__user">' + esc(d.userName) + '</p>' +
+        '<p class="runhead__user">' + esc(d.headerRight || d.userName) + '</p>' +
       '</header>';
   }
 
@@ -339,6 +374,18 @@ const REPORT_SCRIPT = `
   }
 
   function themesTable(list) {
+    // Modo "contagem" (prova do preceptor): cada item traz "count" em vez de
+    // aproveitamento.
+    if (list.length && list[0].count !== undefined) {
+      var countRows = list.map(function (t) {
+        return '<tr><td>' + esc(t.name) + '</td><td><span class="themes__pct" style="color:var(--navy-900)">' + t.count + '</span></td></tr>';
+      }).join('');
+      return '' +
+        '<table class="themes">' +
+          '<thead><tr><th scope="col">Tema</th><th scope="col">Questões</th></tr></thead>' +
+          '<tbody>' + countRows + '</tbody>' +
+        '</table>';
+    }
     var rows = list.map(function (t) {
       return '' +
         '<tr>' +
@@ -399,6 +446,67 @@ const REPORT_SCRIPT = `
 
           (themes.length ? '<div class="themes-block" data-themes="' + esc(JSON.stringify(themes)) + '">' +
             '<h2 class="section-title">Desempenho por temas</h2>' +
+            themesWrapHtml(themes, false) +
+          '</div>' : '') +
+        '</div></div></div>' +
+        runfoot(pageNo) +
+      '</section>';
+  }
+
+  var DONUT_COLORS = ['#2F9C8C', '#2C3A47', '#FFCB70', '#1F6E96', '#079551', '#F05400', '#8A9199', '#146B5E', '#A855F7', '#E20018'];
+
+  function donutBlock(title, items, total) {
+    var body;
+    if (!items.length || !total) {
+      body = '<p class="donut-empty">Sem dados.</p>';
+    } else {
+      var R = 58, C = 2 * Math.PI * R, off = 0, segs = '';
+      items.forEach(function (it, i) {
+        var len = C * it.count / total;
+        segs += '<circle cx="80" cy="80" r="' + R + '" fill="none" stroke="' + DONUT_COLORS[i % DONUT_COLORS.length] +
+          '" stroke-width="26" stroke-dasharray="' + len.toFixed(3) + ' ' + (C - len).toFixed(3) +
+          '" stroke-dashoffset="' + (-off).toFixed(3) + '" transform="rotate(-90 80 80)"/>';
+        off += len;
+      });
+      var legend = items.map(function (it, i) {
+        return '<li class="legend__item">' +
+          '<span class="legend__dot" style="background:' + DONUT_COLORS[i % DONUT_COLORS.length] + '"></span>' +
+          '<span>' + esc(it.name) + '</span>' +
+          '<span><span class="legend__count">' + it.count + '</span><span class="legend__pct">' + Math.round(it.count * 100 / total) + '%</span></span>' +
+        '</li>';
+      }).join('');
+      body = '<div class="donut">' +
+        '<svg viewBox="0 0 160 160" role="img" aria-label="' + esc(title) + '">' + segs +
+          '<text x="80" y="80" text-anchor="middle" dominant-baseline="central" style="font:700 30px Poppins,system-ui,sans-serif;fill:#2C3A47">' + total + '</text>' +
+        '</svg>' +
+        '<ul class="legend">' + legend + '</ul>' +
+      '</div>';
+    }
+    return '<div class="perf-charts__col"><h2 class="section-title">' + esc(title) + '</h2>' + body + '</div>';
+  }
+
+  // Página 2 da prova do preceptor: no lugar do desempenho individual, a
+  // distribuição das questões por grupo TEOT e por fonte (donuts) e a tabela
+  // de temas com a quantidade de questões.
+  function distributionSheet(d, pageNo) {
+    var dist = d.distribution || { total: 0, groups: [], sources: [], themes: [] };
+    var themes = dist.themes || [];
+    return '' +
+      '<section class="sheet">' +
+        runhead(d) +
+        '<div class="sheet__body"><div class="fit"><div class="perf">' +
+          '<div class="scorecard">' +
+            '<div>' +
+              '<p class="scorecard__exam">' + esc(d.examName) + '</p>' +
+              '<p class="scorecard__count">' + dist.total + ' questões · com gabaritos e comentários</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="perf-charts">' +
+            donutBlock('Distribuição por grupo (TEOT)', dist.groups || [], dist.total) +
+            donutBlock('Distribuição por fonte', dist.sources || [], dist.total) +
+          '</div>' +
+          (themes.length ? '<div class="themes-block" data-themes="' + esc(JSON.stringify(themes)) + '">' +
+            '<h2 class="section-title">Temas da prova</h2>' +
             themesWrapHtml(themes, false) +
           '</div>' : '') +
         '</div></div></div>' +
@@ -472,7 +580,7 @@ const REPORT_SCRIPT = `
             '<p class="qhead__title">Questão ' + number + '</p>' +
             '<div class="chips">' +
               (q.source ? '<span class="chip chip--source">' + esc(q.source) + '</span>' : '') +
-              '<span class="chip" style="' + statusStyle + '">' + statusLabel + '</span>' +
+              (d.mode === 'preceptor' ? '' : '<span class="chip" style="' + statusStyle + '">' + statusLabel + '</span>') +
             '</div>' +
           '</div>' +
           '<p class="statement">' + esc(q.statement) + '</p>' +
@@ -543,7 +651,7 @@ const REPORT_SCRIPT = `
     var questions = d.questions || [];
     var page = 1;
 
-    var html = coverSheet(d) + performanceSheet(d, ++page);
+    var html = coverSheet(d) + (d.mode === 'preceptor' ? distributionSheet(d, ++page) : performanceSheet(d, ++page));
     questions.forEach(function (q, i) {
       html += questionSheet(d, q, i + 1, ++page, i === 0);
     });
@@ -552,7 +660,7 @@ const REPORT_SCRIPT = `
     sheets.innerHTML = html;
 
     document.getElementById("toolbar-meta").textContent =
-      d.examName + " · " + d.userName + " · " + page + " páginas";
+      d.examName + " · " + (d.headerRight || d.userName) + " · " + page + " páginas";
 
     sheets.querySelectorAll("[data-hide-on-error]").forEach(function (img) {
       img.addEventListener("error", function () { img.style.visibility = "hidden"; });
@@ -758,5 +866,89 @@ export function buildExamReportData(args: BuildExamReportArgs): ExamReportData {
     themeBreakdown: themeBreakdown.map(t => ({ ...t, groupName: t.groupName || '' })),
     questions: reportQuestions,
     completedAt: timestampToIso(attempt.completedAt),
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// Prova em PDF gerada pelo admin (versão do preceptor): só questões, gabaritos
+// e comentários — nenhuma resposta de usuário.
+// ---------------------------------------------------------------------------
+
+export const PRECEPTOR_COVER_LABEL = 'PRECEPTOR: DR MAURISTON MARTINS';
+export const PRECEPTOR_COVER_FOOTER = 'Hospital Metropolitano Miguel Arraes - PRM em Ortopedia e Traumatologia 2026';
+export const PRECEPTOR_HEADER_RIGHT = 'Preceptor: Dr. Mauriston';
+
+// Agrupa a fonte da questão (ex.: "TEOT 2025", "TARO 2021") em BANCO PRÓPRIO,
+// TEOT ou TARO (todos os anos de cada um juntos); qualquer outro valor cai em
+// "Outras fontes" — mesma regra de getSourceExamDisplayGroup (constants.ts),
+// repetida aqui porque este arquivo é compartilhado com a Cloud Function.
+function sourceGroupLabel(sourceExam: string | undefined): string {
+  const normalized = (sourceExam || '').trim().toUpperCase();
+  if (normalized.startsWith('TEOT')) return 'TEOT';
+  if (normalized.startsWith('TARO')) return 'TARO';
+  if (normalized.startsWith('BANCO PRÓPRIO') || normalized.startsWith('BANCO PROPRIO')) return 'BANCO PRÓPRIO';
+  return 'Outras fontes';
+}
+
+function countBy(values: string[]): ReportDistributionItem[] {
+  const counts: Record<string, number> = {};
+  values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+export interface BuildExamAdminReportArgs {
+  exam: Exam;
+  questions: ExamQuestion[];
+  sourceExamById: Record<string, string>;
+  answerKeys: Record<string, QuestionAnswer>;
+  references: Reference[];
+  themes: { id: string; name: string; groupName?: string }[];
+}
+
+export function buildExamAdminReportData(args: BuildExamAdminReportArgs): ExamReportData {
+  const { exam, questions, sourceExamById, answerKeys, references, themes } = args;
+
+  const reportQuestions: ReportQuestion[] = questions.map((q): ReportQuestion => {
+    const key = answerKeys[q.originalQuestionId];
+    const reference = key?.referenceId ? references.find(r => r.id === key.referenceId) : undefined;
+    return {
+      source: sourceExamById[q.originalQuestionId],
+      statement: q.statement,
+      imageUrl: q.imageUrl,
+      alternatives: q.alternatives,
+      correctAlternative: key?.correctAlternative,
+      selectedAlternative: null,
+      comments: key?.comments,
+      commentMediaUrl: key?.commentMediaUrl,
+      referenceName: reference?.referenceName,
+      referenceUrl: reference?.referenceUrlDownload,
+    };
+  });
+
+  const themeById = new Map(themes.map(t => [t.id, t]));
+  const groups = countBy(questions.map(q => themeById.get(q.themeId)?.groupName || 'Sem grupo'));
+  const sources = countBy(questions.map(q => sourceGroupLabel(sourceExamById[q.originalQuestionId])));
+  const themeCounts = countBy(questions.map(q => themeById.get(q.themeId)?.name || 'Tema desconhecido'));
+
+  return {
+    mode: 'preceptor',
+    coverLabel: PRECEPTOR_COVER_LABEL,
+    coverFooter: PRECEPTOR_COVER_FOOTER,
+    headerRight: PRECEPTOR_HEADER_RIGHT,
+    distribution: { total: questions.length, groups, sources, themes: themeCounts },
+    appName: APP_NAME,
+    appTagline: APP_TAGLINE,
+    examName: exam.name,
+    userName: PRECEPTOR_HEADER_RIGHT,
+    score: 0,
+    correctCount: 0,
+    totalQuestions: questions.length,
+    areaBreakdown: [],
+    groupBreakdown: [],
+    themeBreakdown: [],
+    questions: reportQuestions,
   };
 }
