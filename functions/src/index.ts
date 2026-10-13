@@ -18,7 +18,7 @@
 // validar posse de forma confiável hoje) — não é uma regressão de segurança
 // nova, é o mesmo modelo de acesso já em vigor no resto do app.
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { onDocumentUpdated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
+import { onDocumentUpdated, onDocumentDeleted, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldPath, FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -42,6 +42,7 @@ import type {
   Area,
   Theme,
   Question,
+  Sabatina,
 } from './_shared/types';
 
 // Mesmos valores de firebase-applet-config.json (projeto único, não há
@@ -594,6 +595,146 @@ export const onExamDeleted = onDocumentDeleted(
       await bucket.deleteFiles({ prefix: `exam-pdfs/${examId}/`, force: true });
     } catch (err) {
       console.error(`Erro ao limpar o PDF da prova ${examId}:`, err);
+    }
+  }
+);
+
+
+// ---------------------------------------------------------------------------
+// PDF das sabatinas: baixa a apresentação do Google Slides (export/pdf) no
+// servidor e arquiva no Storage, para o app abrir o PDF salvo em vez de
+// baixar do Drive a cada clique. Requer que a apresentação esteja
+// compartilhada como "qualquer pessoa com o link" (mesmo requisito do
+// download feito antes pelo navegador).
+// ---------------------------------------------------------------------------
+
+function extractSlidesId(url: string): string | null {
+  const match = (url || '').match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+async function downloadSlidesPdf(url: string): Promise<Buffer> {
+  const id = extractSlidesId(url);
+  if (!id) throw new Error('URL do Google Slides inválida.');
+  const res = await fetch(`https://docs.google.com/presentation/d/${id}/export/pdf`, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`O Google respondeu ${res.status} (a apresentação está pública por link?).`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.subarray(0, 4).toString('latin1') !== '%PDF') {
+    throw new Error('A resposta do Google não é um PDF (apresentação privada?).');
+  }
+  return buffer;
+}
+
+// force=false: não refaz se o PDF já foi gerado a partir da mesma `url`.
+async function archiveSabatinaPdf(sabatinaId: string, force: boolean): Promise<'generated' | 'skipped'> {
+  const ref = db.collection('sabatinas').doc(sabatinaId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Sabatina não encontrada.');
+  const item = { id: snap.id, ...snap.data() } as Sabatina;
+
+  if (!force && item.pdfUrl && item.pdfSourceUrl === item.url) return 'skipped';
+
+  const pdf = await downloadSlidesPdf(item.url);
+  const fileName = `${sanitizeForFileName(item.title)}.pdf`;
+  const filePath = `sabatina-pdfs/${sabatinaId}/apresentacao.pdf`;
+  const downloadToken = randomUUID();
+  await bucket.file(filePath).save(pdf, {
+    contentType: 'application/pdf',
+    metadata: {
+      cacheControl: 'private, max-age=0, no-cache',
+      contentDisposition: buildContentDisposition(fileName),
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+        sabatinaId,
+        title: item.title,
+        generatedAt: new Date().toISOString(),
+      },
+    },
+  });
+
+  const pdfUrl =
+    `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}` +
+    `/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
+  await ref.set(
+    {
+      pdfUrl,
+      pdfFileName: fileName,
+      pdfSourceUrl: item.url,
+      pdfGeneratedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  return 'generated';
+}
+
+interface ArchiveSabatinasResult {
+  total: number;
+  generated: number;
+  skipped: number;
+  failed: { id: string; title: string; error: string }[];
+}
+
+// Admin: arquiva o PDF de uma sabatina (sabatinaId) ou de todas (sem id).
+// force=true refaz mesmo as já arquivadas.
+export const archiveSabatinaPdfs = onCall(
+  { region: 'us-central1', memory: '1GiB', timeoutSeconds: 540, cpu: 1 },
+  async request => {
+    await assertAdmin(request.auth as any);
+
+    const sabatinaId = typeof request.data?.sabatinaId === 'string' ? request.data.sabatinaId.trim() : '';
+    const force = request.data?.force === true;
+
+    const docs = sabatinaId
+      ? [await db.collection('sabatinas').doc(sabatinaId).get()]
+      : (await db.collection('sabatinas').get()).docs;
+
+    const result: ArchiveSabatinasResult = { total: 0, generated: 0, skipped: 0, failed: [] };
+    for (const d of docs) {
+      if (!d.exists) continue;
+      result.total += 1;
+      const title = (d.data() as Sabatina).title || d.id;
+      try {
+        const outcome = await archiveSabatinaPdf(d.id, force);
+        if (outcome === 'generated') result.generated += 1; else result.skipped += 1;
+      } catch (err: any) {
+        result.failed.push({ id: d.id, title, error: err?.message || String(err) });
+      }
+    }
+    return result;
+  }
+);
+
+// Sabatina criada ou com apresentação trocada → arquiva o PDF automaticamente.
+export const onSabatinaWritten = onDocumentWritten(
+  {
+    document: 'sabatinas/{sabatinaId}',
+    database: FIRESTORE_DATABASE_ID,
+    region: 'us-central1',
+    memory: '1GiB',
+    timeoutSeconds: 120,
+  },
+  async event => {
+    const sabatinaId = event.params.sabatinaId;
+    const after = event.data?.after.data() as Sabatina | undefined;
+    if (!after) {
+      // Excluída: limpa o PDF arquivado.
+      try {
+        await bucket.deleteFiles({ prefix: `sabatina-pdfs/${sabatinaId}/`, force: true });
+      } catch (err) {
+        console.error(`Erro ao limpar o PDF da sabatina ${sabatinaId}:`, err);
+      }
+      return;
+    }
+    // Já arquivado a partir desta mesma URL (inclui a escrita que o próprio
+    // arquivamento faz em pdfUrl) → nada a fazer, evita laço.
+    if (after.pdfUrl && after.pdfSourceUrl === after.url) return;
+    if (!extractSlidesId(after.url)) return;
+
+    try {
+      await archiveSabatinaPdf(sabatinaId, true);
+    } catch (err) {
+      // Best-effort: o admin pode rodar "Arquivar PDFs" depois.
+      console.error(`Erro ao arquivar o PDF da sabatina ${sabatinaId}:`, err);
     }
   }
 );

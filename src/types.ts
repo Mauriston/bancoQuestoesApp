@@ -366,6 +366,13 @@ export interface Sabatina {
   themeIds: string[];
   themeNames?: string[];
   url: string; // apresentação do Google Slides, modo "present"
+  // PDF da apresentação arquivado no Firebase Storage (ver archiveSabatinaPdfs
+  // e onSabatinaWritten em functions/). pdfSourceUrl guarda a `url` de que o
+  // PDF foi gerado, para detectar apresentação trocada.
+  pdfUrl?: string;
+  pdfFileName?: string;
+  pdfSourceUrl?: string;
+  pdfGeneratedAt?: any;
   createdBy: string;
   createdAt?: any;
   updatedAt?: any;

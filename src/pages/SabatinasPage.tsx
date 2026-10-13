@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getAreas, getThemes, subscribeSabatinas, createSabatina, updateSabatina, deleteSabatina, createNotification, logSabatinaView, subscribeAllSabatinaViewLogs } from '../services/firebaseService';
 import { Area, Theme, Sabatina, SabatinaViewLog } from '../types';
 import { toPresentEmbedUrl, googleSlidesPdfExportUrl } from '../utils/mediaUrls';
+import { archiveSabatinaPdfs, viewExamReportPdf } from '../services/examReportService';
 import { shareOrDownloadFile, toSafeFileName } from '../utils/fileShare';
 import { CheckboxMultiSelect } from '../components/CheckboxMultiSelect';
 
@@ -29,6 +30,7 @@ export const SabatinasPage: React.FC = () => {
   const [editingItem, setEditingItem] = useState<Sabatina | null>(null);
   const [viewingItem, setViewingItem] = useState<Sabatina | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
   // Todos os registros de visualização, carregados só para o admin —
   // alimenta o contador de visualizações exibido em cada card.
   const [allViewLogs, setAllViewLogs] = useState<SabatinaViewLog[]>([]);
@@ -116,7 +118,29 @@ export const SabatinasPage: React.FC = () => {
     }
   };
 
+  // Admin: arquiva no Storage o PDF de todas as sabatinas que ainda não têm.
+  const handleArchiveAll = async () => {
+    if (!confirm('Baixar as apresentações do Google Slides e salvar o PDF de cada sabatina no Storage? Pode levar alguns minutos.')) return;
+    setArchiving(true);
+    try {
+      const r = await archiveSabatinaPdfs();
+      const failedText = r.failed.length > 0
+        ? `\n\nFalharam ${r.failed.length}:\n` + r.failed.map(f => `• ${f.title}: ${f.error}`).join('\n')
+        : '';
+      alert(`PDFs arquivados: ${r.generated} novo(s), ${r.skipped} já existente(s), de ${r.total} sabatina(s).${failedText}`);
+    } catch (err: any) {
+      alert(err?.message || 'Erro ao arquivar os PDFs das sabatinas.');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const handleDownload = async (item: Sabatina) => {
+    // PDF já arquivado no Storage: só abre a visualização.
+    if (item.pdfUrl) {
+      viewExamReportPdf(item.pdfUrl);
+      return;
+    }
     const pdfUrl = googleSlidesPdfExportUrl(item.url);
     if (!pdfUrl) return;
     setDownloadingId(item.id);
@@ -135,6 +159,16 @@ export const SabatinasPage: React.FC = () => {
           Sabatinas
         </h1>
         {isAdmin && (
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleArchiveAll}
+            disabled={archiving}
+            title="Baixar as apresentações do Google Slides e salvar o PDF de cada sabatina no Storage"
+            className="inline-flex items-center gap-2 border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold px-3 py-2.5 rounded-xl text-xs transition-colors disabled:opacity-60"
+          >
+            <Download className={`w-4 h-4 ${archiving ? 'animate-pulse' : ''}`} />
+            <span>{archiving ? 'Arquivando PDFs…' : 'Arquivar PDFs'}</span>
+          </button>
           <button
             onClick={handleOpenCreate}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all self-start sm:self-auto"
@@ -142,6 +176,7 @@ export const SabatinasPage: React.FC = () => {
             <Plus className="w-4 h-4" />
             <span>Inserir Sabatina</span>
           </button>
+          </div>
         )}
       </div>
 
