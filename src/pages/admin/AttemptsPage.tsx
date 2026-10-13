@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { History, Search, ChevronRight, User, Trash2 } from 'lucide-react';
+import { History, Search, ChevronRight, User, Trash2, CheckCheck } from 'lucide-react';
 import { getAllAttempts, getUsers, deleteAttempt } from '../../services/firebaseService';
+import { finishAndGradeAttempt } from '../../services/gradingService';
 import { Attempt } from '../../types';
 import { formatDateOnly, scoreColorClass } from '../../utils/helpers';
 
@@ -21,6 +22,7 @@ export const AttemptsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [gradingId, setGradingId] = useState<string | null>(null);
 
   const fetchAttempts = () => {
     setLoading(true);
@@ -49,6 +51,22 @@ export const AttemptsPage: React.FC = () => {
       alert("Erro ao excluir tentativa: " + (err?.message || "erro desconhecido."));
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Tentativa presa em 'em andamento'/'corrigindo' (ex.: a correção foi
+  // interrompida no meio): finaliza e corrige a partir das respostas já
+  // gravadas, sem o residente precisar refazer a prova.
+  const handleFinalize = async (att: Attempt) => {
+    if (!confirm(`Finalizar e corrigir a tentativa de ${nameOf(att)} em "${att.examName || 'Simulado'}" com as respostas já registradas? Questões sem resposta contam como não respondidas.`)) return;
+    setGradingId(att.id);
+    try {
+      await finishAndGradeAttempt(att.id, { force: true });
+      await fetchAttempts();
+    } catch (err: any) {
+      alert("Erro ao finalizar tentativa: " + (err?.message || "erro desconhecido."));
+    } finally {
+      setGradingId(null);
     }
   };
 
@@ -132,6 +150,16 @@ export const AttemptsPage: React.FC = () => {
                           <span>Ver Relatório</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </Link>
+                      )}
+                      {att.status !== 'completed' && (
+                        <button
+                          onClick={() => handleFinalize(att)}
+                          disabled={gradingId === att.id}
+                          title="Finalizar e corrigir esta tentativa com as respostas já registradas"
+                          className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-500 hover:text-teal-400 transition-colors disabled:opacity-40 shrink-0"
+                        >
+                          <CheckCheck className={`w-3.5 h-3.5 ${gradingId === att.id ? 'animate-pulse' : ''}`} />
+                        </button>
                       )}
                       <button
                         onClick={() => handleDelete(att.id)}

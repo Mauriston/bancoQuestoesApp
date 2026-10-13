@@ -227,7 +227,12 @@ export const TakeExamPage: React.FC = () => {
     setFinishing(true);
 
     try {
-      await finishAndGradeAttempt(attemptId);
+      const graded = await finishAndGradeAttempt(attemptId);
+      // Outra finalização desta mesma prova ainda está corrigindo (lock
+      // recente): não abre o relatório antes de a nota existir.
+      if (graded.status !== 'completed') {
+        throw new Error('A prova ainda está sendo corrigida.');
+      }
       clearDraft(attemptId);
       if (currentUser && exam) {
         createNotification({
