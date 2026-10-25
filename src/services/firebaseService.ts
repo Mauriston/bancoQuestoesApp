@@ -113,6 +113,10 @@ export async function updateUserPhone(userId: string, phone: string): Promise<vo
   await updateDoc(userRef, { phone: trimmed ? trimmed : deleteField(), updatedAt: serverTimestamp() });
 }
 
+export async function markUserFirstLogin(userId: string): Promise<void> {
+  await updateDoc(doc(db, 'users', userId), { firstLoginAt: serverTimestamp() });
+}
+
 export async function incrementInstallPromptCount(userId: string): Promise<void> {
   await updateDoc(doc(db, 'users', userId), { installPromptCount: increment(1) });
 }

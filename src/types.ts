@@ -25,6 +25,9 @@ export interface AppUser {
   // true enquanto o usuário ainda usa a senha inicial (INITIAL_PASSWORD em
   // authService) — dispara o lembrete de troca de senha (InitialPasswordDialog).
   passwordIsInitial?: boolean;
+  // Momento do primeiro login no app — gravado no primeiro login de
+  // residentes HNMD, que também avisa o admin (notificação 'first_login').
+  firstLoginAt?: any;
   // Quantas vezes o convite "adicione o app à tela de início" já apareceu
   // para este residente (no celular, logo após o login) — limitado aos 3
   // primeiros logins (ver InstallPromptDialog).
@@ -397,13 +400,16 @@ export interface SabatinaViewLog {
 
 export type NotificationType =
   | 'exam_started' | 'exam_completed'
-  | 'exam_activated' | 'sabatina_created' | 'video_created' | 'aula_created';
+  | 'exam_activated' | 'sabatina_created' | 'video_created' | 'aula_created'
+  | 'first_login';
 
 // 'all' = todos (users + admin) — eventos gerados por ações de usuários,
 // que os colegas e o admin acompanham em tempo real (ex.: provas feitas
 // juntas ao mesmo tempo). 'users_only' = eventos de ações do admin,
 // avisando só os residentes (o próprio admin já sabe o que fez).
-export type NotificationAudience = 'all' | 'users_only';
+// 'admin_only' = acompanhamento só do admin (ex.: primeiro acesso de um
+// residente HNMD ao app).
+export type NotificationAudience = 'all' | 'users_only' | 'admin_only';
 
 export interface AppNotification {
   id: string;
