@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import {
   signInWithEmailAndPassword, signOut as fbSignOut, signInAnonymously, createUserWithEmailAndPassword, getAuth,
-  EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword
+  EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, firebaseConfig } from '../firebase/config';
 import { AppUser } from '../types';
@@ -308,6 +308,28 @@ export async function loginAdminWithPassword(email: string, pass: string): Promi
   // Set session key in localStorage BEFORE returning
   localStorage.setItem(SESSION_KEY, appUser.id);
   return appUser;
+}
+
+// "Esqueci minha senha": envia o e-mail de redefinição do próprio Firebase
+// Auth. Com a proteção contra enumeração de e-mails ativa no projeto, o
+// Firebase não diz se o e-mail tem conta — por isso a UI sempre mostra a
+// mesma mensagem de sucesso, exista a conta ou não.
+export async function requestPasswordReset(email: string): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  auth.languageCode = 'pt-BR';
+  try {
+    await sendPasswordResetEmail(auth, normalizedEmail);
+  } catch (err: any) {
+    if (err?.code === 'auth/invalid-email' || err?.code === 'auth/missing-email') {
+      throw new Error("Informe um e-mail válido.");
+    }
+    if (err?.code === 'auth/too-many-requests') {
+      throw new Error("Muitas solicitações seguidas. Aguarde alguns minutos e tente novamente.");
+    }
+    // Conta inexistente: mesma resposta de sucesso (ver comentário acima).
+    if (err?.code === 'auth/user-not-found') return;
+    throw new Error("Não foi possível enviar o e-mail de redefinição. Verifique sua conexão e tente novamente.");
+  }
 }
 
 export function getCurrentSessionUserId(): string | null {
