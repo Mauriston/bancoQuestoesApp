@@ -4,6 +4,7 @@ import { FileText, History, BarChart3, CalendarDays, GraduationCap, Sparkles, Me
 import { useAuth } from '../../contexts/AuthContext';
 import { subscribeUserAssignments, isExamActive } from '../../services/firebaseService';
 import { ExamAssignment, Exam } from '../../types';
+import { canSeeCronograma } from '../../utils/cohort';
 
 const HOME_ITEMS = [
   { label: 'Provas', path: '/app/exams', icon: FileText },
@@ -59,7 +60,7 @@ export const HomePage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {HOME_ITEMS.map(item => {
+        {HOME_ITEMS.filter(item => item.path !== '/app/cronograma' || canSeeCronograma(currentUser?.role)).map(item => {
           const Icon = item.icon;
           return (
             <Link

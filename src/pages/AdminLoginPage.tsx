@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Mail, Lock, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ForgotPasswordLink } from '../components/ForgotPasswordLink';
 
 // Mesma dupla de easing usada em HomePage/RegisterPage — suave, sem
 // overshoot, para a entrada em fade+slide do cartão de login.
@@ -122,6 +123,10 @@ export const AdminLoginPage: React.FC = () => {
               {submitting ? 'Autenticando...' : 'Entrar'}
             </button>
           </form>
+
+          <div className="mt-2">
+            <ForgotPasswordLink email={email} />
+          </div>
         </div>
       </motion.div>
     </div>

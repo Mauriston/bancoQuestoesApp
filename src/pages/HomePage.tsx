@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserInactiveError, UserNotRegisteredError } from '../services/authService';
+import { ForgotPasswordLink } from '../components/ForgotPasswordLink';
 
 type Stage = 'splash' | 'gate';
 type CardMode = 'user' | 'admin';
@@ -265,6 +266,10 @@ export const HomePage: React.FC = () => {
                         </button>
                       </form>
 
+                      <div className="mt-2">
+                        <ForgotPasswordLink email={email} />
+                      </div>
+
                       <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-center">
                         <button
                           onClick={() => {
@@ -349,6 +354,10 @@ export const HomePage: React.FC = () => {
                           {adminSubmitting ? 'Autenticando...' : 'Entrar'}
                         </button>
                       </form>
+
+                      <div className="mt-2">
+                        <ForgotPasswordLink email={adminEmail} />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

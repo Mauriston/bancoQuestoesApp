@@ -1,19 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, UserPlus, Search, UserCheck, UserX, AlertCircle, X, Trash2
+  Users, UserPlus, Search, UserCheck, UserX, AlertCircle, X, Trash2, MessageCircle
 } from 'lucide-react';
 import { getUsers, saveUser, updateUserActiveStatus, updateUserRole, deleteUserAccount } from '../../services/firebaseService';
 import { createNewUserWithAuth, INITIAL_PASSWORD } from '../../services/authService';
-import { AppUser } from '../../types';
+import { AppUser, UserRole } from '../../types';
 import { Avatar } from '../../components/Avatar';
-import { maskPhoneInput } from '../../utils/helpers';
+import { maskPhoneInput, buildWhatsAppLink } from '../../utils/helpers';
+import { isResidentRole } from '../../utils/cohort';
+
+// Grupos de linhas da tabela: residentes HMA ('user'), residentes HNMD
+// ('user_hnmd') e os demais perfis (admin e leitor).
+const USER_GROUPS: { key: string; label: string; roles: UserRole[] }[] = [
+  { key: 'hma', label: 'Residentes HMA', roles: ['user'] },
+  { key: 'hnmd', label: 'Residentes HNMD', roles: ['user_hnmd'] },
+  { key: 'others', label: 'Administradores e Leitores', roles: ['admin', 'reader'] }
+];
+
+// Convite para o app enviado pelo WhatsApp (botão em cada residente).
+function buildAppInviteMessage(user: AppUser): string {
+  const firstName = user.name.trim().split(/\s+/)[0] || user.name;
+  const appUrl = `${window.location.origin}/`;
+  return `Olá *${firstName}!* Como o titio aqui não esquece das crias, acesse esse appweb para treinar as provas teóricas e orais do TEOT. As provas teóricas estão montadas de acordo com a especialidade e, uma vez respondida até o fim, você terá acesso a todas as questões comentadas e com opção de download em PDF. Além disso você pode consultar várias provas orais simuladas para treinamento entre vocês. Forte Abraço! CT (Md) Mauriston. ${appUrl}`;
+}
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin' | 'reader'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   const [loading, setLoading] = useState(true);
 
   // Modal create user
@@ -21,7 +37,7 @@ export const UsersPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'user' | 'admin' | 'reader'>('user');
+  const [role, setRole] = useState<UserRole>('user');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,7 +76,12 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const handleChangeRole = async (user: AppUser, newRole: 'user' | 'admin' | 'reader') => {
+  const handleSendAppInvite = (user: AppUser) => {
+    if (!user.phone) return;
+    window.open(buildWhatsAppLink(user.phone, buildAppInviteMessage(user)), '_blank', 'noopener,noreferrer');
+  };
+
+  const handleChangeRole = async (user: AppUser, newRole: UserRole) => {
     try {
       await updateUserRole(user.id, newRole);
       await fetchUsers();
@@ -143,7 +164,8 @@ export const UsersPage: React.FC = () => {
           className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500"
         >
           <option value="all">Todos os Perfis</option>
-          <option value="user">Usuário Comum (Residente)</option>
+          <option value="user">Residente HMA</option>
+          <option value="user_hnmd">Residente HNMD</option>
           <option value="admin">Administrador</option>
           <option value="reader">Leitor (somente leitura)</option>
         </select>
@@ -167,8 +189,17 @@ export const UsersPage: React.FC = () => {
                   <th className="p-3.5 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filtered.map((u) => (
+              {USER_GROUPS.map(group => {
+                const groupUsers = filtered.filter(u => group.roles.includes(u.role));
+                if (groupUsers.length === 0) return null;
+                return (
+              <tbody key={group.key} className="divide-y divide-slate-800/80 border-b border-slate-800">
+                <tr className="bg-slate-950/60">
+                  <td colSpan={5} className="px-3.5 py-2 text-[11px] font-bold uppercase tracking-wide text-cyan-500">
+                    {group.label} <span className="text-slate-500 font-semibold">({groupUsers.length})</span>
+                  </td>
+                </tr>
+                {groupUsers.map((u) => (
                   <tr
                     key={u.id}
                     onClick={() => navigate(`/admin/users/${u.id}`)}
@@ -190,7 +221,8 @@ export const UsersPage: React.FC = () => {
                         onChange={(e) => handleChangeRole(u, e.target.value as any)}
                         className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-200 focus:outline-none focus:border-cyan-500"
                       >
-                        <option value="user">Usuário Comum</option>
+                        <option value="user">Residente HMA</option>
+                        <option value="user_hnmd">Residente HNMD</option>
                         <option value="admin">Administrador</option>
                         <option value="reader">Leitor</option>
                       </select>
@@ -207,7 +239,18 @@ export const UsersPage: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="p-3.5 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-3.5 text-right space-x-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {isResidentRole(u.role) && (
+                        <button
+                          onClick={() => handleSendAppInvite(u)}
+                          disabled={!u.phone}
+                          title={u.phone ? 'Convidar para o app pelo WhatsApp' : 'Cadastre o telefone/WhatsApp do usuário para enviar o convite'}
+                          aria-label="Convidar para o app pelo WhatsApp"
+                          className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 hover:text-emerald-400 transition-colors border border-emerald-500/30 align-middle disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleToggleActive(u)}
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors border ${
@@ -229,6 +272,8 @@ export const UsersPage: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
+                );
+              })}
             </table>
           </div>
         )}
@@ -299,7 +344,8 @@ export const UsersPage: React.FC = () => {
                   onChange={(e) => setRole(e.target.value as any)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                 >
-                  <option value="user">Usuário Comum (Residente / Aluno)</option>
+                  <option value="user">Residente HMA</option>
+                  <option value="user_hnmd">Residente HNMD (Hospital Naval Marcílio Dias)</option>
                   <option value="admin">Administrador (Acesso ao Painel)</option>
                   <option value="reader">Leitor (somente leitura)</option>
                 </select>

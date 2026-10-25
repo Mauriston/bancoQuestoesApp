@@ -1,10 +1,10 @@
 import { initializeApp, getApps } from 'firebase/app';
 import {
   signInWithEmailAndPassword, signOut as fbSignOut, signInAnonymously, createUserWithEmailAndPassword, getAuth,
-  EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword
+  EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, firebaseConfig } from '../firebase/config';
-import { AppUser } from '../types';
+import { AppUser, UserRole } from '../types';
 import { getUserById, getUsers, saveUser } from './firebaseService';
 
 const SESSION_KEY = 'teot_active_session_user_id';
@@ -36,7 +36,7 @@ export class UserInactiveError extends Error {
 export async function createNewUserWithAuth(
   name: string,
   email: string,
-  role: 'user' | 'admin' | 'reader',
+  role: UserRole,
   password?: string,
   options?: { active?: boolean; startSession?: boolean; phone?: string }
 ): Promise<AppUser> {
@@ -153,6 +153,7 @@ export async function loginUserWithPassword(email: string, pass: string): Promis
   }
 
   localStorage.setItem(SESSION_KEY, appUser.id);
+  markInstallPromptPending(appUser.id);
   return appUser;
 }
 
@@ -308,6 +309,45 @@ export async function loginAdminWithPassword(email: string, pass: string): Promi
   // Set session key in localStorage BEFORE returning
   localStorage.setItem(SESSION_KEY, appUser.id);
   return appUser;
+}
+
+// "Esqueci minha senha": envia o e-mail de redefinição do próprio Firebase
+// Auth. Com a proteção contra enumeração de e-mails ativa no projeto, o
+// Firebase não diz se o e-mail tem conta — por isso a UI sempre mostra a
+// mesma mensagem de sucesso, exista a conta ou não.
+export async function requestPasswordReset(email: string): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  auth.languageCode = 'pt-BR';
+  try {
+    await sendPasswordResetEmail(auth, normalizedEmail);
+  } catch (err: any) {
+    if (err?.code === 'auth/invalid-email' || err?.code === 'auth/missing-email') {
+      throw new Error("Informe um e-mail válido.");
+    }
+    if (err?.code === 'auth/too-many-requests') {
+      throw new Error("Muitas solicitações seguidas. Aguarde alguns minutos e tente novamente.");
+    }
+    // Conta inexistente: mesma resposta de sucesso (ver comentário acima).
+    if (err?.code === 'auth/user-not-found') return;
+    throw new Error("Não foi possível enviar o e-mail de redefinição. Verifique sua conexão e tente novamente.");
+  }
+}
+
+// Login acabou de acontecer: o convite "adicione à tela de início"
+// (InstallPromptDialog) pode aparecer uma vez nesta sessão — se ainda
+// estiver dentro dos 3 primeiros logins no celular.
+const INSTALL_PROMPT_PENDING_KEY = 'teot_install_prompt_pending';
+
+function markInstallPromptPending(userId: string) {
+  try { localStorage.setItem(INSTALL_PROMPT_PENDING_KEY, userId); } catch { /* ignora */ }
+}
+
+export function isInstallPromptPending(userId: string): boolean {
+  try { return localStorage.getItem(INSTALL_PROMPT_PENDING_KEY) === userId; } catch { return false; }
+}
+
+export function clearInstallPromptPending() {
+  try { localStorage.removeItem(INSTALL_PROMPT_PENDING_KEY); } catch { /* ignora */ }
 }
 
 export function getCurrentSessionUserId(): string | null {

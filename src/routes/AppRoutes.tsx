@@ -32,6 +32,7 @@ import { ExamsListPage } from '../pages/admin/ExamsListPage';
 import { ExamViewPage } from '../pages/admin/ExamViewPage';
 import { CreateExamPage } from '../pages/admin/CreateExamPage';
 import { AttemptsPage } from '../pages/admin/AttemptsPage';
+import { canSeeCronograma } from '../utils/cohort';
 
 const UserProtectedRoute: React.FC = () => {
   const { currentUser, loading } = useAuth();
@@ -58,6 +59,13 @@ const UserProtectedRoute: React.FC = () => {
     return <Navigate to="/leitor/home" replace />;
   }
   return <UserLayout />;
+};
+
+// Cronograma é o do Treinamento HMA — residentes HNMD (user_hnmd) não veem.
+const CronogramaRoute: React.FC = () => {
+  const { currentUser } = useAuth();
+  if (!canSeeCronograma(currentUser?.role)) return <Navigate to="/app/home" replace />;
+  return <CronogramaPage />;
 };
 
 const ReaderProtectedRoute: React.FC = () => {
@@ -125,7 +133,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="history" element={<HistoryPage />} />
         <Route path="performance" element={<PerformancePage />} />
         <Route path="sabatinas" element={<SabatinasPage />} />
-        <Route path="cronograma" element={<CronogramaPage />} />
+        <Route path="cronograma" element={<CronogramaRoute />} />
         <Route path="exam-stats" element={<ExamStatsPage />} />
         <Route path="extras" element={<ExtrasPage />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -1,7 +1,7 @@
 import {
    collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField,
    query, where, orderBy, limit, serverTimestamp, writeBatch, runTransaction, Timestamp, addDoc,
-   documentId, Query, DocumentData, onSnapshot
+   documentId, Query, DocumentData, onSnapshot, increment
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
@@ -9,9 +9,10 @@ import { resizeImageToSquare } from '../utils/imageResize';
 import {
    AppUser, Area, Group, Theme, Question, QuestionAnswer, Reference, Exam, ExamQuestion,
    ExamAssignment, Attempt, AttemptAnswer, AttemptResultSnapshot, UserStats, AdminLog, ImportLog,
-   VideotecaItem, AulaItem, MaterialViewLog, Sabatina, SabatinaViewLog, AppNotification, NotificationAudience
+   VideotecaItem, AulaItem, MaterialViewLog, Sabatina, SabatinaViewLog, AppNotification, NotificationAudience, UserRole
  } from '../types';
 import { normalizeText, generateId, shuffleArrayWithSeed } from '../utils/helpers';
+import { isResidentRole } from '../utils/cohort';
 
 // --- USERS ---
 
@@ -98,7 +99,7 @@ export async function updateUserActiveStatus(userId: string, active: boolean): P
   await updateDoc(userRef, { active, updatedAt: serverTimestamp() });
 }
 
-export async function updateUserRole(userId: string, role: "user" | "admin" | "reader"): Promise<void> {
+export async function updateUserRole(userId: string, role: UserRole): Promise<void> {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { role, updatedAt: serverTimestamp() });
 }
@@ -110,6 +111,10 @@ export async function updateUserPhone(userId: string, phone: string): Promise<vo
   const userRef = doc(db, 'users', userId);
   const trimmed = phone.trim();
   await updateDoc(userRef, { phone: trimmed ? trimmed : deleteField(), updatedAt: serverTimestamp() });
+}
+
+export async function incrementInstallPromptCount(userId: string): Promise<void> {
+  await updateDoc(doc(db, 'users', userId), { installPromptCount: increment(1) });
 }
 
 // Apaga o documento do usuário. Não cascateia attempts/userStats/assignments
@@ -582,7 +587,7 @@ export async function createAndPublishExam(params: {
     const activeUsers = await getActiveUsers();
     // O admin não realiza provas — mesmo que "all" seja escolhido, ele nunca
     // deve virar candidato de uma prova.
-    targetUserIds = activeUsers.filter(u => u.role === 'user').map(u => u.id);
+    targetUserIds = activeUsers.filter(u => isResidentRole(u.role)).map(u => u.id);
   } else {
     targetUserIds = params.assignedUserIds;
   }
@@ -994,7 +999,7 @@ export async function getUserAssignments(userId: string): Promise<(ExamAssignmen
 // Convite" (link direto de WhatsApp para o assignmentId de cada um).
 export async function getExamAssignmentsWithUsers(
   examId: string
-): Promise<(ExamAssignment & { userName: string; userPhone?: string })[]> {
+): Promise<(ExamAssignment & { userName: string; userPhone?: string; userRole?: UserRole })[]> {
   const q = query(collection(db, 'examAssignments'), where('examId', '==', examId));
   const snapshot = await getDocs(q);
   const assignments: ExamAssignment[] = [];
@@ -1009,7 +1014,8 @@ export async function getExamAssignmentsWithUsers(
     .map(a => ({
       ...a,
       userName: userById[a.userId]?.name || 'Usuário removido',
-      userPhone: userById[a.userId]?.phone
+      userPhone: userById[a.userId]?.phone,
+      userRole: userById[a.userId]?.role
     }))
     .sort((a, b) => a.userName.localeCompare(b.userName));
 }
@@ -1554,9 +1560,11 @@ export async function createNotification(data: {
   audience: NotificationAudience;
   actorId: string;
   actorName: string;
+  actorCohort?: AppNotification['actorCohort'];
+  targetCohorts?: AppNotification['targetCohorts'];
 }): Promise<void> {
   const id = generateId('notif');
-  await setDoc(doc(db, 'notifications', id), { ...data, id, createdAt: serverTimestamp() });
+  await setDoc(doc(db, 'notifications', id), removeUndefined({ ...data, id, createdAt: serverTimestamp() }));
 }
 
 // Lista ao vivo (limitada às mais recentes) — a filtragem por audiência

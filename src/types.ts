@@ -1,6 +1,9 @@
 // 'reader' (Leitor): perfil somente leitura — só consulta Banco de Questões,
 // Provas e Sabatinas (ver ReaderLayout / rotas /leitor).
-export type UserRole = 'user' | 'admin' | 'reader';
+// 'user_hnmd': residente do Hospital Naval Marcílio Dias — mesmo acesso do
+// 'user' (residente HMA), exceto Cronograma, com notificações dos colegas e
+// desempenho/ranking restritos ao próprio grupo (ver utils/cohort.ts).
+export type UserRole = 'user' | 'user_hnmd' | 'admin' | 'reader';
 
 export interface AppUser {
   id: string;
@@ -22,6 +25,10 @@ export interface AppUser {
   // true enquanto o usuário ainda usa a senha inicial (INITIAL_PASSWORD em
   // authService) — dispara o lembrete de troca de senha (InitialPasswordDialog).
   passwordIsInitial?: boolean;
+  // Quantas vezes o convite "adicione o app à tela de início" já apareceu
+  // para este residente (no celular, logo após o login) — limitado aos 3
+  // primeiros logins (ver InstallPromptDialog).
+  installPromptCount?: number;
 }
 
 export interface Area {
@@ -405,6 +412,14 @@ export interface AppNotification {
   audience: NotificationAudience;
   actorId: string;
   actorName: string;
+  // Grupo do residente que gerou o evento (audience 'all'): residentes só
+  // recebem eventos de colegas do mesmo grupo. Ausente nas notificações
+  // antigas = 'hma' (antes do perfil user_hnmd todo residente era HMA).
+  actorCohort?: 'hma' | 'hnmd';
+  // Para avisos do admin (audience 'users_only') que só dizem respeito a
+  // parte dos residentes, ex.: prova ativada só para candidatos HNMD.
+  // Ausente = todos os residentes. Ver isNotificationVisibleTo (utils/cohort).
+  targetCohorts?: ('hma' | 'hnmd')[];
   createdAt?: any;
 }
 

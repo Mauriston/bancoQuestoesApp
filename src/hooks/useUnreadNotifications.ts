@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { subscribeNotifications, subscribeNotificationReadState } from '../services/firebaseService';
 import { AppNotification } from '../types';
+import { isNotificationVisibleTo } from '../utils/cohort';
 
 function toSeconds(value: any): number {
   if (!value) return 0;
@@ -31,10 +32,7 @@ export function useUnreadNotifications() {
 
   const relevant = useMemo(() => {
     if (!currentUser) return [];
-    return notifications.filter(n =>
-      (n.audience === 'all' || currentUser.role === 'user') &&
-      n.actorId !== currentUser.id
-    );
+    return notifications.filter(n => isNotificationVisibleTo(n, currentUser));
   }, [notifications, currentUser]);
 
   const unreadCount = useMemo(() => {
