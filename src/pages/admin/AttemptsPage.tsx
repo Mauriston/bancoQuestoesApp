@@ -21,11 +21,13 @@ export const AttemptsPage: React.FC = () => {
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [gradingId, setGradingId] = useState<string | null>(null);
 
   const fetchAttempts = () => {
     setLoading(true);
+    setLoadError(null);
     return Promise.all([getAllAttempts(), getUsers()])
       .then(([res, users]) => {
         setAttempts(res.sort((a, b) => attemptTime(b) - attemptTime(a)));
@@ -33,7 +35,12 @@ export const AttemptsPage: React.FC = () => {
         // desnormalizado no documento — esse mapa cobre esses registros.
         setUserNameById(Object.fromEntries(users.map(u => [u.id, u.name])));
       })
-      .catch(err => console.error("Erro ao carregar tentativas:", err))
+      .catch(err => {
+        console.error("Erro ao carregar tentativas:", err);
+        setLoadError(err?.code === 'permission-denied'
+          ? "Sem permissão para ler as tentativas — sua sessão pode ter expirado. Saia e entre novamente."
+          : "Erro ao carregar tentativas: " + (err?.message || "erro desconhecido."));
+      })
       .finally(() => setLoading(false));
   };
 
@@ -103,6 +110,8 @@ export const AttemptsPage: React.FC = () => {
           realização (conclusão; para tentativas em andamento, o início). */}
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">Carregando registro de tentativas...</div>
+      ) : loadError ? (
+        <div className="p-8 text-center text-xs text-rose-400 bg-slate-900 border border-rose-500/30 rounded-2xl">{loadError}</div>
       ) : filtered.length === 0 ? (
         <div className="p-8 text-center text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">Nenhuma tentativa encontrada.</div>
       ) : (
