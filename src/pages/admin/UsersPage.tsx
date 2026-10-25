@@ -22,7 +22,7 @@ const USER_GROUPS: { key: string; label: string; roles: UserRole[] }[] = [
 function buildAppInviteMessage(user: AppUser): string {
   const firstName = user.name.trim().split(/\s+/)[0] || user.name;
   const appUrl = `${window.location.origin}/`;
-  return `Olá *${firstName}!* Como o titio aqui não esquece das crias, acesse esse appweb para treinar as provas teóricas e orais do TEOT. As provas teóricas estão montadas de acordo com a especialidade e, uma vez respondida até o fim, você terá acesso a todas as questões comentadas e com opção de download em PDF. Além disso você pode consultar várias provas orais simuladas para treinamento entre vocês. Forte Abraço! CT (Md) Mauriston. ${appUrl}`;
+  return `Olá *${firstName}!* Como o titio aqui não esquece das crias, acesse esse appweb para treinar as provas teóricas e orais do TEOT. As provas teóricas estão montadas de acordo com a especialidade e, uma vez respondida até o fim, você terá acesso a todas as questões comentadas e com opção de download em PDF. Além disso você pode consultar várias provas orais simuladas para treinamento entre vocês. Para entrar, use o seu e-mail cadastrado (${user.email}) e a senha inicial ${INITIAL_PASSWORD}. Forte Abraço! CT (Md) Mauriston. ${appUrl}`;
 }
 
 export const UsersPage: React.FC = () => {
