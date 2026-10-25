@@ -23,10 +23,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [firebaseUser, setFirebaseUser] = useState<FbUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const loadSession = async () => {
+  const loadSession = async (fbUser: FbUser | null) => {
     try {
       const sessionUserId = getCurrentSessionUserId();
-      if (sessionUserId) {
+      if (sessionUserId && !fbUser) {
+        // Sessão do app (localStorage) sem sessão do Firebase Auth por trás
+        // (token expirado/revogado, dados do site limpos etc.): a UI ficaria
+        // "logada", mas toda leitura protegida por isSignedIn() nas Security
+        // Rules falharia com "Missing or insufficient permissions" — telas
+        // como Resultados apareciam vazias sem explicação. Força novo login.
+        await clearSession();
+        setCurrentUser(null);
+      } else if (sessionUserId) {
         const user = await getUserById(sessionUserId);
         if (user && user.active) {
           setCurrentUser(user);
@@ -46,10 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    loadSession();
+    // onAuthStateChanged dispara uma vez assim que o Firebase Auth termina de
+    // restaurar a sessão persistida — só então dá para saber se ela existe.
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
-      loadSession();
+      loadSession(fbUser);
     });
     return () => unsubscribe();
   }, []);
