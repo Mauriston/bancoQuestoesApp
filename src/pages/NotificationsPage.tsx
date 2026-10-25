@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Bell, FileCheck, PlayCircle, MessageSquare, Video, GraduationCap } from 'lucide-react';
+import { Bell, FileCheck, PlayCircle, MessageSquare, Video, GraduationCap, LogIn } from 'lucide-react';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 import { markNotificationsRead } from '../services/firebaseService';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,7 +31,8 @@ const ICONS: Record<AppNotification['type'], React.ElementType> = {
   exam_activated: FileCheck,
   sabatina_created: MessageSquare,
   video_created: Video,
-  aula_created: GraduationCap
+  aula_created: GraduationCap,
+  first_login: LogIn
 };
 
 // Página compartilhada (User e Admin) de notificações — lista tudo que é

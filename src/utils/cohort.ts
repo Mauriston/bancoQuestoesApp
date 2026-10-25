@@ -35,10 +35,12 @@ export function canSeeCronograma(role?: UserRole | null): boolean {
 // - eventos de residentes (audience 'all'): admin e leitor veem todos;
 //   residentes só os de colegas do mesmo grupo;
 // - avisos do admin (audience 'users_only'): só residentes, filtrados por
-//   targetCohorts quando o aviso diz respeito a um grupo só.
+//   targetCohorts quando o aviso diz respeito a um grupo só;
+// - acompanhamento do admin (audience 'admin_only'): só o admin.
 // Nunca a própria ação de quem está logado.
 export function isNotificationVisibleTo(n: AppNotification, viewer: AppUser): boolean {
   if (n.actorId === viewer.id) return false;
+  if (n.audience === 'admin_only') return viewer.role === 'admin';
   const viewerCohort = cohortOfRole(viewer.role);
   if (n.audience === 'users_only') {
     if (!viewerCohort) return false;

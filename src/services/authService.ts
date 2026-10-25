@@ -5,7 +5,7 @@ import {
 } from 'firebase/auth';
 import { auth, firebaseConfig } from '../firebase/config';
 import { AppUser, UserRole } from '../types';
-import { getUserById, getUsers, saveUser } from './firebaseService';
+import { getUserById, getUsers, saveUser, markUserFirstLogin, createNotification } from './firebaseService';
 
 const SESSION_KEY = 'teot_active_session_user_id';
 
@@ -154,7 +154,26 @@ export async function loginUserWithPassword(email: string, pass: string): Promis
 
   localStorage.setItem(SESSION_KEY, appUser.id);
   markInstallPromptPending(appUser.id);
+  if (appUser.role === 'user_hnmd' && !appUser.firstLoginAt) {
+    // Falha aqui não pode impedir o login — só deixa de avisar o admin.
+    notifyFirstLogin(appUser).catch(err => console.error('Erro ao registrar primeiro acesso:', err));
+  }
   return appUser;
+}
+
+// Primeiro login de um residente HNMD: grava firstLoginAt e avisa o admin
+// (notificação 'admin_only', ver isNotificationVisibleTo em utils/cohort).
+async function notifyFirstLogin(appUser: AppUser): Promise<void> {
+  await markUserFirstLogin(appUser.id);
+  appUser.firstLoginAt = new Date();
+  await createNotification({
+    type: 'first_login',
+    message: `${appUser.name} (HNMD) acessou o app pela primeira vez`,
+    audience: 'admin_only',
+    actorId: appUser.id,
+    actorName: appUser.name,
+    actorCohort: 'hnmd'
+  });
 }
 
 // Permite ao próprio usuário logado trocar e-mail e/ou senha (tela de
