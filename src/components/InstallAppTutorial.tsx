@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, EllipsisVertical, Share, Plus, SquarePlus, X, Smartphone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { isResidentRole } from '../utils/cohort';
 
 const DONE_KEY = 'teot_install_tutorial_done';
 
 type Platform = 'ios' | 'android';
 
-function detectPlatform(): Platform | null {
+export function detectPlatform(): Platform | null {
   if (typeof navigator === 'undefined') return null;
   const ua = navigator.userAgent || '';
   const isIos = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
@@ -17,11 +18,11 @@ function detectPlatform(): Platform | null {
 
 // No iPhone, Safari mostra o botão Compartilhar na barra inferior; Chrome,
 // Edge e Firefox o mostram ao lado do endereço, no topo.
-function iosShareOnTop(): boolean {
+export function iosShareOnTop(): boolean {
   return /CriOS|EdgiOS|FxiOS|OPiOS/i.test(navigator.userAgent || '');
 }
 
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   try {
     return window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
   } catch {
@@ -29,7 +30,7 @@ function isStandalone(): boolean {
   }
 }
 
-function readDone(): boolean {
+export function readDone(): boolean {
   try { return localStorage.getItem(DONE_KEY) === '1'; } catch { return false; }
 }
 
@@ -286,7 +287,7 @@ export const InstallAppTutorial: React.FC<{ onClose: () => void }> = ({ onClose 
 // Decide se o tutorial deve aparecer: usuário comum/leitor, celular, app ainda
 // não instalado e tutorial ainda não concluído neste aparelho.
 export function shouldShowInstallTutorial(role: string | undefined): boolean {
-  if (role !== 'user' && role !== 'reader') return false;
+  if (!isResidentRole(role) && role !== 'reader') return false;
   if (!detectPlatform()) return false;
   if (isStandalone()) return false;
   return !readDone();

@@ -1,9 +1,10 @@
 import React from 'react';
+import { UserRole } from '../types';
 
 interface AvatarProps {
   name: string;
   photoUrl?: string | null;
-  role?: 'admin' | 'user' | 'reader';
+  role?: UserRole;
   size?: 'sm' | 'md' | 'lg' | 'fill';
 }
 

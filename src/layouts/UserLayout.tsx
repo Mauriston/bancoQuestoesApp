@@ -11,6 +11,7 @@ import { StartupDialogs } from '../components/StartupDialogs';
 import { NotificationToastHost } from '../components/NotificationToastHost';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 import { useUnseenExtrasCount } from '../hooks/useUnseenExtrasCount';
+import { canSeeCronograma } from '../utils/cohort';
 
 // Badge vermelho de contagem, usado no ícone dos itens de menu (ex.: Extras)
 // — mesmo estilo do badge de não lidas no avatar.
@@ -44,7 +45,7 @@ export const UserLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     { label: 'Cronograma', path: '/app/cronograma', icon: CalendarDays },
     { label: 'TARO/TEOT', path: '/app/exam-stats', icon: GraduationCap },
     { label: 'Extras', path: '/app/extras', icon: Sparkles }
-  ];
+  ].filter(item => item.path !== '/app/cronograma' || canSeeCronograma(currentUser?.role));
 
   const currentTitle = navItems.find(item => location.pathname.startsWith(item.path))?.label
     || (location.pathname.startsWith('/app/settings') ? 'Ajustes' : 'Treinamento TEOT');

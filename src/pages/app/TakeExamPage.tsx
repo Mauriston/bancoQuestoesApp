@@ -10,6 +10,7 @@ import {
 } from '../../services/firebaseService';
 import { finishAndGradeAttempt } from '../../services/gradingService';
 import { Exam, ExamQuestion } from '../../types';
+import { cohortOfRole } from '../../utils/cohort';
 
 // Cache local (por navegador/dispositivo) da alternativa selecionada na
 // questão atual, ainda NÃO confirmada em Firestore (isso só acontece ao
@@ -137,7 +138,8 @@ export const TakeExamPage: React.FC = () => {
             message: `${currentUser.name} iniciou a prova ${examData.name}`,
             audience: 'all',
             actorId: currentUser.id,
-            actorName: currentUser.name
+            actorName: currentUser.name,
+            actorCohort: cohortOfRole(currentUser.role) ?? undefined
           }).catch(err => console.error('Erro ao criar notificação de início de prova:', err));
         }
 
@@ -240,7 +242,8 @@ export const TakeExamPage: React.FC = () => {
           message: `${currentUser.name} concluiu a prova ${exam.name}`,
           audience: 'all',
           actorId: currentUser.id,
-          actorName: currentUser.name
+          actorName: currentUser.name,
+          actorCohort: cohortOfRole(currentUser.role) ?? undefined
         }).catch(err => console.error('Erro ao criar notificação de conclusão de prova:', err));
       }
       navigate(`/app/attempts/${attemptId}/result`);

@@ -11,16 +11,21 @@ import { AppUser, Exam, Attempt, Area, Group, UserStats, Theme } from '../../typ
 import { exportToCSV, scoreColorHex } from '../../utils/helpers';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
 import { ExamPerformanceCard } from '../../components/ExamPerformanceCard';
+import { cohortOfRole, COHORT_LABEL, ResidentCohort } from '../../utils/cohort';
 
 export const DashboardPage: React.FC = () => {
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
-  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [allAttempts, setAttempts] = useState<Attempt[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
-  const [userStatsList, setUserStatsList] = useState<UserStats[]>([]);
+  const [allUserStats, setUserStatsList] = useState<UserStats[]>([]);
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
+  // Filtro de grupo (HMA/HNMD): o admin vê os dois grupos juntos ou cada um
+  // isolado — os residentes só veem o próprio grupo (ver PerformancePage).
+  const [cohortFilter, setCohortFilter] = useState<'all' | ResidentCohort>('all');
+  const [cohortByUserId, setCohortByUserId] = useState<Record<string, ResidentCohort | null>>({});
   const [loading, setLoading] = useState(true);
 
   // Dados de referência (usuários, provas, áreas/temas) mudam raramente
@@ -39,6 +44,7 @@ export const DashboardPage: React.FC = () => {
           getThemes()
         ]);
         setActiveUsers(uList);
+        setCohortByUserId(Object.fromEntries(allUsers.map(u => [u.id, cohortOfRole(u.role)])));
         setExams(eList);
         setAreas(arList);
         setGroups(grList);
@@ -81,6 +87,24 @@ export const DashboardPage: React.FC = () => {
       unsubStats();
     };
   }, []);
+
+  // Usuário que já não existe em `users` conta como HMA (único grupo antigo).
+  const inCohortFilter = (userId?: string) => {
+    if (cohortFilter === 'all') return true;
+    const cohort = userId && userId in cohortByUserId ? cohortByUserId[userId] : 'hma';
+    return cohort === cohortFilter;
+  };
+  const attempts = useMemo(
+    () => allAttempts.filter(a => inCohortFilter(a.userId)),
+    [allAttempts, cohortFilter, cohortByUserId]
+  );
+  const userStatsList = useMemo(
+    () => allUserStats.filter(s => inCohortFilter(s.userId)),
+    [allUserStats, cohortFilter, cohortByUserId]
+  );
+  const filteredActiveUsers = activeUsers.filter(u =>
+    cohortFilter === 'all' || cohortOfRole(u.role) === cohortFilter
+  );
 
   // Ranking geral (Gráfico 1): um ponto por usuário com pelo menos 1 questão
   // resolvida, ordenado desc dentro do próprio RankingChart.
@@ -213,6 +237,20 @@ export const DashboardPage: React.FC = () => {
           </h1>
         </div>
 
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+        <div className="inline-flex bg-slate-900 border border-slate-700 rounded-xl p-0.5" role="group" aria-label="Filtrar por grupo">
+          {([['all', 'Todos'], ['hma', COHORT_LABEL.hma], ['hnmd', COHORT_LABEL.hnmd]] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setCohortFilter(value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                cohortFilter === value ? 'bg-cyan-500/15 text-cyan-500' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <button
           onClick={handleExportAttemptsCSV}
           className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-slate-100 px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition-all self-start sm:self-auto"
@@ -220,6 +258,7 @@ export const DashboardPage: React.FC = () => {
           <Download className="w-4 h-4 text-cyan-400" />
           <span>Exportar Relatório CSV</span>
         </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -231,7 +270,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate">Usuários Ativos</p>
-              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">{activeUsers.length}</p>
+              <p className="text-2xl font-black text-slate-100 mt-0.5 leading-none">{filteredActiveUsers.length}</p>
             </div>
           </div>
         </div>

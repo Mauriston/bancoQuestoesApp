@@ -3,6 +3,7 @@ import { Bell, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { subscribeNewNotifications } from '../services/firebaseService';
 import { AppNotification } from '../types';
+import { isNotificationVisibleTo } from '../utils/cohort';
 
 const AUTO_DISMISS_MS = 6000;
 
@@ -18,8 +19,7 @@ export const NotificationToastHost: React.FC = () => {
   useEffect(() => {
     if (!currentUser) return;
     const unsubscribe = subscribeNewNotifications(mountedAt.current, (notification) => {
-      const isForMe = notification.audience === 'all' || currentUser.role === 'user';
-      if (!isForMe || notification.actorId === currentUser.id) return;
+      if (!isNotificationVisibleTo(notification, currentUser)) return;
       setToasts(prev => [...prev, notification]);
       window.setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== notification.id));

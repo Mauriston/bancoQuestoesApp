@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FbUser } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { AppUser } from '../types';
+import { AppUser, UserRole } from '../types';
 import { getUserById } from '../services/firebaseService';
 import { getCurrentSessionUserId, loginUserWithPassword, loginAdminWithPassword, clearSession } from '../services/authService';
 
 interface AuthContextType {
   currentUser: AppUser | null;
   firebaseUser: FbUser | null;
-  role: "user" | "admin" | "reader" | null;
+  role: UserRole | null;
   loading: boolean;
   userLogin: (email: string, pass: string) => Promise<AppUser>;
   adminLogin: (email: string, pass: string) => Promise<AppUser>;

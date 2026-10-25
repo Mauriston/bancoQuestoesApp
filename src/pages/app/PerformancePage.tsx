@@ -13,6 +13,7 @@ import { UserStats, Area as ExamArea, Group, Theme, Attempt } from '../../types'
 import { scoreColorHex } from '../../utils/helpers';
 import { Avatar } from '../../components/Avatar';
 import { RankingChart, RankingEntry } from '../../components/RankingChart';
+import { cohortOfRole } from '../../utils/cohort';
 
 type Tier = 'good' | 'warn' | 'bad';
 
@@ -65,9 +66,18 @@ export const PerformancePage: React.FC = () => {
           getUserAttempts(currentUser.id),
           getUsers()
         ]);
+        // Médias, comparativos e ranking consideram só o grupo do residente
+        // (HMA ou HNMD). Estatísticas de quem já não está na coleção `users`
+        // (usuário removido) contam como HMA — o único grupo que existia antes.
+        const myCohort = cohortOfRole(currentUser.role) ?? 'hma';
+        const cohortById = new Map(allUsers.map(u => [u.id, cohortOfRole(u.role)]));
+        const sameCohortStats = allStats.filter(s => {
+          const cohort = cohortById.has(s.userId!) ? cohortById.get(s.userId!) : 'hma';
+          return cohort === myCohort;
+        });
         setStats(uStats);
-        setPeerStats(allStats.filter(s => s.userId !== currentUser.id));
-        setAllStatsForRanking(allStats);
+        setPeerStats(sameCohortStats.filter(s => s.userId !== currentUser.id));
+        setAllStatsForRanking(sameCohortStats);
         setUserNameById(Object.fromEntries(allUsers.map(u => [u.id, u.name])));
         setAreas(areaList);
         setGroups(groupList);

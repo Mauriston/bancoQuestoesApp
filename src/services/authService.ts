@@ -4,7 +4,7 @@ import {
   EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, firebaseConfig } from '../firebase/config';
-import { AppUser } from '../types';
+import { AppUser, UserRole } from '../types';
 import { getUserById, getUsers, saveUser } from './firebaseService';
 
 const SESSION_KEY = 'teot_active_session_user_id';
@@ -36,7 +36,7 @@ export class UserInactiveError extends Error {
 export async function createNewUserWithAuth(
   name: string,
   email: string,
-  role: 'user' | 'admin' | 'reader',
+  role: UserRole,
   password?: string,
   options?: { active?: boolean; startSession?: boolean; phone?: string }
 ): Promise<AppUser> {
@@ -153,6 +153,7 @@ export async function loginUserWithPassword(email: string, pass: string): Promis
   }
 
   localStorage.setItem(SESSION_KEY, appUser.id);
+  markInstallPromptPending(appUser.id);
   return appUser;
 }
 
@@ -330,6 +331,23 @@ export async function requestPasswordReset(email: string): Promise<void> {
     if (err?.code === 'auth/user-not-found') return;
     throw new Error("Não foi possível enviar o e-mail de redefinição. Verifique sua conexão e tente novamente.");
   }
+}
+
+// Login acabou de acontecer: o convite "adicione à tela de início"
+// (InstallPromptDialog) pode aparecer uma vez nesta sessão — se ainda
+// estiver dentro dos 3 primeiros logins no celular.
+const INSTALL_PROMPT_PENDING_KEY = 'teot_install_prompt_pending';
+
+function markInstallPromptPending(userId: string) {
+  try { localStorage.setItem(INSTALL_PROMPT_PENDING_KEY, userId); } catch { /* ignora */ }
+}
+
+export function isInstallPromptPending(userId: string): boolean {
+  try { return localStorage.getItem(INSTALL_PROMPT_PENDING_KEY) === userId; } catch { return false; }
+}
+
+export function clearInstallPromptPending() {
+  try { localStorage.removeItem(INSTALL_PROMPT_PENDING_KEY); } catch { /* ignora */ }
 }
 
 export function getCurrentSessionUserId(): string | null {

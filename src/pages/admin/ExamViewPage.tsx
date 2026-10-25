@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, BarChart3, Users, Power, PowerOff, Trash2, Pencil, Camera, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Layers, MapPin, X, Send, PhoneOff, UserPlus, FileText, Download, Loader2, ArrowUp } from 'lucide-react';
 import { getExamById, getExamQuestions, getQuestionAnswer, getExamQuestionStats, updateExamActiveStatus, isExamActive, getQuestionsByIds, getAttemptsForExam, subscribeAttemptsForExam, updateExamContent, syncExamQuestionFromBank, getAttemptAnswers, getAreas, getThemes, getReferences, createNotification, getExamAssignmentsWithUsers, markAssignmentInvited, addExamAssignments, getActiveUsers } from '../../services/firebaseService';
-import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser } from '../../types';
+import { Exam, ExamQuestion, QuestionAnswer, Question, Attempt, Area, Reference, ExamAssignment, AppUser, UserRole } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { QuestionFormModal, SavedAnswerFields } from '../../components/QuestionFormModal';
 import { AddQuestionImageModal } from '../../components/AddQuestionImageModal';
@@ -14,6 +14,7 @@ import { getSourceExamChipClass, getSourceExamDisplayGroup } from '../../constan
 import { useAccess } from '../../hooks/useAccess';
 import { generateExamPdfForAdmin, viewExamReportPdf } from '../../services/examReportService';
 import { scoreColorClass, buildWhatsAppLink } from '../../utils/helpers';
+import { isResidentRole, cohortOfRole, COHORT_LABEL, ResidentCohort } from '../../utils/cohort';
 
 interface SubmittedRow {
   attempt: Attempt;
@@ -67,7 +68,7 @@ export const ExamViewPage: React.FC = () => {
   const [submittedRows, setSubmittedRows] = useState<SubmittedRow[]>([]);
   // Candidatos atribuídos a esta prova, para a seção "Convidar Candidatos"
   // (botão de envio de convite por WhatsApp com o link direto do assignment).
-  const [assignments, setAssignments] = useState<(ExamAssignment & { userName: string; userPhone?: string })[]>([]);
+  const [assignments, setAssignments] = useState<(ExamAssignment & { userName: string; userPhone?: string; userRole?: UserRole })[]>([]);
   // "Adicionar Candidatos" — usuários ativos ainda não atribuídos a esta
   // prova, para incluí-los mesmo depois dela já elaborada/publicada.
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
@@ -248,7 +249,7 @@ export const ExamViewPage: React.FC = () => {
         setReferences(refList);
         setAssignments(assignmentList);
         // O admin não realiza provas — nunca deve aparecer como candidato.
-        setActiveUsers(activeUserList.filter(u => u.role === 'user'));
+        setActiveUsers(activeUserList.filter(u => isResidentRole(u.role)));
 
         // Áreas presentes nesta prova (colunas da tabela de respostas
         // enviadas), na mesma ordem de getAreas() (alfabética).
@@ -322,10 +323,11 @@ export const ExamViewPage: React.FC = () => {
   // convite como enviado (invitedAt) tanto no Firestore quanto localmente,
   // para contabilizar na coluna "Convites" de ExamsListPage e mostrar
   // "Convidado" nesta tabela.
-  const handleSendInvite = (assignment: ExamAssignment & { userName: string; userPhone?: string }) => {
+  const handleSendInvite = (assignment: ExamAssignment & { userName: string; userPhone?: string; userRole?: UserRole }) => {
     if (!exam || !assignment.userPhone || assignment.status !== 'available') return;
     const link = `${window.location.origin}/app/exams/${assignment.id}`;
-    const message = `*TEOT HMA 2027:*\n\n${assignment.userName}, a prova ${exam.name} está disponível para você.\n\nAcesse : ${link}`;
+    const cohortLabel = COHORT_LABEL[cohortOfRole(assignment.userRole) ?? 'hma'];
+    const message = `*TEOT ${cohortLabel} 2027:*\n\n${assignment.userName}, a prova ${exam.name} está disponível para você.\n\nAcesse : ${link}`;
     window.open(buildWhatsAppLink(assignment.userPhone, message), '_blank', 'noopener,noreferrer');
 
     markAssignmentInvited(assignment.id).catch(err => console.error('Erro ao registrar convite enviado:', err));
@@ -362,7 +364,11 @@ export const ExamViewPage: React.FC = () => {
           message: `${currentUser.name} ativou a prova ${exam.name} para realização`,
           audience: 'users_only',
           actorId: currentUser.id,
-          actorName: currentUser.name
+          actorName: currentUser.name,
+          // Só avisa os grupos que têm candidatos nesta prova.
+          targetCohorts: Array.from(new Set(
+            assignments.map(a => cohortOfRole(a.userRole)).filter((c): c is ResidentCohort => !!c)
+          ))
         }).catch(err => console.error('Erro ao criar notificação de ativação de prova:', err));
       }
     } catch (err: any) {
@@ -581,7 +587,10 @@ export const ExamViewPage: React.FC = () => {
           <CheckboxMultiSelect
             className="flex-1"
             label="Candidato"
-            options={unassignedActiveUsers.map(u => ({ id: u.id, label: u.name }))}
+            options={unassignedActiveUsers.map(u => {
+              const cohort = cohortOfRole(u.role);
+              return { id: u.id, label: cohort ? `${u.name} · ${COHORT_LABEL[cohort]}` : u.name };
+            })}
             selectedIds={selectedNewUserIds}
             onChange={setSelectedNewUserIds}
             emptyLabel={unassignedActiveUsers.length === 0 ? 'Todos os usuários ativos já foram atribuídos' : 'Selecione candidatos'}
@@ -597,6 +606,34 @@ export const ExamViewPage: React.FC = () => {
             {addingCandidates ? 'Adicionando...' : 'Adicionar'}
           </button>
         </div>
+        {/* Atalho de seleção em lote: todos os residentes ainda não
+            atribuídos de um grupo (HMA/HNMD) de uma vez. */}
+        {unassignedActiveUsers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-400">Selecionar grupo inteiro:</span>
+            {(['hma', 'hnmd'] as ResidentCohort[]).map(cohort => {
+              const ids = unassignedActiveUsers.filter(u => cohortOfRole(u.role) === cohort).map(u => u.id);
+              const allSelected = ids.length > 0 && ids.every(id => selectedNewUserIds.includes(id));
+              return (
+                <button
+                  key={cohort}
+                  type="button"
+                  disabled={ids.length === 0}
+                  onClick={() => setSelectedNewUserIds(prev => allSelected
+                    ? prev.filter(id => !ids.includes(id))
+                    : Array.from(new Set([...prev, ...ids])))}
+                  className={`px-3 py-1.5 rounded-lg font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    allSelected
+                      ? 'bg-cyan-500/15 text-cyan-500 border-cyan-500/40'
+                      : 'text-slate-300 border-slate-700 hover:bg-slate-800'
+                  }`}
+                >
+                  {COHORT_LABEL[cohort]} ({ids.length})
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
       )}
 

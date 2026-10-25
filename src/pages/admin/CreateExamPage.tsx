@@ -14,6 +14,7 @@ import { QuestionPreviewModal } from '../../components/QuestionPreviewModal';
 import { CheckboxMultiSelect } from '../../components/CheckboxMultiSelect';
 import { Switch } from '../../components/Switch';
 import { useHideOnScroll } from '../../hooks/useHideOnScroll';
+import { isResidentRole, cohortOfRole, COHORT_LABEL, ResidentCohort } from '../../utils/cohort';
 
 export const CreateExamPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -58,8 +59,24 @@ export const CreateExamPage: React.FC = () => {
 
   // Step 3: User Assignment
   const [activeUsers, setActiveUsers] = useState<AppUser[]>([]);
-  const [assignMode, setAssignMode] = useState<'all' | 'custom'>('all');
+  // 'groups': atribui em lote a todos os residentes ativos dos grupos
+  // marcados (HMA e/ou HNMD); 'custom': escolha individual.
+  const [assignMode, setAssignMode] = useState<'groups' | 'custom'>('groups');
+  const [selectedCohorts, setSelectedCohorts] = useState<ResidentCohort[]>(['hma', 'hnmd']);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const usersOfCohort = (cohort: ResidentCohort) => activeUsers.filter(u => cohortOfRole(u.role) === cohort);
+  const cohortUserIds = activeUsers
+    .filter(u => { const c = cohortOfRole(u.role); return !!c && selectedCohorts.includes(c); })
+    .map(u => u.id);
+  const toggleCohort = (cohort: ResidentCohort) =>
+    setSelectedCohorts(prev => prev.includes(cohort) ? prev.filter(c => c !== cohort) : [...prev, cohort]);
+  // Na seleção individual: marca/desmarca de uma vez todo o grupo.
+  const toggleCohortInCustom = (cohort: ResidentCohort, checked: boolean) => {
+    const ids = usersOfCohort(cohort).map(u => u.id);
+    setSelectedUserIds(prev => checked
+      ? Array.from(new Set([...prev, ...ids]))
+      : prev.filter(id => !ids.includes(id)));
+  };
 
   // Submitting
   const [publishing, setPublishing] = useState(false);
@@ -78,7 +95,7 @@ export const CreateExamPage: React.FC = () => {
         setAreas(arList);
         setThemes(thList);
         // O admin não realiza provas, então não pode ser destinatário.
-        setActiveUsers(uList.filter(u => u.role === 'user'));
+        setActiveUsers(uList.filter(u => isResidentRole(u.role)));
         getQuestionAnswersByIds(qList.map(q => q.id))
           .then(setAnswersById)
           .catch(err => console.error("Erro ao carregar gabaritos:", err));
@@ -253,7 +270,12 @@ export const CreateExamPage: React.FC = () => {
     setErrorMsg('');
 
     try {
-      const assignedIds = assignMode === 'all' ? ['all'] : selectedUserIds;
+      const assignedIds = assignMode === 'groups' ? cohortUserIds : selectedUserIds;
+      if (assignedIds.length === 0) {
+        setErrorMsg("Selecione pelo menos um candidato (grupo ou usuário) na Etapa 3.");
+        setPublishing(false);
+        return;
+      }
       await createAndPublishExam({
         examData: {
           name,
@@ -746,19 +768,36 @@ export const CreateExamPage: React.FC = () => {
           <h2 className="text-sm font-bold text-slate-100 mb-2">Etapa 3: Atribuir a Prova aos Candidatos</h2>
           
           <div className="space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-slate-800 bg-slate-950">
-              <input
-                type="radio"
-                name="assignMode"
-                checked={assignMode === 'all'}
-                onChange={() => setAssignMode('all')}
-                className="text-cyan-500"
-              />
-              <div>
-                <strong className="text-slate-100 block">Atribuir a TODOS os usuários ativos ({activeUsers.length})</strong>
-                <span className="text-[10px] text-slate-400">Todos os residentes ativos receberão o simulado em seu painel.</span>
-              </div>
-            </label>
+            <div className="p-3 rounded-xl border border-slate-800 bg-slate-950 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="assignMode"
+                  checked={assignMode === 'groups'}
+                  onChange={() => setAssignMode('groups')}
+                  className="text-cyan-500"
+                />
+                <div>
+                  <strong className="text-slate-100 block">Atribuir em lote por grupo</strong>
+                  <span className="text-[10px] text-slate-400">Todos os residentes ativos dos grupos marcados receberão o simulado em seu painel.</span>
+                </div>
+              </label>
+              {assignMode === 'groups' && (
+                <div className="flex flex-wrap gap-2 pl-6">
+                  {(['hma', 'hnmd'] as ResidentCohort[]).map(cohort => (
+                    <label key={cohort} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-slate-800 bg-slate-900">
+                      <input
+                        type="checkbox"
+                        checked={selectedCohorts.includes(cohort)}
+                        onChange={() => toggleCohort(cohort)}
+                      />
+                      <span className="text-slate-200 font-semibold">{COHORT_LABEL[cohort]}</span>
+                      <span className="text-slate-500">({usersOfCohort(cohort).length})</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
             
             <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-slate-800 bg-slate-950">
               <input
@@ -777,21 +816,39 @@ export const CreateExamPage: React.FC = () => {
 
           {assignMode === 'custom' && (
             <div className="max-h-60 overflow-y-auto space-y-1.5 border border-slate-800 rounded-xl p-3 bg-slate-950">
-              {activeUsers.map(u => {
-                const isChecked = selectedUserIds.includes(u.id);
+              {(['hma', 'hnmd'] as ResidentCohort[]).map(cohort => {
+                const groupUsers = usersOfCohort(cohort);
+                if (groupUsers.length === 0) return null;
+                const allChecked = groupUsers.every(u => selectedUserIds.includes(u.id));
                 return (
-                  <label key={u.id} className="flex items-center gap-2 p-2 hover:bg-slate-900 rounded-lg cursor-pointer min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      className="shrink-0"
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedUserIds(prev => [...prev, u.id]);
-                        else setSelectedUserIds(prev => prev.filter(id => id !== u.id));
-                      }}
-                    />
-                    <span className="text-slate-200 truncate">{u.name} ({u.email})</span>
-                  </label>
+                  <div key={cohort} className="space-y-1.5">
+                    <label className="flex items-center gap-2 px-2 pt-1 cursor-pointer text-[11px] font-bold uppercase tracking-wide text-cyan-500">
+                      <input
+                        type="checkbox"
+                        checked={allChecked}
+                        className="shrink-0"
+                        onChange={(e) => toggleCohortInCustom(cohort, e.target.checked)}
+                      />
+                      <span>Residentes {COHORT_LABEL[cohort]} ({groupUsers.length})</span>
+                    </label>
+                    {groupUsers.map(u => {
+                      const isChecked = selectedUserIds.includes(u.id);
+                      return (
+                        <label key={u.id} className="flex items-center gap-2 p-2 hover:bg-slate-900 rounded-lg cursor-pointer min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            className="shrink-0"
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedUserIds(prev => [...prev, u.id]);
+                              else setSelectedUserIds(prev => prev.filter(id => id !== u.id));
+                            }}
+                          />
+                          <span className="text-slate-200 truncate">{u.name} ({u.email})</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </div>
@@ -823,7 +880,9 @@ export const CreateExamPage: React.FC = () => {
             <p>• Nome da Prova: <strong className="text-slate-100">{name}</strong></p>
             <p>• Total de Questões: <strong className="text-teal-400">{selectedQuestions.length}</strong></p>
             {!isEditMode && (
-              <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'all' ? `Todos os ${activeUsers.length} usuários ativos` : `${selectedUserIds.length} usuários`}</strong></p>
+              <p>• Destinatários: <strong className="text-cyan-400">{assignMode === 'groups'
+                ? `${cohortUserIds.length} residentes (${selectedCohorts.length > 0 ? selectedCohorts.map(c => COHORT_LABEL[c]).join(' + ') : 'nenhum grupo marcado'})`
+                : `${selectedUserIds.length} usuários`}</strong></p>
             )}
           </div>
 

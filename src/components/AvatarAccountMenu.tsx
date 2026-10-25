@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, LogOut, UserCircle } from 'lucide-react';
 import { Avatar } from './Avatar';
+import { UserRole } from '../types';
 
 interface AvatarAccountMenuProps {
   name: string;
   photoUrl?: string | null;
-  role: 'admin' | 'user' | 'reader';
+  role: UserRole;
   avatarSize?: 'sm' | 'md' | 'lg';
   unreadCount: number;
   settingsPath: string;
